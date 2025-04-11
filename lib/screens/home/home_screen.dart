@@ -398,7 +398,6 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       itemBuilder: (context, index) {
         final product = products[index];
         return ProductCard(
-          id: product['id'] as int,
           name: product['name'] as String,
           price: product['price'] as double,
           imageUrl: product['image'] as String,
