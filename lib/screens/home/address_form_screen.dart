@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dayliz_app/models/address.dart';
+import 'package:dayliz_app/providers/address_provider.dart';
 import 'package:dayliz_app/theme/app_spacing.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/utils/validators.dart';
@@ -118,8 +119,13 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
         additionalInfo: _additionalInfoController.text.trim(),
       );
 
-      // TODO: Save address to storage or API
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+      if (widget.address == null) {
+        // Add new address
+        await ref.read(addressNotifierProvider.notifier).addAddress(address);
+      } else {
+        // Update existing address
+        await ref.read(addressNotifierProvider.notifier).updateAddress(address);
+      }
 
       if (!mounted) return;
 
@@ -162,6 +168,12 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditMode ? 'Edit Address' : 'Add New Address'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
       ),
       body: SafeArea(
         child: Form(

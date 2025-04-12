@@ -2,37 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dayliz_app/models/address.dart';
+import 'package:dayliz_app/providers/address_provider.dart';
 import 'package:dayliz_app/theme/app_spacing.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/widgets/buttons/dayliz_button.dart';
-
-// Temporary provider for addresses - to be replaced with actual address repository
-final addressesProvider = StateProvider<List<Address>>((ref) {
-  return [
-    Address(
-      id: '1',
-      name: 'John Doe',
-      street: '123 Main Street, Apartment 4B',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      postalCode: '400001',
-      country: 'India',
-      phone: '+91 9876543210',
-      isDefault: true,
-    ),
-    Address(
-      id: '2',
-      name: 'John Doe',
-      street: '456 Park Avenue',
-      city: 'Bangalore',
-      state: 'Karnataka',
-      postalCode: '560001',
-      country: 'India',
-      phone: '+91 9876543210',
-      additionalInfo: 'Near Central Park',
-    ),
-  ];
-});
+import 'package:dayliz_app/widgets/loaders/dayliz_shimmer.dart';
 
 class AddressListScreen extends ConsumerWidget {
   final bool isSelectable;
@@ -44,31 +18,100 @@ class AddressListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final addresses = ref.watch(addressesProvider);
+    final addressesState = ref.watch(addressNotifierProvider);
     final theme = Theme.of(context);
     
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Addresses'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (isSelectable) {
+              Navigator.of(context).pop();
+            } else {
+              context.go('/home');
+            }
+          },
+        ),
       ),
-      body: addresses.isEmpty
-          ? _buildEmptyState(context)
-          : ListView.separated(
-              padding: AppSpacing.paddingMD,
-              itemCount: addresses.length,
-              separatorBuilder: (context, index) => const Divider(),
-              itemBuilder: (context, index) {
-                final address = addresses[index];
-                return _buildAddressItem(
-                  context,
-                  ref,
-                  address,
-                );
-              },
-            ),
+      body: addressesState.when(
+        loading: () => _buildLoadingState(),
+        error: (error, stack) => _buildErrorState(context, error),
+        data: (addresses) => addresses.isEmpty
+            ? _buildEmptyState(context)
+            : ListView.separated(
+                padding: AppSpacing.paddingMD,
+                itemCount: addresses.length,
+                separatorBuilder: (context, index) => const Divider(),
+                itemBuilder: (context, index) {
+                  final address = addresses[index];
+                  return _buildAddressItem(
+                    context,
+                    ref,
+                    address,
+                  );
+                },
+              ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _navigateToAddAddress(context, ref),
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return ListView.builder(
+      padding: AppSpacing.paddingMD,
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: AppSpacing.paddingVSM,
+          child: DaylizShimmer(
+            height: 150,
+            width: double.infinity,
+            borderRadius: 8,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, Object error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 80,
+            color: Theme.of(context).colorScheme.error.withOpacity(0.5),
+          ),
+          AppSpacing.vMD,
+          Text(
+            'Failed to load addresses',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          AppSpacing.vSM,
+          Padding(
+            padding: AppSpacing.paddingHLG,
+            child: Text(
+              'There was a problem loading your addresses. Please try again.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondaryColor,
+              ),
+            ),
+          ),
+          AppSpacing.vLG,
+          DaylizButton(
+            label: 'Try Again',
+            onPressed: () => ref.read(addressNotifierProvider.notifier).loadAddresses(),
+            leadingIcon: Icons.refresh,
+            type: DaylizButtonType.primary,
+          ),
+        ],
       ),
     );
   }
@@ -104,7 +147,7 @@ class AddressListScreen extends ConsumerWidget {
           AppSpacing.vLG,
           DaylizButton(
             label: 'Add New Address',
-            onPressed: () => _navigateToAddAddress(context, null),
+            onPressed: () => _navigateToAddAddress(context, ref),
             leadingIcon: Icons.add,
             type: DaylizButtonType.primary,
           ),
@@ -239,10 +282,7 @@ class AddressListScreen extends ConsumerWidget {
     final result = await context.push<Address>('/address-form');
     
     if (result != null && ref != null) {
-      ref.read(addressesProvider.notifier).state = [
-        ...ref.read(addressesProvider),
-        result,
-      ];
+      ref.read(addressNotifierProvider.notifier).addAddress(result);
     }
   }
 
@@ -254,12 +294,7 @@ class AddressListScreen extends ConsumerWidget {
     final result = await context.push<Address>('/address-form', extra: address);
     
     if (result != null) {
-      final addresses = ref.read(addressesProvider);
-      final updatedAddresses = addresses.map((addr) {
-        return addr.id == result.id ? result : addr;
-      }).toList();
-      
-      ref.read(addressesProvider.notifier).state = updatedAddresses;
+      ref.read(addressNotifierProvider.notifier).updateAddress(result);
     }
   }
 
@@ -279,23 +314,32 @@ class AddressListScreen extends ConsumerWidget {
             child: const Text('CANCEL'),
           ),
           TextButton(
-            onPressed: () {
-              // Delete address from list
-              final addresses = ref.read(addressesProvider);
-              final updatedAddresses = addresses.where(
-                (addr) => addr.id != address.id
-              ).toList();
-              
-              ref.read(addressesProvider.notifier).state = updatedAddresses;
-              
+            onPressed: () async {
               Navigator.of(context).pop();
-              
-              // Show success message
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Address deleted successfully'),
-                ),
-              );
+              if (address.id != null) {
+                try {
+                  await ref.read(addressNotifierProvider.notifier).deleteAddress(address.id!);
+                  
+                  if (!context.mounted) return;
+                  
+                  // Show success message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Address deleted successfully'),
+                    ),
+                  );
+                } catch (e) {
+                  if (!context.mounted) return;
+                  
+                  // Show error message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting address: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: Text(
               'DELETE',
@@ -311,24 +355,30 @@ class AddressListScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Address address,
-  ) {
-    final addresses = ref.read(addressesProvider);
-    final updatedAddresses = addresses.map((addr) {
-      if (addr.id == address.id) {
-        return addr.copyWith(isDefault: true);
-      } else if (addr.isDefault) {
-        return addr.copyWith(isDefault: false);
+  ) async {
+    if (address.id != null) {
+      try {
+        await ref.read(addressNotifierProvider.notifier).setDefaultAddress(address.id!);
+        
+        if (!context.mounted) return;
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Default address updated'),
+          ),
+        );
+      } catch (e) {
+        if (!context.mounted) return;
+        
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error setting default address: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-      return addr;
-    }).toList();
-    
-    ref.read(addressesProvider.notifier).state = updatedAddresses;
-    
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Default address updated'),
-      ),
-    );
+    }
   }
 } 
