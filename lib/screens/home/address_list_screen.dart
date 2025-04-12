@@ -12,9 +12,9 @@ class AddressListScreen extends ConsumerWidget {
   final bool isSelectable;
 
   const AddressListScreen({
-    Key? key,
+    super.key,
     this.isSelectable = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,25 +35,25 @@ class AddressListScreen extends ConsumerWidget {
           },
         ),
       ),
-      body: addressesState.when(
-        loading: () => _buildLoadingState(),
-        error: (error, stack) => _buildErrorState(context, error),
-        data: (addresses) => addresses.isEmpty
-            ? _buildEmptyState(context)
-            : ListView.separated(
-                padding: AppSpacing.paddingMD,
-                itemCount: addresses.length,
-                separatorBuilder: (context, index) => const Divider(),
-                itemBuilder: (context, index) {
-                  final address = addresses[index];
-                  return _buildAddressItem(
-                    context,
-                    ref,
-                    address,
-                  );
-                },
-              ),
-      ),
+      body: addressesState.isLoading 
+          ? _buildLoadingState()
+          : addressesState.error != null 
+              ? _buildErrorState(context, addressesState.error!, ref)
+              : addressesState.addresses.isEmpty
+                  ? _buildEmptyState(context, ref)
+                  : ListView.separated(
+                      padding: AppSpacing.paddingMD,
+                      itemCount: addressesState.addresses.length,
+                      separatorBuilder: (context, index) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final address = addressesState.addresses[index];
+                        return _buildAddressItem(
+                          context,
+                          ref,
+                          address,
+                        );
+                      },
+                    ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _navigateToAddAddress(context, ref),
         child: const Icon(Icons.add),
@@ -78,7 +78,7 @@ class AddressListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorState(BuildContext context, Object error) {
+  Widget _buildErrorState(BuildContext context, Object error, WidgetRef ref) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -107,7 +107,7 @@ class AddressListScreen extends ConsumerWidget {
           AppSpacing.vLG,
           DaylizButton(
             label: 'Try Again',
-            onPressed: () => ref.read(addressNotifierProvider.notifier).loadAddresses(),
+            onPressed: () => ref.read(addressNotifierProvider.notifier).fetchAddresses(),
             leadingIcon: Icons.refresh,
             type: DaylizButtonType.primary,
           ),
@@ -116,7 +116,7 @@ class AddressListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     
     return Center(
@@ -278,24 +278,12 @@ class AddressListScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _navigateToAddAddress(BuildContext context, WidgetRef? ref) async {
-    final result = await context.push<Address>('/address-form');
-    
-    if (result != null && ref != null) {
-      ref.read(addressNotifierProvider.notifier).addAddress(result);
-    }
+  void _navigateToAddAddress(BuildContext context, WidgetRef ref) {
+    context.push('/address/add');
   }
 
-  Future<void> _navigateToEditAddress(
-    BuildContext context,
-    WidgetRef ref,
-    Address address,
-  ) async {
-    final result = await context.push<Address>('/address-form', extra: address);
-    
-    if (result != null) {
-      ref.read(addressNotifierProvider.notifier).updateAddress(result);
-    }
+  void _navigateToEditAddress(BuildContext context, WidgetRef ref, Address address) {
+    context.push('/address/edit/${address.id}');
   }
 
   void _deleteAddress(

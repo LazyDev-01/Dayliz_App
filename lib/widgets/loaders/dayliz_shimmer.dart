@@ -4,22 +4,28 @@ import 'package:dayliz_app/theme/app_theme.dart';
 
 /// A customizable shimmer effect for loading states.
 class DaylizShimmer extends StatelessWidget {
-  final Widget child;
+  final Widget? child;
   final Color? baseColor;
   final Color? highlightColor;
   final Duration duration;
   final ShimmerDirection direction;
   final bool enabled;
+  final double? height;
+  final double? width;
+  final double? borderRadius;
 
   const DaylizShimmer({
-    Key? key,
-    required this.child,
+    super.key,
+    this.child,
     this.baseColor,
     this.highlightColor,
     this.duration = const Duration(milliseconds: 1500),
     this.direction = ShimmerDirection.ltr,
     this.enabled = true,
-  }) : super(key: key);
+    this.height,
+    this.width,
+    this.borderRadius,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,14 +40,23 @@ class DaylizShimmer extends StatelessWidget {
         ? const Color(0xFF3A3A3A) 
         : const Color(0xFFF5F5F5);
     
-    return Shimmer.fromColors(
+    final shimmerWidget = Shimmer.fromColors(
       baseColor: baseColor ?? defaultBaseColor,
       highlightColor: highlightColor ?? defaultHighlightColor,
       period: duration,
       direction: direction,
       enabled: enabled,
-      child: child,
+      child: child ?? Container(
+        width: width ?? double.infinity,
+        height: height ?? 100,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(borderRadius ?? 8),
+        ),
+      ),
     );
+    
+    return shimmerWidget;
   }
 
   /// Creates a shimmer effect for a product card.

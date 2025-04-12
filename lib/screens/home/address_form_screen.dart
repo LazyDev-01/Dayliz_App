@@ -108,15 +108,18 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       // Create address object
       final address = Address(
         id: widget.address?.id,
+        userId: 'current-user-id',
         name: _nameController.text.trim(),
-        street: _streetController.text.trim(),
+        addressLine1: _streetController.text.trim(),
         city: _cityController.text.trim(),
         state: _state,
         postalCode: _postalCodeController.text.trim(),
         country: _country,
-        phone: _phoneController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
         isDefault: _isDefault,
         additionalInfo: _additionalInfoController.text.trim(),
+        street: _streetController.text.trim(),
+        phone: _phoneController.text.trim(),
       );
 
       if (widget.address == null) {

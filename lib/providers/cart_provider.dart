@@ -1,70 +1,104 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/product.dart';
-
-class CartItem {
-  final Product product;
-  int quantity;
-
-  CartItem({
-    required this.product,
-    this.quantity = 1,
-  });
-}
+import 'package:dayliz_app/models/cart_item.dart';
+import 'package:dayliz_app/models/product.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class CartNotifier extends StateNotifier<List<CartItem>> {
-  CartNotifier() : super([]);
+  CartNotifier() : super([]) {
+    _loadCartFromStorage();
+  }
 
-  void addToCart(Product product) {
-    final existingIndex = state.indexWhere((item) => item.product.id == product.id);
-    
-    if (existingIndex >= 0) {
-      // Product already exists in cart, increment quantity
-      final updatedCart = [...state];
-      updatedCart[existingIndex].quantity += 1;
-      state = updatedCart;
-    } else {
-      // Add new product to cart
-      state = [...state, CartItem(product: product)];
+  // Load cart from SharedPreferences
+  Future<void> _loadCartFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cartDataString = prefs.getString('cart_data');
+      
+      if (cartDataString != null) {
+        final List<dynamic> cartData = jsonDecode(cartDataString);
+        state = cartData.map((item) => CartItem.fromJson(item)).toList();
+      }
+    } catch (e) {
+      print('Error loading cart data: $e');
     }
   }
 
-  void removeFromCart(String productId) {
-    state = state.where((item) => item.product.id != productId).toList();
+  // Save cart to SharedPreferences
+  Future<void> _saveCartToStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cartDataString = jsonEncode(state.map((item) => item.toJson()).toList());
+      await prefs.setString('cart_data', cartDataString);
+    } catch (e) {
+      print('Error saving cart data: $e');
+    }
   }
 
+  // Add a product to the cart
+  void addToCart(Product product, {int quantity = 1}) {
+    final existingItemIndex = state.indexWhere((item) => item.productId == product.id);
+    
+    if (existingItemIndex >= 0) {
+      // Update existing item
+      final existingItem = state[existingItemIndex];
+      final updatedItem = existingItem.copyWith(
+        quantity: existingItem.quantity + quantity,
+      );
+      
+      final updatedCart = [...state];
+      updatedCart[existingItemIndex] = updatedItem;
+      
+      state = updatedCart;
+    } else {
+      // Add new item
+      final newItem = CartItem.fromProduct(product, quantity: quantity);
+      state = [...state, newItem];
+    }
+    
+    _saveCartToStorage();
+  }
+
+  // Update item quantity
   void updateQuantity(String productId, int quantity) {
     if (quantity <= 0) {
       removeFromCart(productId);
       return;
     }
-
+    
     state = state.map((item) {
-      if (item.product.id == productId) {
-        return CartItem(product: item.product, quantity: quantity);
+      if (item.productId == productId) {
+        return item.copyWith(quantity: quantity);
       }
       return item;
     }).toList();
+    
+    _saveCartToStorage();
   }
 
+  // Remove an item from the cart
+  void removeFromCart(String productId) {
+    state = state.where((item) => item.productId != productId).toList();
+    _saveCartToStorage();
+  }
+
+  // Clear the entire cart
   void clearCart() {
     state = [];
+    _saveCartToStorage();
   }
 
+  // Get cart total - renamed to totalAmount to match usage in cart_screen.dart
   double get totalAmount {
-    return state.fold(
-      0,
-      (total, item) {
-        double itemPrice = item.product.price;
-        if (item.product.discountPercentage != null) {
-          itemPrice = itemPrice * (1 - (item.product.discountPercentage! / 100));
-        }
-        return total + (itemPrice * item.quantity);
-      },
-    );
+    return state.fold(0, (sum, item) => sum + item.total);
   }
+  
+  // Get original total getter for backward compatibility
+  double get total => totalAmount;
 
+  // Get total number of items
   int get itemCount {
-    return state.fold(0, (total, item) => total + item.quantity);
+    return state.fold(0, (sum, item) => sum + item.quantity);
   }
 }
 

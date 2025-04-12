@@ -110,11 +110,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CheckoutScreen(),
       ),
       GoRoute(
-        path: '/order-confirmation',
+        path: '/order-confirmation/:orderId',
         builder: (context, state) {
-          // Extract the order details from the state parameters
-          final orderDetails = state.extra as Map<String, dynamic>?;
-          return OrderConfirmationScreen(orderDetails: orderDetails ?? {});
+          // Extract the order ID from the state parameters
+          final orderId = state.pathParameters['orderId']!;
+          return OrderConfirmationScreen(orderId: orderId);
         },
       ),
       GoRoute(

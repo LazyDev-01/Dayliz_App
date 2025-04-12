@@ -1,21 +1,86 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dayliz_app/providers/cart_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dayliz_app/models/order.dart';
+import 'package:dayliz_app/providers/order_provider.dart';
 
-class OrderConfirmationScreen extends StatelessWidget {
-  final Map<String, dynamic> orderDetails;
+class OrderConfirmationScreen extends ConsumerWidget {
+  final String orderId;
 
   const OrderConfirmationScreen({
     Key? key,
-    required this.orderDetails,
+    required this.orderId,
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Load order details
+    final orderState = ref.watch(orderNotifierProvider);
+    final order = orderState.selectedOrder;
+    
+    // Show loading if order is not loaded yet
+    if (order == null || order.id != orderId || orderState.isLoading) {
+      // Load the order
+      if (!orderState.isLoading) {
+        ref.read(orderNotifierProvider.notifier).getOrderById(orderId);
+      }
+      
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Order Confirmation'),
+          automaticallyImplyLeading: false,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
+    // If there's an error loading the order
+    if (orderState.error != null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Order Confirmation'),
+          automaticallyImplyLeading: false,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 80,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Failed to load order details',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                orderState.error!,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(orderNotifierProvider.notifier).getOrderById(orderId);
+                },
+                child: const Text('Try Again'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
     // Estimated delivery date (5-7 days from order date)
-    final orderDate = orderDetails['orderDate'] as DateTime;
-    final deliveryDate = orderDate.add(const Duration(days: 5));
+    final deliveryDate = order.createdAt.add(const Duration(days: 5));
     final dateFormat = DateFormat('MMMM dd, yyyy');
     
     return Scaffold(
@@ -53,7 +118,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Order ID: ${orderDetails['orderId']}',
+                      'Order ID: ${order.id}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                       ),
@@ -107,7 +172,7 @@ class OrderConfirmationScreen extends StatelessWidget {
               const SizedBox(height: 16),
               
               // Order Items
-              ..._buildOrderItems(),
+              ..._buildOrderItems(order.items),
               const Divider(height: 32),
 
               // Price breakdown
@@ -115,7 +180,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Subtotal'),
-                  Text('\$${orderDetails['subtotal'].toStringAsFixed(2)}'),
+                  Text('\$${(order.totalAmount * 0.9).toStringAsFixed(2)}'),
                 ],
               ),
               const SizedBox(height: 8),
@@ -123,15 +188,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Shipping'),
-                  orderDetails['shipping'] > 0
-                      ? Text('\$${orderDetails['shipping'].toStringAsFixed(2)}')
-                      : const Text(
-                          'FREE',
-                          style: TextStyle(
-                            color: Colors.green,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                  Text('\$${5.99.toStringAsFixed(2)}'),
                 ],
               ),
               const SizedBox(height: 8),
@@ -139,7 +196,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Tax'),
-                  Text('\$${orderDetails['tax'].toStringAsFixed(2)}'),
+                  Text('\$${(order.totalAmount * 0.07).toStringAsFixed(2)}'),
                 ],
               ),
               const Divider(height: 24),
@@ -153,7 +210,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '\$${orderDetails['total'].toStringAsFixed(2)}',
+                    '\$${order.totalAmount.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -172,13 +229,16 @@ class OrderConfirmationScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              _buildInfoRow('Name', orderDetails['shippingAddress']['name']),
-              _buildInfoRow('Phone', orderDetails['shippingAddress']['phone']),
-              _buildInfoRow('Address', orderDetails['shippingAddress']['address']),
-              _buildInfoRow(
-                'City/ZIP',
-                '${orderDetails['shippingAddress']['city']}, ${orderDetails['shippingAddress']['zip']}',
-              ),
+              if (order.shippingAddress != null) ...[
+                _buildInfoRow('Name', order.shippingAddress!.fullName),
+                _buildInfoRow('Phone', order.shippingAddress!.phoneNumber),
+                _buildInfoRow('Address', order.shippingAddress!.addressLine1),
+                _buildInfoRow(
+                  'City/ZIP',
+                  '${order.shippingAddress!.city}, ${order.shippingAddress!.postalCode}',
+                ),
+              ] else
+                _buildInfoRow('Address', 'No shipping address provided'),
               const SizedBox(height: 24),
 
               // Payment Method
@@ -190,7 +250,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              _buildInfoRow('Method', orderDetails['paymentMethod']),
+              _buildInfoRow('Method', _getPaymentMethodName(order.paymentMethod)),
               const SizedBox(height: 32),
 
               // Continue Shopping Button
@@ -214,10 +274,27 @@ class OrderConfirmationScreen extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildOrderItems() {
-    final items = orderDetails['items'] as List<CartItem>;
+  String _getPaymentMethodName(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.creditCard:
+        return 'Credit Card';
+      case PaymentMethod.debitCard:
+        return 'Debit Card';
+      case PaymentMethod.wallet:
+        return 'Digital Wallet';
+      case PaymentMethod.cashOnDelivery:
+        return 'Cash on Delivery';
+      case PaymentMethod.upi:
+        return 'UPI';
+      case PaymentMethod.netBanking:
+        return 'Net Banking';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  List<Widget> _buildOrderItems(List<OrderItem> items) {
     return items.map<Widget>((item) {
-      final product = item.product;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: Row(
@@ -230,7 +307,7 @@ class OrderConfirmationScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 image: DecorationImage(
-                  image: _getImageProvider(product.imageUrl),
+                  image: _getImageProvider(item.imageUrl),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -243,7 +320,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product.name,
+                    item.name,
                     style: const TextStyle(
                       fontWeight: FontWeight.w500,
                     ),
@@ -261,7 +338,7 @@ class OrderConfirmationScreen extends StatelessWidget {
             
             // Price
             Text(
-              '\$${(product.price * item.quantity).toStringAsFixed(2)}',
+              '\$${(item.price * item.quantity).toStringAsFixed(2)}',
               style: const TextStyle(
                 fontWeight: FontWeight.w500,
               ),

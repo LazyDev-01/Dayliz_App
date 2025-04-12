@@ -1,105 +1,171 @@
-class Address {
+import 'package:equatable/equatable.dart';
+
+class Address extends Equatable {
   final String? id;
+  final String userId;
   final String name;
-  final String street;
+  final String addressLine1;
+  final String? addressLine2;
   final String city;
   final String state;
-  final String postalCode;
   final String country;
-  final String? phone;
+  final String postalCode;
+  final String phoneNumber;
   final bool isDefault;
-  final String? additionalInfo;
   final double? latitude;
   final double? longitude;
+  final String? landmark;
+  final String? addressType; // 'home', 'work', 'other'
+  final String? additionalInfo;
+  final String? street;
+  final String? phone;
 
-  Address({
+  const Address({
     this.id,
+    required this.userId,
     required this.name,
-    required this.street,
+    required this.addressLine1,
+    this.addressLine2,
     required this.city,
     required this.state,
-    required this.postalCode,
     required this.country,
-    this.phone,
+    required this.postalCode,
+    required this.phoneNumber,
     this.isDefault = false,
-    this.additionalInfo,
     this.latitude,
     this.longitude,
+    this.landmark,
+    this.addressType = 'home',
+    this.additionalInfo,
+    this.street,
+    this.phone,
   });
 
   Address copyWith({
     String? id,
+    String? userId,
     String? name,
-    String? street,
+    String? addressLine1,
+    String? addressLine2,
     String? city,
     String? state,
-    String? postalCode,
     String? country,
-    String? phone,
+    String? postalCode,
+    String? phoneNumber,
     bool? isDefault,
-    String? additionalInfo,
     double? latitude,
     double? longitude,
+    String? landmark,
+    String? addressType,
+    String? additionalInfo,
+    String? street,
+    String? phone,
   }) {
     return Address(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       name: name ?? this.name,
-      street: street ?? this.street,
+      addressLine1: addressLine1 ?? this.addressLine1,
+      addressLine2: addressLine2 ?? this.addressLine2,
       city: city ?? this.city,
       state: state ?? this.state,
-      postalCode: postalCode ?? this.postalCode,
       country: country ?? this.country,
-      phone: phone ?? this.phone,
+      postalCode: postalCode ?? this.postalCode,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       isDefault: isDefault ?? this.isDefault,
-      additionalInfo: additionalInfo ?? this.additionalInfo,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      landmark: landmark ?? this.landmark,
+      addressType: addressType ?? this.addressType,
+      additionalInfo: additionalInfo ?? this.additionalInfo,
+      street: street ?? this.street,
+      phone: phone ?? this.phone,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
+      'user_id': userId,
       'name': name,
-      'street': street,
+      'address_line1': addressLine1,
+      'address_line2': addressLine2,
       'city': city,
       'state': state,
-      'postal_code': postalCode,
       'country': country,
-      'phone': phone,
+      'postal_code': postalCode,
+      'phone_number': phoneNumber,
       'is_default': isDefault,
-      'additional_info': additionalInfo,
       'latitude': latitude,
       'longitude': longitude,
+      'landmark': landmark,
+      'address_type': addressType,
+      'additional_info': additionalInfo,
+      if (street != null) 'street': street,
+      if (phone != null) 'phone': phone,
     };
   }
 
   factory Address.fromJson(Map<String, dynamic> json) {
     return Address(
       id: json['id'],
+      userId: json['user_id'] ?? '',
       name: json['name'] ?? '',
-      street: json['street'] ?? '',
+      addressLine1: json['address_line1'] ?? '',
+      addressLine2: json['address_line2'],
       city: json['city'] ?? '',
       state: json['state'] ?? '',
-      postalCode: json['postal_code'] ?? '',
       country: json['country'] ?? '',
-      phone: json['phone'],
+      postalCode: json['postal_code'] ?? '',
+      phoneNumber: json['phone_number'] ?? '',
       isDefault: json['is_default'] ?? false,
-      additionalInfo: json['additional_info'],
       latitude: json['latitude'],
       longitude: json['longitude'],
+      landmark: json['landmark'],
+      addressType: json['address_type'] ?? 'home',
+      additionalInfo: json['additional_info'],
+      street: json['street'],
+      phone: json['phone'],
     );
   }
 
-  String get formattedAddress {
+  @override
+  List<Object?> get props => [
+    id, 
+    userId, 
+    name, 
+    addressLine1, 
+    addressLine2, 
+    city, 
+    state, 
+    country, 
+    postalCode, 
+    phoneNumber, 
+    isDefault,
+    latitude,
+    longitude,
+    landmark,
+    addressType,
+    additionalInfo,
+    street,
+    phone,
+  ];
+
+  String get fullAddress {
     final parts = [
-      street,
-      city,
-      state,
-      postalCode,
-      country,
+      addressLine1,
+      if (addressLine2 != null && addressLine2!.isNotEmpty) addressLine2,
+      if (landmark != null && landmark!.isNotEmpty) 'Landmark: $landmark',
+      '$city, $state',
+      '$country - $postalCode',
     ];
-    return parts.where((part) => part.isNotEmpty).join(', ');
+    return parts.join(', ');
+  }
+
+  String get formattedAddress {
+    return street != null ? 
+      '$street, $city, $state, $postalCode, $country' : 
+      '$addressLine1, ${addressLine2 != null ? "$addressLine2, " : ""}$city, $state, $postalCode, $country';
   }
 
   String get shortAddress {
