@@ -247,20 +247,6 @@ class SignupScreenState extends ConsumerState<SignupScreen> {
                 ),
                 AppSpacing.vMD,
                 
-                // Phone sign up
-                DaylizButton(
-                  label: 'Sign up with Phone',
-                  onPressed: () {
-                    debugPrint('📱 Navigating to phone verification screen from signup');
-                    context.go('/phone-verification');
-                  },
-                  leadingIcon: Icons.phone_android,
-                  type: DaylizButtonType.secondary,
-                  size: DaylizButtonSize.large,
-                  isFullWidth: true,
-                ),
-                AppSpacing.vMD,
-                
                 // Terms and conditions
                 Text(
                   'By signing up, you agree to our Terms of Service and Privacy Policy',

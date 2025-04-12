@@ -95,61 +95,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Sign in with phone and password
-  Future<User?> signInWithPhone({
-    required String phone,
-    required String password,
-  }) async {
-    state = AuthState.loading;
-    
-    try {
-      final response = await AuthService.instance.signInWithPhone(
-        phone: phone,
-        password: password,
-      );
-      
-      state = AuthState.authenticated;
-      return response.user;
-    } catch (e) {
-      state = AuthState.unauthenticated;
-      rethrow;
-    }
-  }
-
-  /// Send OTP to phone
-  Future<void> sendOtp({
-    required String phone,
-  }) async {
-    try {
-      await AuthService.instance.sendOtp(
-        phone: phone,
-      );
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// Verify OTP
-  Future<User?> verifyOtp({
-    required String phone,
-    required String token,
-  }) async {
-    state = AuthState.loading;
-    
-    try {
-      final response = await AuthService.instance.verifyOtp(
-        phone: phone,
-        token: token,
-      );
-      
-      state = AuthState.authenticated;
-      return response.user;
-    } catch (e) {
-      state = AuthState.unauthenticated;
-      rethrow;
-    }
-  }
-
   /// Reset password
   Future<void> resetPassword({
     required String email,
