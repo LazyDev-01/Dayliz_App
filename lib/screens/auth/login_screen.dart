@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dayliz_app/screens/auth/signup_screen.dart';
-import 'package:dayliz_app/screens/home/main_screen.dart';
+import 'package:dayliz_app/providers/auth_provider.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
-import 'package:dayliz_app/widgets/custom_button.dart';
+import 'package:dayliz_app/theme/app_spacing.dart';
+import 'package:dayliz_app/utils/validators.dart';
+import 'package:dayliz_app/widgets/buttons/dayliz_button.dart';
+import 'package:dayliz_app/widgets/inputs/dayliz_text_field.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -18,7 +20,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
-  bool _obscurePassword = true;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -34,24 +36,24 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
 
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
 
     try {
-      // TODO: Implement actual login logic with Supabase
-      await Future.delayed(const Duration(seconds: 1)); // Simulating API call
+      await ref.read(authNotifierProvider.notifier).signInWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
       
       if (!mounted) return;
       
-      context.go('/home');
+      // Navigation will be handled by the router's redirect
     } catch (e) {
       if (!mounted) return;
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login failed: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      setState(() {
+        _errorMessage = _formatErrorMessage(e.toString());
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -61,22 +63,44 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  String _formatErrorMessage(String error) {
+    // Format Supabase error messages for better user experience
+    if (error.contains('Invalid login credentials')) {
+      return 'Invalid email or password';
+    } else if (error.contains('rate limit')) {
+      return 'Too many login attempts. Please try again later';
+    } else {
+      return 'Login failed. Please try again';
+    }
+  }
+
   void _navigateToSignup() {
     context.go('/signup');
   }
 
+  void _navigateToForgotPassword() {
+    // TODO: Implement forgot password navigation
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Forgot password functionality coming soon!'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: AppSpacing.paddingLG,
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 40),
+                AppSpacing.vXL,
                 // App Logo
                 Center(
                   child: Container(
@@ -93,124 +117,158 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                const Text(
+                AppSpacing.vLG,
+                Text(
                   'Welcome Back!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimaryColor,
-                  ),
+                  style: theme.textTheme.displaySmall,
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                AppSpacing.vXS,
+                Text(
                   'Login to continue shopping',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: theme.textTheme.bodyLarge?.copyWith(
                     color: AppTheme.textSecondaryColor,
                   ),
                 ),
-                const SizedBox(height: 40),
-                // Email field
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                // Password field
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                AppSpacing.vXL,
+                
+                // Error message
+                if (_errorMessage != null) ...[
+                  Container(
+                    padding: AppSpacing.paddingMD,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.error.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: theme.colorScheme.error,
+                        ),
+                        AppSpacing.hSM,
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
+                  AppSpacing.vMD,
+                ],
+                
+                // Email field
+                DaylizTextField(
+                  controller: _emailController,
+                  label: 'Email',
+                  hint: 'Enter your email',
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  prefixIcon: Icons.email_outlined,
+                  validator: Validators.email,
+                  errorText: null, // Will be handled by the form validator
                 ),
-                const SizedBox(height: 8),
+                AppSpacing.vMD,
+                
+                // Password field
+                DaylizTextField(
+                  controller: _passwordController,
+                  label: 'Password',
+                  hint: 'Enter your password',
+                  obscureText: true,
+                  textInputAction: TextInputAction.done,
+                  prefixIcon: Icons.lock_outline,
+                  validator: Validators.password,
+                  errorText: null, // Will be handled by the form validator
+                ),
+                AppSpacing.vSM,
+                
                 // Forgot password
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      // TODO: Implement forgot password
-                    },
-                    child: const Text('Forgot Password?'),
+                    onPressed: _navigateToForgotPassword,
+                    child: Text(
+                      'Forgot Password?',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.primaryColor,
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                AppSpacing.vLG,
+                
                 // Login button
-                _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(),
-                      )
-                    : ElevatedButton(
-                        onPressed: _login,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text(
-                          'Login',
-                          style: TextStyle(fontSize: 16),
+                DaylizButton(
+                  label: 'Login',
+                  onPressed: _isLoading ? null : _login,
+                  isLoading: _isLoading,
+                  type: DaylizButtonType.primary,
+                  size: DaylizButtonSize.large,
+                  isFullWidth: true,
+                ),
+                AppSpacing.vMD,
+                
+                // Or divider
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: theme.dividerColor)),
+                    Padding(
+                      padding: AppSpacing.paddingHSM,
+                      child: Text(
+                        'OR',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondaryColor,
                         ),
                       ),
-                const SizedBox(height: 16),
+                    ),
+                    Expanded(child: Divider(color: theme.dividerColor)),
+                  ],
+                ),
+                AppSpacing.vMD,
+                
                 // Google sign in
-                OutlinedButton.icon(
+                DaylizButton(
+                  label: 'Continue with Google',
                   onPressed: () {
                     // TODO: Implement Google sign in
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Google Sign In coming soon!'),
+                      ),
+                    );
                   },
-                  icon: const Icon(Icons.g_mobiledata, size: 24),
-                  label: const Text('Continue with Google'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
+                  leadingIcon: Icons.g_mobiledata,
+                  type: DaylizButtonType.secondary,
+                  size: DaylizButtonSize.large,
+                  isFullWidth: true,
                 ),
-                const SizedBox(height: 24),
+                AppSpacing.vLG,
+                
                 // Sign up link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'Don\'t have an account? ',
-                      style: TextStyle(color: AppTheme.textSecondaryColor),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondaryColor,
+                      ),
                     ),
                     TextButton(
                       onPressed: _navigateToSignup,
-                      child: const Text('Sign Up'),
+                      child: Text(
+                        'Sign Up',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),

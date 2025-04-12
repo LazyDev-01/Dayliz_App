@@ -1,44 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:dayliz_app/providers/auth_provider.dart';
+import 'package:dayliz_app/providers/theme_provider.dart';
+import 'package:dayliz_app/screens/home/address_list_screen.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
-import 'package:dayliz_app/screens/auth/login_screen.dart';
-
-// Mock user provider
-final userProvider = StateProvider<User?>((ref) {
-  return User(
-    id: '1',
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+91 9876543210',
-    address: '123 Main Street, Mumbai, India',
-  );
-});
-
-class User {
-  final String id;
-  final String name;
-  final String email;
-  final String? phone;
-  final String? address;
-  final String? profilePicture;
-
-  User({
-    required this.id,
-    required this.name,
-    required this.email,
-    this.phone,
-    this.address,
-    this.profilePicture,
-  });
-}
+import 'package:dayliz_app/theme/app_spacing.dart';
+import 'package:dayliz_app/widgets/buttons/dayliz_button.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(userProvider);
-
+    final theme = Theme.of(context);
+    final user = ref.watch(currentUserProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Profile'),
@@ -47,104 +26,147 @@ class ProfileScreen extends ConsumerWidget {
             icon: const Icon(Icons.edit),
             onPressed: () {
               // TODO: Navigate to edit profile
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Edit profile feature coming soon!'),
+                ),
+              );
             },
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildProfileHeader(context, user),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Account'),
-              _buildSettingsItem(
-                context,
-                icon: Icons.shopping_bag_outlined,
-                title: 'My Orders',
-                onTap: () {
-                  // TODO: Navigate to orders
-                },
+      body: user == null
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Padding(
+                padding: AppSpacing.paddingLG,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildProfileHeader(context, user),
+                    AppSpacing.vLG,
+                    _buildSectionTitle(context, 'Account'),
+                    _buildSettingsItem(
+                      context,
+                      icon: Icons.shopping_bag_outlined,
+                      title: 'My Orders',
+                      onTap: () {
+                        // TODO: Navigate to orders
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Orders feature coming soon!'),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildSettingsItem(
+                      context,
+                      icon: Icons.location_on_outlined,
+                      title: 'My Addresses',
+                      onTap: () {
+                        context.go('/addresses');
+                      },
+                    ),
+                    _buildSettingsItem(
+                      context,
+                      icon: Icons.payment_outlined,
+                      title: 'Payment Methods',
+                      onTap: () {
+                        // TODO: Navigate to payment methods
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Payment methods feature coming soon!'),
+                          ),
+                        );
+                      },
+                    ),
+                    const Divider(),
+                    _buildSectionTitle(context, 'Settings'),
+                    _buildSettingsItem(
+                      context,
+                      icon: Icons.dark_mode_outlined,
+                      title: 'Dark Mode',
+                      trailing: Switch(
+                        value: themeMode == ThemeMode.dark,
+                        onChanged: (value) {
+                          ref.read(themeModeProvider.notifier).toggleThemeMode();
+                        },
+                      ),
+                      onTap: () {
+                        ref.read(themeModeProvider.notifier).toggleThemeMode();
+                      },
+                    ),
+                    _buildSettingsItem(
+                      context,
+                      icon: Icons.language_outlined,
+                      title: 'Language',
+                      value: 'English',
+                      onTap: () {
+                        // TODO: Navigate to language settings
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Language settings coming soon!'),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildSettingsItem(
+                      context,
+                      icon: Icons.notifications_outlined,
+                      title: 'Notifications',
+                      onTap: () {
+                        // TODO: Navigate to notification settings
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Notification settings coming soon!'),
+                          ),
+                        );
+                      },
+                    ),
+                    const Divider(),
+                    _buildSectionTitle(context, 'Support'),
+                    _buildSettingsItem(
+                      context,
+                      icon: Icons.help_outline,
+                      title: 'Help Center',
+                      onTap: () {
+                        // TODO: Navigate to help center
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Help center coming soon!'),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildSettingsItem(
+                      context,
+                      icon: Icons.info_outline,
+                      title: 'About Us',
+                      onTap: () {
+                        // TODO: Navigate to about us
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('About us coming soon!'),
+                          ),
+                        );
+                      },
+                    ),
+                    const Divider(),
+                    AppSpacing.vMD,
+                    _buildLogoutButton(context, ref),
+                    AppSpacing.vLG,
+                  ],
+                ),
               ),
-              _buildSettingsItem(
-                context,
-                icon: Icons.location_on_outlined,
-                title: 'My Addresses',
-                onTap: () {
-                  // TODO: Navigate to addresses
-                },
-              ),
-              _buildSettingsItem(
-                context,
-                icon: Icons.payment_outlined,
-                title: 'Payment Methods',
-                onTap: () {
-                  // TODO: Navigate to payment methods
-                },
-              ),
-              const Divider(),
-              _buildSectionTitle('Settings'),
-              _buildSettingsItem(
-                context,
-                icon: Icons.language_outlined,
-                title: 'Language',
-                value: 'English',
-                onTap: () {
-                  // TODO: Navigate to language settings
-                },
-              ),
-              _buildSettingsItem(
-                context,
-                icon: Icons.notifications_outlined,
-                title: 'Notifications',
-                onTap: () {
-                  // TODO: Navigate to notification settings
-                },
-              ),
-              _buildSettingsItem(
-                context,
-                icon: Icons.security_outlined,
-                title: 'Privacy & Security',
-                onTap: () {
-                  // TODO: Navigate to privacy settings
-                },
-              ),
-              const Divider(),
-              _buildSectionTitle('Support'),
-              _buildSettingsItem(
-                context,
-                icon: Icons.help_outline,
-                title: 'Help Center',
-                onTap: () {
-                  // TODO: Navigate to help center
-                },
-              ),
-              _buildSettingsItem(
-                context,
-                icon: Icons.info_outline,
-                title: 'About Us',
-                onTap: () {
-                  // TODO: Navigate to about us
-                },
-              ),
-              const Divider(),
-              const SizedBox(height: 16),
-              _buildLogoutButton(context, ref),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context, User? user) {
-    if (user == null) {
-      return const SizedBox();
-    }
-
+  Widget _buildProfileHeader(BuildContext context, User user) {
+    final theme = Theme.of(context);
+    final metadata = user.userMetadata;
+    final fullName = metadata?['full_name'] as String? ?? 'User';
+    
     return Column(
       children: [
         Center(
@@ -152,43 +174,35 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               CircleAvatar(
                 radius: 50,
-                backgroundColor: AppTheme.primaryLightColor,
-                backgroundImage: user.profilePicture != null
-                    ? NetworkImage(user.profilePicture!)
-                    : null,
-                child: user.profilePicture == null
-                    ? Text(
-                        user.name.substring(0, 1).toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
-                        ),
-                      )
-                    : null,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Text(
+                  fullName.isNotEmpty ? fullName.substring(0, 1).toUpperCase() : 'U',
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.vMD,
               Text(
-                user.name,
-                style: const TextStyle(
-                  fontSize: 24,
+                fullName,
+                style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 4),
+              AppSpacing.vXS,
               Text(
-                user.email,
-                style: const TextStyle(
-                  fontSize: 16,
+                user.email ?? '',
+                style: theme.textTheme.bodyMedium?.copyWith(
                   color: AppTheme.textSecondaryColor,
                 ),
               ),
               if (user.phone != null) ...[
-                const SizedBox(height: 4),
+                AppSpacing.vXS,
                 Text(
                   user.phone!,
-                  style: const TextStyle(
-                    fontSize: 14,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: AppTheme.textSecondaryColor,
                   ),
                 ),
@@ -200,13 +214,14 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    final theme = Theme.of(context);
+    
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: AppSpacing.paddingVSM,
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 18,
+        style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -218,22 +233,25 @@ class ProfileScreen extends ConsumerWidget {
     required IconData icon,
     required String title,
     String? value,
+    Widget? trailing,
     VoidCallback? onTap,
   }) {
+    final theme = Theme.of(context);
+    
     return ListTile(
       leading: Icon(
         icon,
-        color: AppTheme.primaryColor,
+        color: theme.colorScheme.primary,
       ),
       title: Text(title),
-      trailing: value != null
+      trailing: trailing ?? (value != null
           ? Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textSecondaryColor,
               ),
             )
-          : const Icon(Icons.chevron_right),
+          : const Icon(Icons.chevron_right)),
       onTap: onTap,
     );
   }
@@ -241,41 +259,46 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
     return SizedBox(
       width: double.infinity,
-      child: OutlinedButton.icon(
+      child: DaylizButton(
+        label: 'Log Out',
         onPressed: () {
           _showLogoutDialog(context, ref);
         },
-        icon: const Icon(Icons.logout),
-        label: const Text('Log Out'),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.red,
-          side: const BorderSide(color: Colors.red),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-        ),
+        leadingIcon: Icons.logout,
+        type: DaylizButtonType.danger,
+        size: DaylizButtonSize.large,
+        isFullWidth: true,
       ),
     );
   }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Log Out'),
-        content: const Text('Are you sure you want to log out?'),
+        title: Text('Log Out', style: theme.textTheme.titleLarge),
+        content: Text(
+          'Are you sure you want to log out?',
+          style: theme.textTheme.bodyMedium,
+        ),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
             },
-            child: const Text('CANCEL'),
+            child: Text('CANCEL', style: theme.textTheme.labelLarge),
           ),
           TextButton(
             onPressed: () {
               _logout(context, ref);
             },
-            child: const Text(
+            child: Text(
               'LOG OUT',
-              style: TextStyle(color: Colors.red),
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.error,
+              ),
             ),
           ),
         ],
@@ -284,13 +307,11 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   void _logout(BuildContext context, WidgetRef ref) {
-    // Clear user data
-    ref.read(userProvider.notifier).state = null;
+    Navigator.of(context).pop(); // Close dialog
     
-    // Navigate to login screen
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-      (route) => false,
-    );
+    // Sign out using AuthNotifier
+    ref.read(authNotifierProvider.notifier).signOut();
+    
+    // Navigation will be handled by the router's redirect
   }
 } 
