@@ -44,9 +44,9 @@ The "Serial Stacked Sprint" approach involves:
 - [ ] Create FastAPI project structure
 - [ ] Setup database with SQLAlchemy ORM
 - [x] Implement JWT authentication
-- [ ] Define core models (User, Product, Order)
-- [ ] Create migration system
-- [ ] Implement basic CRUD operations
+- [x] Define core models (User, Product, Order)
+- [x] Create migration system
+- [x] Implement basic CRUD operations
 
 ## Phase 2: Product Browsing + UI Polish (2-3 weeks)
 

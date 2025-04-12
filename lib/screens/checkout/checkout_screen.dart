@@ -49,8 +49,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 Expanded(
                   child: Stepper(
                     type: StepperType.horizontal,
-                    currentStep: _currentStep,
-                    onStepContinue: () {
+        currentStep: _currentStep,
+        onStepContinue: () {
                       if (_currentStep < 2) {
                         if (_currentStep == 0 && selectedAddress == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -58,20 +58,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           );
                           return;
                         }
-                        setState(() {
+              setState(() {
                           _currentStep++;
-                        });
+              });
                       } else {
-                        _placeOrder();
-                      }
-                    },
-                    onStepCancel: () {
-                      if (_currentStep > 0) {
-                        setState(() {
+            _placeOrder();
+          }
+        },
+        onStepCancel: () {
+          if (_currentStep > 0) {
+            setState(() {
                           _currentStep--;
-                        });
-                      }
-                    },
+            });
+          }
+        },
                     controlsBuilder: (context, details) {
                       return Padding(
                         padding: const EdgeInsets.only(top: 16.0),
@@ -93,28 +93,28 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           ],
                         ),
                       );
-                    },
-                    steps: [
-                      Step(
+        },
+        steps: [
+          Step(
                         title: const Text('Address'),
                         content: _buildAddressStep(),
-                        isActive: _currentStep >= 0,
-                      ),
-                      Step(
+            isActive: _currentStep >= 0,
+          ),
+          Step(
                         title: const Text('Payment'),
                         content: _buildPaymentStep(),
-                        isActive: _currentStep >= 1,
-                      ),
-                      Step(
+            isActive: _currentStep >= 1,
+          ),
+          Step(
                         title: const Text('Review'),
-                        content: _buildOrderSummary(),
-                        isActive: _currentStep >= 2,
+            content: _buildOrderSummary(),
+            isActive: _currentStep >= 2,
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -146,9 +146,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Widget _buildAddressStep() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
           'Select a delivery address',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
@@ -182,7 +182,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+              children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -207,7 +207,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
-                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -253,7 +253,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final shipping = 5.99; // Example shipping cost
     final tax = subtotal * 0.07; // Example tax rate (7%)
     final total = subtotal + shipping + tax;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -286,8 +286,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           const Text(
             'Shipping Address',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
+        ),
+        const SizedBox(height: 8),
           Text(selectedAddress.name),
           Text(selectedAddress.formattedAddress),
           if (selectedAddress.phone != null)
@@ -318,7 +318,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          children: [
           Container(
             width: 60,
             height: 60,
@@ -338,15 +338,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 Text(
                   item.name,
                   style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
+            ),
+            Text(
                   '${item.quantity} x \$${item.price.toStringAsFixed(2)}',
                   style: TextStyle(
                     color: Colors.grey[600],
-                  ),
-                ),
-              ],
+              ),
             ),
+          ],
+        ),
           ),
           Text(
             '\$${(item.price * item.quantity).toStringAsFixed(2)}',
@@ -365,7 +365,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(
+          style: TextStyle(
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
               fontSize: isTotal ? 16 : 14,
             ),

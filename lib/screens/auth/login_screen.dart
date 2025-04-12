@@ -248,6 +248,20 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                   size: DaylizButtonSize.large,
                   isFullWidth: true,
                 ),
+                AppSpacing.vMD,
+                
+                // Phone sign in
+                DaylizButton(
+                  label: 'Continue with Phone',
+                  onPressed: () {
+                    debugPrint('📱 Navigating to phone verification screen');
+                    context.go('/phone-verification');
+                  },
+                  leadingIcon: Icons.phone_android,
+                  type: DaylizButtonType.secondary,
+                  size: DaylizButtonSize.large,
+                  isFullWidth: true,
+                ),
                 AppSpacing.vLG,
                 
                 // Sign up link

@@ -19,6 +19,7 @@ import 'package:dayliz_app/services/auth_service.dart' hide AuthState;
 import 'package:dayliz_app/models/address.dart';
 import 'package:dayliz_app/services/address_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:dayliz_app/screens/auth/phone_otp_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,7 +90,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Check if the user is on an auth screen
       final isAuthScreen = 
           state.uri.path == '/login' || 
-          state.uri.path == '/signup';
+          state.uri.path == '/signup' ||
+          state.uri.path == '/phone-verification';
       
       // If the user is authenticated but on an auth screen, redirect to home
       if (isAuthenticated && isAuthScreen) {
@@ -117,6 +119,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/signup',
         builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
+        path: '/phone-verification',
+        builder: (context, state) {
+          final initialPhone = state.uri.queryParameters['phone'];
+          return PhoneOtpScreen(initialPhone: initialPhone);
+        },
       ),
       GoRoute(
         path: '/home',

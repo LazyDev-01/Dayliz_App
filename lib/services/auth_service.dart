@@ -165,10 +165,13 @@ class AuthService {
     required String phone,
   }) async {
     try {
+      debugPrint('📱 Sending OTP to phone: $phone');
       await _client.auth.signInWithOtp(
         phone: phone,
       );
+      debugPrint('✅ OTP sent successfully to $phone');
     } catch (e) {
+      debugPrint('❌ Error sending OTP: $e');
       rethrow;
     }
   }
@@ -179,15 +182,18 @@ class AuthService {
     required String token,
   }) async {
     try {
+      debugPrint('🔐 Verifying OTP for phone: $phone with code: $token');
       final response = await _client.auth.verifyOTP(
         phone: phone,
         token: token,
         type: OtpType.sms,
       );
       
+      debugPrint('✅ OTP verification successful for $phone');
       await _saveSession(response.session);
       return response;
     } catch (e) {
+      debugPrint('❌ Error verifying OTP: $e');
       rethrow;
     }
   }

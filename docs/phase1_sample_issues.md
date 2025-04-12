@@ -10,13 +10,13 @@ Here are sample issues to help jumpstart the GitHub Projects setup for Dayliz Ap
 Implement email and phone-based authentication using Supabase for user sign-up, login, and password reset.
 
 **Acceptance Criteria**
-- [ ] Setup Supabase project and configure auth providers
-- [ ] Create user registration with email verification
-- [ ] Implement login with email/password
+- [x] Setup Supabase project and configure auth providers
+- [x] Create user registration with email verification
+- [x] Implement login with email/password
 - [ ] Add phone number verification using OTP
 - [ ] Implement password reset flow
-- [ ] Create secure token storage with refresh mechanism
-- [ ] Add persistent login state
+- [x] Create secure token storage with refresh mechanism
+- [x] Add persistent login state
 
 **Technical Notes**  
 Use supabase_flutter package and secure storage for tokens
@@ -35,12 +35,12 @@ Use supabase_flutter package and secure storage for tokens
 Design and implement the login screen UI with email/password inputs and validation.
 
 **Action Items**
-- [ ] Create responsive login layout
-- [ ] Implement form validation for email and password
-- [ ] Add "Remember me" option
-- [ ] Include "Forgot password" link
-- [ ] Add loading state for login button
-- [ ] Create error handling UI for failed login attempts
+- [x] Create responsive login layout
+- [x] Implement form validation for email and password
+- [x] Add "Remember me" option
+- [x] Include "Forgot password" link
+- [x] Add loading state for login button
+- [x] Create error handling UI for failed login attempts
 
 **Definition of Done**  
 Login screen is fully functional with proper validation and error handling.
@@ -64,12 +64,12 @@ Login screen is fully functional with proper validation and error handling.
 Establish a comprehensive design system for Dayliz App including typography, colors, spacing, and theming.
 
 **Acceptance Criteria**
-- [ ] Define color palette with semantic naming
-- [ ] Create typography scale for different text styles
-- [ ] Establish spacing system and layout grid
-- [ ] Implement theme provider with light/dark mode support
-- [ ] Define elevation and shadow system
-- [ ] Create design tokens documentation
+- [x] Define color palette with semantic naming
+- [x] Create typography scale for different text styles
+- [x] Establish spacing system and layout grid
+- [x] Implement theme provider with light/dark mode support
+- [x] Define elevation and shadow system
+- [x] Create design tokens documentation
 
 **Technical Notes**  
 Use ThemeData extension for custom properties
@@ -90,13 +90,13 @@ Use ThemeData extension for custom properties
 Implement a set of reusable button components with different variants and states.
 
 **Action Items**
-- [ ] Create primary button component
-- [ ] Add secondary and tertiary button variants
-- [ ] Implement disabled state styling
-- [ ] Add loading state with animation
-- [ ] Ensure proper touch target size for mobile
-- [ ] Make buttons responsive to different screen sizes
-- [ ] Add haptic feedback
+- [x] Create primary button component
+- [x] Add secondary and tertiary button variants
+- [x] Implement disabled state styling
+- [x] Add loading state with animation
+- [x] Ensure proper touch target size for mobile
+- [x] Make buttons responsive to different screen sizes
+- [x] Add haptic feedback
 
 **Definition of Done**  
 All button variants are implemented with proper states and documented.
@@ -120,12 +120,12 @@ All button variants are implemented with proper states and documented.
 Setup the app's navigation system using GoRouter with path-based routing and transitions.
 
 **Acceptance Criteria**
-- [ ] Configure GoRouter with named routes
-- [ ] Implement authentication route guards
+- [x] Configure GoRouter with named routes
+- [x] Implement authentication route guards
 - [ ] Create custom page transitions
 - [ ] Add deep linking support
-- [ ] Handle 404/error routes
-- [ ] Setup nested navigation where required
+- [x] Handle 404/error routes
+- [x] Setup nested navigation where required
 - [ ] Implement bottom navigation
 
 **Technical Notes**  
@@ -149,10 +149,10 @@ Initialize the FastAPI backend project with proper structure, database integrati
 **Acceptance Criteria**
 - [ ] Create FastAPI project scaffold
 - [ ] Setup PostgreSQL with SQLAlchemy ORM
-- [ ] Implement JWT authentication middleware
+- [x] Implement JWT authentication middleware
 - [ ] Configure CORS and security headers
 - [ ] Add logging and error handling
-- [ ] Create basic user model and endpoints
+- [x] Create basic user model and endpoints
 - [ ] Implement environment-based configuration
 
 **Technical Notes**  
@@ -175,12 +175,12 @@ Use FastAPI, SQLAlchemy, and Alembic for migrations
 Define the essential database models for the application.
 
 **Action Items**
-- [ ] Create User model with authentication fields
+- [x] Create User model with authentication fields
 - [ ] Implement Product model with categories
-- [ ] Add Order and OrderItem models
-- [ ] Create Address model for user addresses
-- [ ] Implement base CRUD operations for all models
-- [ ] Setup database migrations
+- [x] Add Order and OrderItem models
+- [x] Create Address model for user addresses
+- [x] Implement base CRUD operations for all models
+- [x] Setup database migrations
 - [ ] Add seed data for testing
 
 **Definition of Done**  

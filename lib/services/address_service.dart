@@ -82,14 +82,14 @@ class AddressService {
   
   /// Add a new address
   Future<Address?> addAddress(
-    String name,
+    String? name,
     String addressLine1,
     String? addressLine2,
     String city,
     String state,
     String country,
     String postalCode,
-    String phoneNumber,
+    String? phoneNumber,
     bool isDefault,
     double? latitude,
     double? longitude,
@@ -104,23 +104,26 @@ class AddressService {
         debugPrint('Error in addAddress: User not authenticated');
         throw Exception('User not authenticated');
       }
-      
-      // Ensure user exists in public.users table
-      final userExists = await _userService.ensureUserExists();
-      if (!userExists) {
-        debugPrint('Error in addAddress: Failed to ensure user exists');
-        throw Exception('Failed to ensure user exists in the database');
+
+      // Check if the user exists
+      final userExists = await _client
+          .from('users')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (userExists == null) {
+        debugPrint('Error in addAddress: User does not exist');
+        throw Exception('User does not exist in the database');
       }
-      
-      debugPrint('Creating address for user: $userId');
 
-      // Generate a unique ID for the address
-      String id = const Uuid().v4();
-      debugPrint('Generated ID for new address: $id');
+      // Generate unique ID
+      final addressId = const Uuid().v4();
+      debugPrint('Generated address ID: $addressId for user: $userId');
 
-      // Create a map of address data
+      // Create address data
       final addressData = {
-        'id': id,
+        'id': addressId,
         'user_id': userId,
         'name': name,
         'address_line1': addressLine1,
@@ -129,60 +132,66 @@ class AddressService {
         'state': state,
         'country': country,
         'postal_code': postalCode,
-        'phone': phoneNumber,
+        'phone_number': phoneNumber,
         'is_default': isDefault,
         'latitude': latitude,
         'longitude': longitude,
+        'landmark': landmark,
+        'address_type': addressType,
+        'street': street,
+        'phone': phone,
+        'created_at': DateTime.now().toIso8601String(),
       };
-      
-      // Insert the address
-      debugPrint('Saving address: $addressData');
-      debugPrint('Adding address: $addressData');
-      debugPrint('Sending address data to API: $addressData');
-      debugPrint('API POST request to table: user_addresses with data: ${addressData.keys.join(', ')}');
-      
+
+      // Remove null values
       final cleanData = Map<String, dynamic>.from(addressData);
       cleanData.removeWhere((key, value) => value == null);
-      debugPrint('Inserting into table: user_addresses with clean data: ${cleanData.keys.join(', ')}');
       
+      debugPrint('Inserting address with data: ${cleanData.keys.join(', ')}');
+
+      // Insert the address
       final response = await _client
           .from('user_addresses')
-          .insert(cleanData)
+          .insert(cleanData);
+      
+      // Get the inserted address
+      final addressResponse = await _client
+          .from('user_addresses')
           .select()
+          .eq('id', addressId)
           .single();
       
-      debugPrint('Successfully added address with ID: ${response['id']}');
-      return Address.fromJson(response);
-    } on PostgrestException catch (e) {
-      debugPrint('API POST PostgrestException for user_addresses: ${e.code} - ${e.message} - ${e.details}');
-      debugPrint('API response: 500 - null');
-      debugPrint('Failed to add address: ${e.message}');
-      rethrow;
+      debugPrint('Successfully added address with ID: $addressId');
+      return Address.fromJson(addressResponse);
     } catch (e) {
-      debugPrint('Error adding address: $e');
+      if (e is PostgrestException) {
+        debugPrint('PostgrestException in addAddress: ${e.message}, ${e.details}');
+      } else {
+        debugPrint('Error adding address: $e');
+      }
       rethrow;
     }
   }
   
   /// Update an existing address
   Future<Address?> updateAddress(
-    String id,
-    String name,
-    String addressLine1,
+    String id, {
+    String? name,
+    String? addressLine1,
     String? addressLine2,
-    String city,
-    String state,
-    String country,
-    String postalCode,
-    String phoneNumber,
-    bool isDefault,
+    String? city,
+    String? state,
+    String? country,
+    String? postalCode,
+    String? phoneNumber,
+    bool? isDefault,
     double? latitude,
     double? longitude,
     String? landmark,
     String? addressType,
     String? street,
     String? phone,
-  ) async {
+  }) async {
     try {
       final userId = _userService.getCurrentUser()?.id;
       if (userId == null) {
@@ -190,7 +199,9 @@ class AddressService {
         throw Exception('User not authenticated');
       }
 
-      // Create a map of address data
+      debugPrint('Updating address $id for user: $userId');
+
+      // Create address data
       final addressData = {
         'name': name,
         'address_line1': addressLine1,
@@ -199,24 +210,45 @@ class AddressService {
         'state': state,
         'country': country,
         'postal_code': postalCode,
-        'phone': phoneNumber,
+        'phone_number': phoneNumber,
         'is_default': isDefault,
         'latitude': latitude,
         'longitude': longitude,
+        'landmark': landmark,
+        'address_type': addressType,
+        'street': street,
+        'phone': phone,
+        'updated_at': DateTime.now().toIso8601String(),
       };
+
+      // Remove null values
+      final cleanData = Map<String, dynamic>.from(addressData);
+      cleanData.removeWhere((key, value) => value == null);
       
+      debugPrint('Updating address with data: ${cleanData.keys.join(', ')}');
+
       // Update the address
-      final response = await _client
+      await _client
           .from('user_addresses')
-          .update(addressData)
+          .update(cleanData)
           .eq('id', id)
-          .eq('user_id', userId)
+          .eq('user_id', userId);
+      
+      // Get the updated address
+      final addressResponse = await _client
+          .from('user_addresses')
           .select()
+          .eq('id', id)
           .single();
       
-      return Address.fromJson(response);
+      debugPrint('Successfully updated address with ID: $id');
+      return Address.fromJson(addressResponse);
     } catch (e) {
-      debugPrint('Error updating address: $e');
+      if (e is PostgrestException) {
+        debugPrint('PostgrestException in updateAddress: ${e.message}, ${e.details}');
+      } else {
+        debugPrint('Error updating address: $e');
+      }
       rethrow;
     }
   }
@@ -259,10 +291,13 @@ class AddressService {
           .update({'is_default': true})
           .eq('id', id)
           .eq('user_id', userId)
-          .select()
-          .single();
+          .select();
       
-      return Address.fromJson(response);
+      if (response.isEmpty) {
+        throw Exception('Address not found');
+      }
+      
+      return Address.fromJson(response.first);
     } catch (e) {
       debugPrint('Error setting default address: $e');
       rethrow;
