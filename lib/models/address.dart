@@ -1,7 +1,8 @@
 import 'package:equatable/equatable.dart';
+import 'package:uuid/uuid.dart';
 
 class Address extends Equatable {
-  final String? id;
+  final String id;
   final String userId;
   final String name;
   final String addressLine1;
@@ -16,12 +17,11 @@ class Address extends Equatable {
   final double? longitude;
   final String? landmark;
   final String? addressType; // 'home', 'work', 'other'
-  final String? additionalInfo;
   final String? street;
   final String? phone;
 
   const Address({
-    this.id,
+    required this.id,
     required this.userId,
     required this.name,
     required this.addressLine1,
@@ -35,11 +35,50 @@ class Address extends Equatable {
     this.latitude,
     this.longitude,
     this.landmark,
-    this.addressType = 'home',
-    this.additionalInfo,
+    this.addressType,
     this.street,
     this.phone,
   });
+
+  factory Address.create({
+    String? id,
+    required String userId,
+    required String name,
+    required String addressLine1,
+    String? addressLine2,
+    required String city,
+    required String state,
+    required String country,
+    required String postalCode,
+    required String phoneNumber,
+    bool isDefault = false,
+    double? latitude,
+    double? longitude,
+    String? landmark,
+    String? addressType,
+    String? street,
+    String? phone,
+  }) {
+    return Address(
+      id: id ?? const Uuid().v4(),
+      userId: userId,
+      name: name,
+      addressLine1: addressLine1,
+      addressLine2: addressLine2,
+      city: city,
+      state: state,
+      country: country,
+      postalCode: postalCode,
+      phoneNumber: phoneNumber,
+      isDefault: isDefault,
+      latitude: latitude,
+      longitude: longitude,
+      landmark: landmark,
+      addressType: addressType,
+      street: street,
+      phone: phone,
+    );
+  }
 
   Address copyWith({
     String? id,
@@ -57,7 +96,6 @@ class Address extends Equatable {
     double? longitude,
     String? landmark,
     String? addressType,
-    String? additionalInfo,
     String? street,
     String? phone,
   }) {
@@ -77,7 +115,6 @@ class Address extends Equatable {
       longitude: longitude ?? this.longitude,
       landmark: landmark ?? this.landmark,
       addressType: addressType ?? this.addressType,
-      additionalInfo: additionalInfo ?? this.additionalInfo,
       street: street ?? this.street,
       phone: phone ?? this.phone,
     );
@@ -85,7 +122,7 @@ class Address extends Equatable {
 
   Map<String, dynamic> toJson() {
     return {
-      if (id != null) 'id': id,
+      'id': id,
       'user_id': userId,
       'name': name,
       'address_line1': addressLine1,
@@ -94,21 +131,16 @@ class Address extends Equatable {
       'state': state,
       'country': country,
       'postal_code': postalCode,
-      'phone_number': phoneNumber,
+      'phone': phoneNumber,
       'is_default': isDefault,
       'latitude': latitude,
       'longitude': longitude,
-      'landmark': landmark,
-      'address_type': addressType,
-      'additional_info': additionalInfo,
-      if (street != null) 'street': street,
-      if (phone != null) 'phone': phone,
     };
   }
 
   factory Address.fromJson(Map<String, dynamic> json) {
     return Address(
-      id: json['id'],
+      id: json['id'] ?? const Uuid().v4(),
       userId: json['user_id'] ?? '',
       name: json['name'] ?? '',
       addressLine1: json['address_line1'] ?? '',
@@ -117,14 +149,13 @@ class Address extends Equatable {
       state: json['state'] ?? '',
       country: json['country'] ?? '',
       postalCode: json['postal_code'] ?? '',
-      phoneNumber: json['phone_number'] ?? '',
+      phoneNumber: json['phone'] ?? '',
       isDefault: json['is_default'] ?? false,
-      latitude: json['latitude'],
-      longitude: json['longitude'],
-      landmark: json['landmark'],
-      addressType: json['address_type'] ?? 'home',
-      additionalInfo: json['additional_info'],
-      street: json['street'],
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
+      landmark: null,
+      addressType: null,
+      street: null,
       phone: json['phone'],
     );
   }
@@ -146,7 +177,6 @@ class Address extends Equatable {
     longitude,
     landmark,
     addressType,
-    additionalInfo,
     street,
     phone,
   ];

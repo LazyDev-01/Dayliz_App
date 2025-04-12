@@ -8,7 +8,7 @@ import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/widgets/buttons/dayliz_button.dart';
 import 'package:dayliz_app/widgets/loaders/dayliz_shimmer.dart';
 
-class AddressListScreen extends ConsumerWidget {
+class AddressListScreen extends ConsumerStatefulWidget {
   final bool isSelectable;
 
   const AddressListScreen({
@@ -17,7 +17,25 @@ class AddressListScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  AddressListScreenState createState() => AddressListScreenState();
+}
+
+class AddressListScreenState extends ConsumerState<AddressListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshAddresses();
+    });
+  }
+  
+  void _refreshAddresses() {
+    print("Refreshing addresses list");
+    ref.read(addressNotifierProvider.notifier).fetchAddresses();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final addressesState = ref.watch(addressNotifierProvider);
     final theme = Theme.of(context);
     
@@ -27,13 +45,20 @@ class AddressListScreen extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (isSelectable) {
+            if (widget.isSelectable) {
               Navigator.of(context).pop();
             } else {
               context.go('/home');
             }
           },
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshAddresses,
+            tooltip: 'Refresh addresses',
+          ),
+        ],
       ),
       body: addressesState.isLoading 
           ? _buildLoadingState()
@@ -164,7 +189,7 @@ class AddressListScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     
     return InkWell(
-      onTap: isSelectable
+      onTap: widget.isSelectable
           ? () => Navigator.of(context).pop(address)
           : null,
       child: Padding(
@@ -221,10 +246,10 @@ class AddressListScreen extends ConsumerWidget {
                         address.formattedAddress,
                         style: theme.textTheme.bodyMedium,
                       ),
-                      if (address.additionalInfo != null) ...[
+                      if (address.landmark != null) ...[
                         AppSpacing.vXS,
                         Text(
-                          address.additionalInfo!,
+                          "Landmark: ${address.landmark!}",
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontStyle: FontStyle.italic,
                           ),
@@ -236,7 +261,7 @@ class AddressListScreen extends ConsumerWidget {
               ],
             ),
             AppSpacing.vMD,
-            if (!isSelectable)
+            if (!widget.isSelectable)
               Row(
                 children: [
                   Expanded(
@@ -278,12 +303,39 @@ class AddressListScreen extends ConsumerWidget {
     );
   }
 
-  void _navigateToAddAddress(BuildContext context, WidgetRef ref) {
-    context.push('/address/add');
+  void _navigateToAddAddress(BuildContext context, WidgetRef ref) async {
+    print("Navigating to add address screen");
+    
+    // First, clear any existing errors to give a clean slate
+    if (ref.read(addressNotifierProvider).error != null) {
+      print("Clearing previous errors before navigation");
+      ref.read(addressNotifierProvider.notifier).state = 
+          ref.read(addressNotifierProvider).copyWith(clearError: true);
+    }
+    
+    final result = await context.push('/address/add');
+    
+    print("Returned from add address with result: $result");
+    
+    // Always refresh the address list when returning, regardless of result
+    _refreshAddresses();
   }
 
-  void _navigateToEditAddress(BuildContext context, WidgetRef ref, Address address) {
-    context.push('/address/edit/${address.id}');
+  void _navigateToEditAddress(BuildContext context, WidgetRef ref, Address address) async {
+    print("Navigating to edit address screen for address: ${address.id}");
+    
+    // First, clear any existing errors
+    if (ref.read(addressNotifierProvider).error != null) {
+      ref.read(addressNotifierProvider.notifier).state = 
+          ref.read(addressNotifierProvider).copyWith(clearError: true);
+    }
+    
+    final result = await context.push('/address/edit/${address.id}', extra: address);
+    
+    print("Returned from edit address with result: $result");
+    
+    // Always refresh the address list when returning, regardless of result
+    _refreshAddresses();
   }
 
   void _deleteAddress(

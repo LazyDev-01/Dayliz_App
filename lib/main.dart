@@ -17,6 +17,8 @@ import 'package:dayliz_app/providers/theme_provider.dart';
 import 'package:dayliz_app/providers/auth_provider.dart';
 import 'package:dayliz_app/services/auth_service.dart' hide AuthState;
 import 'package:dayliz_app/models/address.dart';
+import 'package:dayliz_app/services/address_service.dart';
+import 'package:flutter/foundation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,8 +26,11 @@ void main() async {
   // Load environment variables
   await dotenv.load(fileName: '.env');
   
-  // Initialize auth service
+  // Initialize services
   await AuthService.instance.initialize();
+  
+  // Test database connections
+  await _testDatabaseConnections();
   
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -47,6 +52,22 @@ void main() async {
       child: MyApp(),
     ),
   );
+}
+
+Future<void> _testDatabaseConnections() async {
+  try {
+    // Test address database connection
+    debugPrint('Testing database connections...');
+    final addressTableExists = await AddressService.instance.testDatabaseConnection();
+    
+    if (addressTableExists) {
+      debugPrint('✅ Address table connection successful');
+    } else {
+      debugPrint('❌ Address table connection failed - check table name and permissions');
+    }
+  } catch (e) {
+    debugPrint('Error testing database connections: $e');
+  }
 }
 
 /// Router provider for navigation
@@ -130,6 +151,23 @@ final routerProvider = Provider<GoRouter>((ref) {
           // Extract the address from the state parameters for editing
           final address = state.extra as Address?;
           return AddressFormScreen(address: address);
+        },
+      ),
+      GoRoute(
+        path: '/address/add',
+        builder: (context, state) {
+          return const AddressFormScreen();
+        },
+      ),
+      GoRoute(
+        path: '/address/edit/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          // Try to get the address from extra data first
+          final address = state.extra as Address?;
+          
+          // The component will use the ID to fetch the address if not provided
+          return AddressFormScreen(address: address, addressId: id);
         },
       ),
     ],

@@ -44,49 +44,75 @@ class AddressNotifier extends StateNotifier<AddressState> {
   }
 
   Future<void> fetchAddresses() async {
+    print("Starting fetchAddresses");
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
       final userId = _ref.read(currentUserProvider)?.id;
       if (userId == null) {
+        print("Error: User not authenticated during fetchAddresses");
         state = state.copyWith(isLoading: false, error: 'User not authenticated');
         return;
       }
       
-      final response = await _apiService.get('user_addresses?user_id=eq.$userId');
+      print("Fetching addresses for user: $userId");
+      final query = 'user_addresses?user_id=eq.$userId';
+      print("Query: $query");
       
-      if (response.statusCode == 200) {
+      final response = await _apiService.get(query);
+      
+      print("Fetch response: ${response.statusCode} - ${response.data != null ? 'Data length: ${response.data.length}' : 'No data'}");
+      
+      if (response.isSuccess && response.data != null) {
         final List<dynamic> data = response.data as List<dynamic>;
+        print("Parsed ${data.length} addresses");
+        
         final addresses = data.map((json) => Address.fromJson(json)).toList();
         
         // Set default address as selected if available
-        final defaultAddress = addresses.firstWhere(
-          (address) => address.isDefault, 
-          orElse: () => addresses.isNotEmpty ? addresses.first : Address(
-            id: '',
-            userId: userId,
-            name: '',
-            addressLine1: '',
-            city: '',
-            state: '',
-            country: '',
-            postalCode: '',
-            phoneNumber: '',
-          )
-        );
+        Address defaultAddress;
+        try {
+          defaultAddress = addresses.firstWhere(
+            (address) => address.isDefault, 
+          );
+          print("Found default address: ${defaultAddress.id}");
+        } catch (e) {
+          // If no default address, use the first one or create a placeholder
+          if (addresses.isNotEmpty) {
+            defaultAddress = addresses.first;
+            print("No default address, using first: ${defaultAddress.id}");
+          } else {
+            defaultAddress = Address.create(
+              id: '',
+              userId: userId,
+              name: '',
+              addressLine1: '',
+              city: '',
+              state: '',
+              country: '',
+              postalCode: '',
+              phoneNumber: '',
+            );
+            print("No addresses found, using placeholder");
+          }
+        }
         
+        print("Setting state with ${addresses.length} addresses");
         state = state.copyWith(
           addresses: addresses,
           isLoading: false,
-          selectedAddress: defaultAddress
+          selectedAddress: defaultAddress,
+          clearError: true
         );
       } else {
+        print("Failed to fetch addresses: ${response.statusMessage}");
         state = state.copyWith(
           isLoading: false,
-          error: 'Failed to fetch addresses: ${response.statusMessage}'
+          error: 'Failed to fetch addresses: ${response.statusMessage ?? "Unknown error"}'
         );
       }
     } catch (e) {
+      print("Exception during fetchAddresses: $e");
       state = state.copyWith(
         isLoading: false,
         error: 'Error fetching addresses: $e'
@@ -98,8 +124,10 @@ class AddressNotifier extends StateNotifier<AddressState> {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
+      print("Adding address: ${address.toJson()}");
       final userId = _ref.read(currentUserProvider)?.id;
       if (userId == null) {
+        print("Error: User not authenticated");
         state = state.copyWith(isLoading: false, error: 'User not authenticated');
         return;
       }
@@ -113,18 +141,58 @@ class AddressNotifier extends StateNotifier<AddressState> {
         'is_default': isDefault,
       };
       
+      print("Sending address data to API: $addressData");
       final response = await _apiService.post('user_addresses', addressData);
       
-      if (response.statusCode == 201) {
-        // Refetch addresses to get the updated list
-        await fetchAddresses();
+      print("API response: ${response.statusCode} - ${response.data}");
+      if (response.isSuccess && response.data != null) {
+        print("Address added successfully");
+        
+        // Create address object from response
+        final List<dynamic> responseData = response.data as List<dynamic>;
+        if (responseData.isNotEmpty) {
+          final newAddress = Address.fromJson(responseData[0]);
+          print("Created address with ID: ${newAddress.id}");
+          
+          // Update the state immediately with the new address
+          final updatedAddresses = [...state.addresses, newAddress];
+          
+          // If this is the default address, update any other addresses
+          if (isDefault && updatedAddresses.length > 1) {
+            // Clear default status of other addresses in the local state
+            for (int i = 0; i < updatedAddresses.length - 1; i++) {
+              if (updatedAddresses[i].isDefault) {
+                updatedAddresses[i] = updatedAddresses[i].copyWith(isDefault: false);
+              }
+            }
+            // Also update in the database (async)
+            _updateDefaultAddress(newAddress.id);
+          }
+          
+          // Set as selected if it's the first address or is marked as default
+          final selectedAddress = isDefault ? newAddress : state.selectedAddress;
+          
+          state = state.copyWith(
+            addresses: updatedAddresses,
+            isLoading: false,
+            selectedAddress: selectedAddress,
+            clearError: true
+          );
+          
+          print("State updated with ${updatedAddresses.length} addresses");
+        } else {
+          print("Empty response data, fetching addresses instead");
+          await fetchAddresses();
+        }
       } else {
+        print("Failed to add address: ${response.statusMessage}");
         state = state.copyWith(
           isLoading: false,
-          error: 'Failed to add address: ${response.statusMessage}'
+          error: 'Failed to add address: ${response.statusMessage ?? "Unknown error"}'
         );
       }
     } catch (e) {
+      print("Exception when adding address: $e");
       state = state.copyWith(
         isLoading: false,
         error: 'Error adding address: $e'
@@ -218,6 +286,17 @@ class AddressNotifier extends StateNotifier<AddressState> {
     state = state.copyWith(selectedAddress: address);
   }
 
+  // Get address by ID from the current state
+  Address? getAddressById(String id) {
+    try {
+      return state.addresses.firstWhere(
+        (address) => address.id == id,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Helper method to ensure only one default address exists
   Future<void> _updateDefaultAddress(String newDefaultId) async {
     try {
@@ -248,4 +327,16 @@ final apiServiceProvider = Provider<ApiService>((ref) {
 // Provider for the selected address
 final selectedAddressProvider = StateProvider<Address?>((ref) {
   return ref.watch(addressProvider).selectedAddress;
+});
+
+// Provider to get an address by ID
+final addressByIdProvider = Provider.family<Address?, String>((ref, id) {
+  final addresses = ref.watch(addressProvider).addresses;
+  try {
+    return addresses.firstWhere(
+      (address) => address.id == id,
+    );
+  } catch (e) {
+    return null;
+  }
 }); 

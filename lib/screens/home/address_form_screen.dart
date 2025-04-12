@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dayliz_app/models/address.dart';
 import 'package:dayliz_app/providers/address_provider.dart';
+import 'package:dayliz_app/providers/auth_provider.dart';
 import 'package:dayliz_app/theme/app_spacing.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/utils/validators.dart';
@@ -38,10 +39,12 @@ final indianStatesProvider = Provider<List<DaylizDropdownItem<String>>>((ref) {
 
 class AddressFormScreen extends ConsumerStatefulWidget {
   final Address? address;
+  final String? addressId;
 
   const AddressFormScreen({
     Key? key,
     this.address,
+    this.addressId,
   }) : super(key: key);
 
   @override
@@ -50,48 +53,73 @@ class AddressFormScreen extends ConsumerStatefulWidget {
 
 class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nameController;
-  late final TextEditingController _streetController;
-  late final TextEditingController _cityController;
-  late final TextEditingController _postalCodeController;
-  late final TextEditingController _phoneController;
-  late final TextEditingController _additionalInfoController;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _streetController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _postalCodeController = TextEditingController();
+  final TextEditingController _landmarkController = TextEditingController();
   
   String _country = 'India';
   String _state = '';
   bool _isDefault = false;
   bool _isLoading = false;
+  Address? _fetchedAddress;
 
   @override
   void initState() {
     super.initState();
     
-    // Initialize controllers with existing address data if editing
-    final address = widget.address;
-    _nameController = TextEditingController(text: address?.name ?? '');
-    _streetController = TextEditingController(text: address?.street ?? '');
-    _cityController = TextEditingController(text: address?.city ?? '');
-    _postalCodeController = TextEditingController(text: address?.postalCode ?? '');
-    _phoneController = TextEditingController(text: address?.phone ?? '');
-    _additionalInfoController = TextEditingController(text: address?.additionalInfo ?? '');
-    
-    if (address != null) {
-      _country = address.country;
-      _state = address.state;
-      _isDefault = address.isDefault;
-    } else {
+    // If we have an address ID but no address object, set up for lazy loading
+    if (widget.address == null && widget.addressId != null) {
+      // Address will be loaded in didChangeDependencies
       _state = ref.read(indianStatesProvider).first.value;
+    } else {
+      // Use the address directly if provided
+      _initializeForm();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // If we have an addressId but no address, try to fetch it
+    if (widget.address == null && widget.addressId != null && _fetchedAddress == null) {
+      // Attempt to get the address
+      final address = ref.read(addressByIdProvider(widget.addressId!));
+      if (address != null) {
+        setState(() {
+          _fetchedAddress = address;
+          _initializeForm();
+        });
+      }
+    }
+  }
+
+  void _initializeForm() {
+    if (widget.address != null) {
+      // Pre-fill the form with existing address data
+      _nameController.text = widget.address!.name;
+      _phoneController.text = widget.address!.phone ?? '';
+      _streetController.text = widget.address!.street ?? '';
+      _cityController.text = widget.address!.city;
+      _postalCodeController.text = widget.address!.postalCode;
+      _landmarkController.text = widget.address!.landmark ?? '';
+      _country = widget.address!.country;
+      _state = widget.address!.state;
+      _isDefault = widget.address!.isDefault;
     }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _phoneController.dispose();
     _streetController.dispose();
     _cityController.dispose();
     _postalCodeController.dispose();
-    _phoneController.dispose();
-    _additionalInfoController.dispose();
+    _landmarkController.dispose();
     super.dispose();
   }
 
@@ -105,10 +133,14 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     });
 
     try {
-      // Create address object
-      final address = Address(
+      // Get current user ID
+      final userId = ref.read(currentUserProvider)?.id ?? 'current-user-id';
+      print("Creating address for user: $userId");
+      
+      // Create address object - include only fields that exist in the database
+      final address = Address.create(
         id: widget.address?.id,
-        userId: 'current-user-id',
+        userId: userId,
         name: _nameController.text.trim(),
         addressLine1: _streetController.text.trim(),
         city: _cityController.text.trim(),
@@ -117,11 +149,14 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
         country: _country,
         phoneNumber: _phoneController.text.trim(),
         isDefault: _isDefault,
-        additionalInfo: _additionalInfoController.text.trim(),
         street: _streetController.text.trim(),
         phone: _phoneController.text.trim(),
+        landmark: _landmarkController.text.isEmpty ? null : _landmarkController.text.trim(),
       );
 
+      print("Saving address: ${address.toJson()}");
+      
+      // Wait for the operation to complete
       if (widget.address == null) {
         // Add new address
         await ref.read(addressNotifierProvider.notifier).addAddress(address);
@@ -132,7 +167,7 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
 
       if (!mounted) return;
 
-      // Show success message and return to previous screen
+      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Address saved successfully'),
@@ -140,8 +175,13 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
         ),
       );
       
-      Navigator.of(context).pop(address);
+      // Force a refresh of the address list immediately
+      await ref.read(addressNotifierProvider.notifier).fetchAddresses();
+      
+      // Return success result to the previous screen
+      Navigator.of(context).pop(true);
     } catch (e) {
+      print("Error saving address: $e");
       if (!mounted) return;
       
       // Show error message
@@ -264,29 +304,27 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                 ),
                 AppSpacing.vMD,
                 
-                // Postal code
+                // Postal Code Field
                 DaylizTextField(
                   controller: _postalCodeController,
                   label: 'Postal Code',
-                  hint: 'Enter postal/ZIP code',
+                  hint: 'Enter postal code',
                   keyboardType: TextInputType.number,
                   validator: Validators.postalCode,
                   prefixIcon: Icons.markunread_mailbox_outlined,
                 ),
                 AppSpacing.vMD,
                 
-                // Additional info
+                // Landmark Field
                 DaylizTextField(
-                  controller: _additionalInfoController,
-                  label: 'Additional Information',
-                  hint: 'Enter landmark, apartment number, etc. (optional)',
-                  maxLines: 2,
-                  textCapitalization: TextCapitalization.sentences,
-                  prefixIcon: Icons.info_outline,
+                  controller: _landmarkController,
+                  label: 'Landmark (Optional)',
+                  hint: 'Enter a nearby landmark',
+                  maxLines: 3,
                 ),
                 AppSpacing.vMD,
                 
-                // Default address checkbox
+                // Default Address Checkbox
                 CheckboxListTile(
                   value: _isDefault,
                   onChanged: (value) {

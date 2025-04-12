@@ -13,6 +13,9 @@ class DaylizShimmer extends StatelessWidget {
   final double? height;
   final double? width;
   final double? borderRadius;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final BoxDecoration? decoration;
 
   const DaylizShimmer({
     super.key,
@@ -25,6 +28,9 @@ class DaylizShimmer extends StatelessWidget {
     this.height,
     this.width,
     this.borderRadius,
+    this.padding,
+    this.margin,
+    this.decoration,
   });
 
   @override
@@ -49,7 +55,9 @@ class DaylizShimmer extends StatelessWidget {
       child: child ?? Container(
         width: width ?? double.infinity,
         height: height ?? 100,
-        decoration: BoxDecoration(
+        margin: margin,
+        padding: padding,
+        decoration: decoration ?? BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(borderRadius ?? 8),
         ),

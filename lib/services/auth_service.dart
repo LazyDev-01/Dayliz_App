@@ -3,6 +3,22 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dayliz_app/services/user_service.dart';
+
+/// Authentication states
+enum AuthState {
+  /// User is authenticated
+  authenticated,
+  
+  /// User is not authenticated
+  unauthenticated,
+  
+  /// Auth state is being determined
+  loading,
+  
+  /// Authentication state is unknown
+  unknown,
+}
 
 /// Service that handles authentication operations using Supabase.
 class AuthService {
@@ -10,7 +26,8 @@ class AuthService {
   static AuthService get instance => _instance;
   
   late final SupabaseClient _client;
-  final _secureStorage = const FlutterSecureStorage();
+  late final FlutterSecureStorage _secureStorage;
+  late final UserService _userService;
   
   /// Stream controller for auth state changes
   final StreamController<AuthState> _authStateController = StreamController<AuthState>.broadcast();
@@ -27,6 +44,8 @@ class AuthService {
     );
     
     _client = Supabase.instance.client;
+    _secureStorage = const FlutterSecureStorage();
+    _userService = UserService.instance;
     
     // Listen to auth state changes
     _client.auth.onAuthStateChange.listen((data) {
@@ -223,6 +242,11 @@ class AuthService {
         key: 'refresh_token',
         value: session.refreshToken,
       );
+      
+      // Ensure user exists in public.users table
+      if (_client.auth.currentUser != null) {
+        await _userService.ensureUserExists();
+      }
     } catch (e) {
       debugPrint('Error saving session: $e');
     }
@@ -260,16 +284,4 @@ class AuthService {
       return false;
     }
   }
-}
-
-/// Authentication state
-enum AuthState {
-  /// User is authenticated
-  authenticated,
-  
-  /// User is not authenticated
-  unauthenticated,
-  
-  /// Auth state is being determined
-  loading,
 } 
