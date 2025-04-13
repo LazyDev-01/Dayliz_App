@@ -19,6 +19,8 @@ import 'package:dayliz_app/services/auth_service.dart' hide AuthState;
 import 'package:dayliz_app/models/address.dart';
 import 'package:dayliz_app/services/address_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:dayliz_app/screens/auth/reset_password_screen.dart';
+import 'package:dayliz_app/screens/auth/update_password_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,7 +91,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Check if the user is on an auth screen
       final isAuthScreen = 
           state.uri.path == '/login' || 
-          state.uri.path == '/signup';
+          state.uri.path == '/signup' ||
+          state.uri.path == '/reset-password' ||
+          state.uri.path.startsWith('/update-password');
       
       // If the user is authenticated but on an auth screen, redirect to home
       if (isAuthenticated && isAuthScreen) {
@@ -117,6 +121,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/signup',
         builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) => const ResetPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/update-password',
+        builder: (context, state) {
+          final accessToken = state.uri.queryParameters['accessToken'];
+          return UpdatePasswordScreen(accessToken: accessToken);
+        },
       ),
       GoRoute(
         path: '/home',

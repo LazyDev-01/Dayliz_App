@@ -8,28 +8,27 @@ import 'package:dayliz_app/utils/validators.dart';
 import 'package:dayliz_app/widgets/buttons/dayliz_button.dart';
 import 'package:dayliz_app/widgets/inputs/dayliz_text_field.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+class ResetPasswordScreen extends ConsumerStatefulWidget {
+  const ResetPasswordScreen({Key? key}) : super(key: key);
 
   @override
-  LoginScreenState createState() => LoginScreenState();
+  ResetPasswordScreenState createState() => ResetPasswordScreenState();
 }
 
-class LoginScreenState extends ConsumerState<LoginScreen> {
+class ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isSuccess = false;
   String? _errorMessage;
 
   @override
   void dispose() {
     _emailController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _resetPassword() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -37,17 +36,19 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _isSuccess = false;
     });
 
     try {
-      await ref.read(authNotifierProvider.notifier).signInWithEmail(
+      await ref.read(authNotifierProvider.notifier).resetPassword(
         email: _emailController.text.trim(),
-        password: _passwordController.text,
       );
       
       if (!mounted) return;
       
-      // Navigation will be handled by the router's redirect
+      setState(() {
+        _isSuccess = true;
+      });
     } catch (e) {
       if (!mounted) return;
       
@@ -65,21 +66,17 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
 
   String _formatErrorMessage(String error) {
     // Format Supabase error messages for better user experience
-    if (error.contains('Invalid login credentials')) {
-      return 'Invalid email or password';
-    } else if (error.contains('rate limit')) {
-      return 'Too many login attempts. Please try again later';
+    if (error.contains('rate limit')) {
+      return 'Too many attempts. Please try again later';
+    } else if (error.contains('email not found')) {
+      return 'No account found with this email address';
     } else {
-      return 'Login failed. Please try again';
+      return 'Failed to send password reset link. Please try again';
     }
   }
 
-  void _navigateToSignup() {
-    context.go('/signup');
-  }
-
-  void _navigateToForgotPassword() {
-    context.go('/reset-password');
+  void _navigateToLogin() {
+    context.go('/login');
   }
 
   @override
@@ -87,6 +84,10 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
     final theme = Theme.of(context);
     
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Reset Password'),
+        elevation: 0,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: AppSpacing.paddingLG,
@@ -95,8 +96,8 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AppSpacing.vXL,
-                // App Logo
+                AppSpacing.vMD,
+                // Reset password icon
                 Center(
                   child: Container(
                     width: 100,
@@ -106,7 +107,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.local_grocery_store,
+                      Icons.lock_reset,
                       size: 50,
                       color: Colors.white,
                     ),
@@ -114,13 +115,13 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 AppSpacing.vLG,
                 Text(
-                  'Welcome Back!',
+                  'Forgot Your Password?',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.displaySmall,
                 ),
                 AppSpacing.vXS,
                 Text(
-                  'Login to continue shopping',
+                  'Enter your email and we\'ll send you a link to reset your password',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: AppTheme.textSecondaryColor,
@@ -128,8 +129,45 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 AppSpacing.vXL,
                 
+                // Success message
+                if (_isSuccess) ...[
+                  Container(
+                    padding: AppSpacing.paddingMD,
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green,
+                          size: 48,
+                        ),
+                        AppSpacing.vSM,
+                        Text(
+                          'Reset link sent!',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        AppSpacing.vXS,
+                        Text(
+                          'Please check your email inbox for instructions to reset your password.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.vMD,
+                ],
+                
                 // Error message
-                if (_errorMessage != null) ...[
+                if (_errorMessage != null && !_isSuccess) ...[
                   Container(
                     padding: AppSpacing.paddingMD,
                     decoration: BoxDecoration(
@@ -163,45 +201,17 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                   label: 'Email',
                   hint: 'Enter your email',
                   keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
+                  textInputAction: TextInputAction.done,
                   prefixIcon: Icons.email_outlined,
                   validator: Validators.email,
                   errorText: null, // Will be handled by the form validator
                 ),
-                AppSpacing.vMD,
-                
-                // Password field
-                DaylizTextField(
-                  controller: _passwordController,
-                  label: 'Password',
-                  hint: 'Enter your password',
-                  obscureText: true,
-                  textInputAction: TextInputAction.done,
-                  prefixIcon: Icons.lock_outline,
-                  validator: Validators.password,
-                  errorText: null, // Will be handled by the form validator
-                ),
-                AppSpacing.vSM,
-                
-                // Forgot password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: _navigateToForgotPassword,
-                    child: Text(
-                      'Forgot Password?',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.primaryColor,
-                      ),
-                    ),
-                  ),
-                ),
                 AppSpacing.vLG,
                 
-                // Login button
+                // Reset button
                 DaylizButton(
-                  label: 'Login',
-                  onPressed: _isLoading ? null : _login,
+                  label: 'Send Reset Link',
+                  onPressed: _isLoading || _isSuccess ? null : _resetPassword,
                   isLoading: _isLoading,
                   type: DaylizButtonType.primary,
                   size: DaylizButtonSize.large,
@@ -209,64 +219,22 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 AppSpacing.vMD,
                 
-                // Or divider
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: theme.dividerColor)),
-                    Padding(
-                      padding: AppSpacing.paddingHSM,
-                      child: Text(
-                        'OR',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textSecondaryColor,
-                        ),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: theme.dividerColor)),
-                  ],
-                ),
-                AppSpacing.vMD,
-                
-                // Google sign in
-                DaylizButton(
-                  label: 'Continue with Google',
-                  onPressed: () {
-                    // TODO: Implement Google sign in
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Google Sign In coming soon!'),
-                      ),
-                    );
-                  },
-                  leadingIcon: Icons.g_mobiledata,
-                  type: DaylizButtonType.secondary,
-                  size: DaylizButtonSize.large,
-                  isFullWidth: true,
-                ),
-                AppSpacing.vLG,
-                
-                // Sign up link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Don\'t have an account? ',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondaryColor,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: _navigateToSignup,
-                      child: Text(
-                        'Sign Up',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                // Back to login
+                if (_isSuccess) ...[
+                  DaylizButton(
+                    label: 'Back to Login',
+                    onPressed: _navigateToLogin,
+                    type: DaylizButtonType.secondary,
+                    size: DaylizButtonSize.large,
+                    isFullWidth: true,
+                  ),
+                ] else ...[
+                  TextButton.icon(
+                    onPressed: _navigateToLogin,
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Back to Login'),
+                  ),
+                ],
               ],
             ),
           ),

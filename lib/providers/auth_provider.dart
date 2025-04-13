@@ -108,6 +108,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Update password with access token from reset link
+  Future<void> updatePassword({
+    required String password,
+    String? accessToken,
+  }) async {
+    try {
+      await AuthService.instance.updatePassword(
+        password: password,
+        accessToken: accessToken,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Sign out
   Future<void> signOut() async {
     state = AuthState.loading;

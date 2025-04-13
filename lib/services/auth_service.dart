@@ -124,8 +124,48 @@ class AuthService {
     required String email,
   }) async {
     try {
-      await _client.auth.resetPasswordForEmail(email);
+      debugPrint('🔄 Sending password reset email to: $email');
+      await _client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: dotenv.env['APP_RESET_PASSWORD_URL'],
+      );
+      debugPrint('✅ Password reset email sent to: $email');
     } catch (e) {
+      debugPrint('❌ Error sending password reset email: $e');
+      rethrow;
+    }
+  }
+  
+  /// Update password
+  Future<void> updatePassword({
+    required String password,
+    String? accessToken,
+  }) async {
+    try {
+      debugPrint('🔄 Updating password with token');
+      
+      if (accessToken != null) {
+        // Update password using the access token from the reset link
+        await _client.auth.updateUser(
+          UserAttributes(
+            password: password,
+          ),
+          emailRedirectTo: dotenv.env['APP_REDIRECT_URL'],
+        );
+        debugPrint('✅ Password updated successfully with token');
+      } else if (_client.auth.currentUser != null) {
+        // Update password for logged in user
+        await _client.auth.updateUser(
+          UserAttributes(
+            password: password,
+          ),
+        );
+        debugPrint('✅ Password updated successfully for logged in user');
+      } else {
+        throw Exception('Cannot update password: User not authenticated and no access token provided');
+      }
+    } catch (e) {
+      debugPrint('❌ Error updating password: $e');
       rethrow;
     }
   }
