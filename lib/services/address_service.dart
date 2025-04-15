@@ -150,7 +150,7 @@ class AddressService {
       debugPrint('Inserting address with data: ${cleanData.keys.join(', ')}');
 
       // Insert the address
-      final response = await _client
+      await _client
           .from('user_addresses')
           .insert(cleanData);
       
@@ -227,12 +227,11 @@ class AddressService {
       
       debugPrint('Updating address with data: ${cleanData.keys.join(', ')}');
 
-      // Update the address
+      // Update the address in the database
       await _client
           .from('user_addresses')
           .update(cleanData)
-          .eq('id', id)
-          .eq('user_id', userId);
+          .eq('id', id);
       
       // Get the updated address
       final addressResponse = await _client

@@ -70,6 +70,33 @@ class SignupScreenState extends ConsumerState<SignupScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+      
+      if (!mounted) return;
+      
+      // No navigation needed here, will be handled by the auth state change
+    } catch (e) {
+      if (!mounted) return;
+      
+      setState(() {
+        _errorMessage = _formatErrorMessage(e.toString());
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   String _formatErrorMessage(String error) {
     // Format Supabase error messages for better user experience
     if (error.contains('email already registered')) {
@@ -232,14 +259,7 @@ class SignupScreenState extends ConsumerState<SignupScreen> {
                 // Google sign up
                 DaylizButton(
                   label: 'Sign up with Google',
-                  onPressed: () {
-                    // TODO: Implement Google sign up
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Google Sign Up coming soon!'),
-                      ),
-                    );
-                  },
+                  onPressed: _isLoading ? null : _signInWithGoogle,
                   leadingIcon: Icons.g_mobiledata,
                   type: DaylizButtonType.secondary,
                   size: DaylizButtonSize.large,

@@ -72,6 +72,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Sign in with Google
+  Future<void> signInWithGoogle() async {
+    state = AuthState.loading;
+    
+    try {
+      await AuthService.instance.signInWithGoogle();
+      // The auth state will be updated via the auth state change listener
+      // when the user completes the OAuth flow
+    } catch (e) {
+      state = AuthState.unauthenticated;
+      rethrow;
+    }
+  }
+
   /// Sign up with email and password
   Future<User?> signUpWithEmail({
     required String email,

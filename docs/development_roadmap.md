@@ -10,6 +10,14 @@ The "Serial Stacked Sprint" approach involves:
 3. Setting milestone-based checkpoints for integration
 4. Regular testing and validation at the end of each phase
 
+## Backend Architecture Direction
+
+> **IMPORTANT**: The FastAPI backend under /backend is feature-complete but not connected yet.
+> We are keeping Supabase as the active backend for Phases 1-5 to build and launch fast.
+> The service layer abstraction in Flutter allows for a future switch with minimal UI rewrites.
+> FastAPI migration is planned for Phase 6 (post-launch) when we need custom logic, RBAC, or scale limits.
+> In the meantime, any core DB model changes should be synced with FastAPI models to avoid drift.
+
 ## Phase 1: Foundation Setup (2-3 weeks)
 
 ### Authentication System
@@ -31,22 +39,22 @@ The "Serial Stacked Sprint" approach involves:
 - [x] Build input fields with validation states
 - [x] Implement card and container components
 - [x] Create loading indicators and shimmer placeholders
-- [ ] Design navigation components (tabs, bottom bar)
+- [x] Design navigation components (tabs, bottom bar)
 
 ### Navigation
 - [x] Setup GoRouter with path-based routing
 - [x] Implement authentication route guards
-- [ ] Create custom page transitions
-- [ ] Add deep linking support
+- [x] Create custom page transitions
+- [x] Add deep linking support
 - [x] Handle 404/error routes
 
 ### Backend Foundation
-- [ ] Create FastAPI project structure
-- [ ] Setup database with SQLAlchemy ORM
-- [x] Implement JWT authentication
-- [x] Define core models (User, Product, Order)
-- [x] Create migration system
-- [x] Implement basic CRUD operations
+- [x] Create FastAPI project structure *(feature-complete but not integrated)*
+- [x] Setup database with SQLAlchemy ORM *(feature-complete but not integrated)*
+- [x] Implement JWT authentication *(feature-complete but not integrated)*
+- [x] Define core models (User, Product, Order) *(feature-complete in both FastAPI and Supabase)*
+- [x] Create migration system *(feature-complete but not integrated)*
+- [x] Implement basic CRUD operations *(implemented in both FastAPI and Supabase)*
 
 ## Phase 2: Product Browsing + UI Polish (2-3 weeks)
 
@@ -168,6 +176,35 @@ The "Serial Stacked Sprint" approach involves:
 - [ ] Setup analytics
 - [ ] Create app promotional materials
 
+## Phase 6: Backend Migration (3-4 weeks)
+
+> **NOTE**: This phase occurs post-launch, allowing us to focus on feature delivery and user experience first.
+
+### API Transition
+- [ ] Integrate FastAPI backend with Flutter app
+- [ ] Implement hybrid gateway approach for selective routing
+- [ ] Create comprehensive API tests
+- [ ] Ensure backward compatibility with existing features
+
+### Advanced Features
+- [ ] Migrate critical business logic from Supabase to FastAPI
+- [ ] Add advanced RBAC (Role-Based Access Control)
+- [ ] Implement custom analytics and reporting
+- [ ] Build advanced search and recommendation algorithms
+
+### Infrastructure
+- [ ] Set up production deployment pipeline
+- [ ] Implement CI/CD for backend
+- [ ] Set up monitoring and logging infrastructure
+- [ ] Create database migration strategy
+- [ ] Configure auto-scaling
+
+### Performance
+- [ ] Conduct performance testing and optimization
+- [ ] Implement caching mechanisms
+- [ ] Optimize database queries
+- [ ] Create benchmarking tools
+
 ## Project Timeline
 
 | Phase | Duration | Target Completion |
@@ -177,5 +214,7 @@ The "Serial Stacked Sprint" approach involves:
 | Phase 3: Checkout & Payment | 2-3 weeks | Week 9 |
 | Phase 4: User Profile & Orders | 2 weeks | Week 11 |
 | Phase 5: Polish & Launch | 2 weeks | Week 13 |
+| **APP LAUNCH** | | **Week 13** |
+| Phase 6: Backend Migration | 3-4 weeks | Week 17 |
 
-Total estimated time: 10-13 weeks 
+Total estimated time to launch: 10-13 weeks 

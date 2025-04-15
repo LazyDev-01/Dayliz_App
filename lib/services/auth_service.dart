@@ -96,6 +96,36 @@ class AuthService {
     }
   }
   
+  /// Sign in with Google
+  Future<AuthResponse> signInWithGoogle() async {
+    try {
+      debugPrint('🔄 Starting Google Sign-in process');
+      final response = await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: dotenv.env['APP_REDIRECT_URL'],
+      );
+      
+      if (response) {
+        debugPrint('✅ Google Sign-in process initiated successfully');
+      } else {
+        debugPrint('❌ Google Sign-in process failed');
+        throw Exception('Failed to initiate Google Sign-in');
+      }
+      
+      // Return an empty AuthResponse since the actual sign-in happens in the browser
+      // The user will be redirected back to the app and the auth state will be updated
+      final AuthResponse authResponse = AuthResponse(
+        session: null,
+        user: null,
+      );
+      
+      return authResponse;
+    } catch (e) {
+      debugPrint('❌ Error in Google Sign-in: $e');
+      rethrow;
+    }
+  }
+  
   /// Sign up with email and password
   Future<AuthResponse> signUpWithEmail({
     required String email,

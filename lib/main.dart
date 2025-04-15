@@ -109,83 +109,240 @@ final routerProvider = Provider<GoRouter>((ref) {
       // No redirect needed
       return null;
     },
+    
+    // Setup observers for deep linking
+    observers: [
+      NavigatorObserver(),
+    ],
+    
+    // Enable deep link debugging
+    debugLogDiagnostics: true,
+    
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const SplashScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const SplashScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
       ),
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const LoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
       ),
       GoRoute(
         path: '/signup',
-        builder: (context, state) => const SignupScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const SignupScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
       ),
       GoRoute(
         path: '/reset-password',
-        builder: (context, state) => const ResetPasswordScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const ResetPasswordScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
       ),
       GoRoute(
         path: '/update-password',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final accessToken = state.uri.queryParameters['accessToken'];
-          return UpdatePasswordScreen(accessToken: accessToken);
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: UpdatePasswordScreen(accessToken: accessToken),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
         },
       ),
       GoRoute(
         path: '/home',
-        builder: (context, state) => const MainScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const MainScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ),
       ),
       GoRoute(
         path: '/cart',
-        builder: (context, state) => const CartScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const CartScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
       ),
       GoRoute(
         path: '/checkout',
-        builder: (context, state) => const CheckoutScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const CheckoutScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
       ),
       GoRoute(
         path: '/order-confirmation/:orderId',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           // Extract the order ID from the state parameters
           final orderId = state.pathParameters['orderId']!;
-          return OrderConfirmationScreen(orderId: orderId);
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: OrderConfirmationScreen(orderId: orderId),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
+                  child: child,
+                ),
+              );
+            },
+          );
         },
       ),
       GoRoute(
         path: '/addresses',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final isSelectable = state.uri.queryParameters['selectable'] == 'true';
-          return AddressListScreen(isSelectable: isSelectable);
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: AddressListScreen(isSelectable: isSelectable),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
         },
       ),
       GoRoute(
         path: '/address-form',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           // Extract the address from the state parameters for editing
           final address = state.extra as Address?;
-          return AddressFormScreen(address: address);
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: AddressFormScreen(address: address),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
         },
       ),
       GoRoute(
         path: '/address/add',
-        builder: (context, state) {
-          return const AddressFormScreen();
+        pageBuilder: (context, state) {
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const AddressFormScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
         },
       ),
       GoRoute(
         path: '/address/edit/:id',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
           // Try to get the address from extra data first
           final address = state.extra as Address?;
           
           // The component will use the ID to fetch the address if not provided
-          return AddressFormScreen(address: address, addressId: id);
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: AddressFormScreen(address: address, addressId: id),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
         },
       ),
     ],
+    
     // Add error handling for routes
     errorBuilder: (context, state) => Scaffold(
       body: Center(

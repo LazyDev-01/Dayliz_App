@@ -13,8 +13,8 @@ Implement email and phone-based authentication using Supabase for user sign-up, 
 - [x] Setup Supabase project and configure auth providers
 - [x] Create user registration with email verification
 - [x] Implement login with email/password
-- [ ] Add phone number verification using OTP
-- [ ] Implement password reset flow
+- [x] Add phone number verification using OTP
+- [x] Implement password reset flow
 - [x] Create secure token storage with refresh mechanism
 - [x] Add persistent login state
 
@@ -122,11 +122,11 @@ Setup the app's navigation system using GoRouter with path-based routing and tra
 **Acceptance Criteria**
 - [x] Configure GoRouter with named routes
 - [x] Implement authentication route guards
-- [ ] Create custom page transitions
-- [ ] Add deep linking support
+- [x] Create custom page transitions
+- [x] Add deep linking support
 - [x] Handle 404/error routes
 - [x] Setup nested navigation where required
-- [ ] Implement bottom navigation
+- [x] Implement bottom navigation
 
 **Technical Notes**  
 Use go_router package with route refreshing for auth state changes
@@ -147,13 +147,13 @@ Use go_router package with route refreshing for auth state changes
 Initialize the FastAPI backend project with proper structure, database integration, and authentication.
 
 **Acceptance Criteria**
-- [ ] Create FastAPI project scaffold
-- [ ] Setup PostgreSQL with SQLAlchemy ORM
+- [x] Create FastAPI project scaffold
+- [x] Setup PostgreSQL with SQLAlchemy ORM
 - [x] Implement JWT authentication middleware
-- [ ] Configure CORS and security headers
-- [ ] Add logging and error handling
+- [x] Configure CORS and security headers
+- [x] Add logging and error handling
 - [x] Create basic user model and endpoints
-- [ ] Implement environment-based configuration
+- [x] Implement environment-based configuration
 
 **Technical Notes**  
 Use FastAPI, SQLAlchemy, and Alembic for migrations

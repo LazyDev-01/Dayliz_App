@@ -63,6 +63,33 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+      
+      if (!mounted) return;
+      
+      // No navigation needed here, will be handled by the auth state change
+    } catch (e) {
+      if (!mounted) return;
+      
+      setState(() {
+        _errorMessage = _formatErrorMessage(e.toString());
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   String _formatErrorMessage(String error) {
     // Format Supabase error messages for better user experience
     if (error.contains('Invalid login credentials')) {
@@ -230,14 +257,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                 // Google sign in
                 DaylizButton(
                   label: 'Continue with Google',
-                  onPressed: () {
-                    // TODO: Implement Google sign in
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Google Sign In coming soon!'),
-                      ),
-                    );
-                  },
+                  onPressed: _isLoading ? null : _signInWithGoogle,
                   leadingIcon: Icons.g_mobiledata,
                   type: DaylizButtonType.secondary,
                   size: DaylizButtonSize.large,
