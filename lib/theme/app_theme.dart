@@ -141,6 +141,7 @@ class AppTheme {
   static const Color successColor = Color(0xFF4CAF50);
   static const Color warningColor = Color(0xFFFFA000);
   static const Color greyColor = Color(0xFFE0E0E0);
+  static const Color backgroundSecondary = Color(0xFFF5F5F5);
 
   // Typography
   static TextTheme get _baseTextTheme => GoogleFonts.poppinsTextTheme();

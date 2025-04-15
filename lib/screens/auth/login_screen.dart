@@ -5,8 +5,9 @@ import 'package:dayliz_app/providers/auth_provider.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/theme/app_spacing.dart';
 import 'package:dayliz_app/utils/validators.dart';
-import 'package:dayliz_app/widgets/buttons/dayliz_button.dart';
 import 'package:dayliz_app/widgets/inputs/dayliz_text_field.dart';
+import 'package:dayliz_app/widgets/buttons/dayliz_button.dart';
+import 'package:dayliz_app/services/auth_service.dart' show AuthException, AuthErrorType;
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -21,6 +22,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  bool _needsVerification = false;
 
   @override
   void dispose() {
@@ -37,6 +39,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _needsVerification = false;
     });
 
     try {
@@ -51,9 +54,19 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       
-      setState(() {
-        _errorMessage = _formatErrorMessage(e.toString());
-      });
+      // Check if it's an email verification issue
+      if (e is AuthException && e.type == AuthErrorType.emailNotVerified) {
+        setState(() {
+          _needsVerification = true;
+          _errorMessage = e.message;
+        });
+      } else {
+        setState(() {
+          _errorMessage = e is AuthException 
+              ? e.message 
+              : _formatErrorMessage(e.toString());
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -63,10 +76,18 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _goToVerifyEmail() async {
+    final email = _emailController.text.trim();
+    if (email.isNotEmpty) {
+      context.go('/verify-email?email=${Uri.encodeComponent(email)}');
+    }
+  }
+
   Future<void> _signInWithGoogle() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _needsVerification = false;
     });
 
     try {
@@ -79,7 +100,9 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       
       setState(() {
-        _errorMessage = _formatErrorMessage(e.toString());
+        _errorMessage = e is AuthException 
+            ? e.message 
+            : _formatErrorMessage(e.toString());
       });
     } finally {
       if (mounted) {
@@ -163,21 +186,38 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                       color: theme.colorScheme.error.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(
+                    child: Column(
                       children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: theme.colorScheme.error,
-                        ),
-                        AppSpacing.hSM,
-                        Expanded(
-                          child: Text(
-                            _errorMessage!,
-                            style: theme.textTheme.bodyMedium?.copyWith(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
                               color: theme.colorScheme.error,
                             ),
-                          ),
+                            AppSpacing.hSM,
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.error,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
+                        
+                        // Show verify button if needed
+                        if (_needsVerification) ...[
+                          AppSpacing.vSM,
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _goToVerifyEmail,
+                              child: const Text('Verify Email'),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

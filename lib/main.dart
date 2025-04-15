@@ -21,6 +21,9 @@ import 'package:dayliz_app/services/address_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dayliz_app/screens/auth/reset_password_screen.dart';
 import 'package:dayliz_app/screens/auth/update_password_screen.dart';
+import 'package:dayliz_app/screens/auth/email_verification_screen.dart';
+import 'package:dayliz_app/screens/auth/verify_token_handler.dart';
+import 'package:dayliz_app/data/seed_database.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +36,21 @@ void main() async {
   
   // Test database connections
   await _testDatabaseConnections();
+  
+  // Seed database with test data
+  if (kDebugMode) {
+    try {
+      // Only try to seed if Supabase is initialized
+      if (AuthService.instance.isInitialized) {
+        await DatabaseSeeder.instance.seedAll();
+      } else {
+        debugPrint('Skipping database seeding: Auth service not initialized');
+      }
+    } catch (e) {
+      debugPrint('Error seeding database: $e');
+      // Continue with app startup even if seeding fails
+    }
+  }
   
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -80,20 +98,34 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     redirect: (context, state) {
       // Get the current auth state
-      final isAuthenticated = authState.maybeWhen(
-        data: (state) => state == AuthState.authenticated,
-        orElse: () => false,
-      );
+      final authData = authState.valueOrNull;
+      
+      final isAuthenticated = authData == AuthState.authenticated;
+      final needsEmailVerification = authData == AuthState.emailVerificationRequired;
       
       // Check if the user is on the splash screen
       final isSplashScreen = state.uri.path == '/';
       
-      // Check if the user is on an auth screen
+      // Check if the user is on an auth screen or verification screen
       final isAuthScreen = 
           state.uri.path == '/login' || 
           state.uri.path == '/signup' ||
           state.uri.path == '/reset-password' ||
           state.uri.path.startsWith('/update-password');
+          
+      final isVerificationScreen = 
+          state.uri.path == '/verify-email' ||
+          state.uri.path == '/auth/verify';
+      
+      // Don't redirect if handling a verification token
+      if (state.uri.path == '/auth/verify') {
+        return null;
+      }
+      
+      // If the user needs email verification and not on verification screen, redirect
+      if (needsEmailVerification && !isVerificationScreen && !isSplashScreen) {
+        return '/verify-email';
+      }
       
       // If the user is authenticated but on an auth screen, redirect to home
       if (isAuthenticated && isAuthScreen) {
@@ -102,7 +134,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       
       // If the user is not authenticated and not on an auth screen or splash screen,
       // redirect to login
-      if (!isAuthenticated && !isAuthScreen && !isSplashScreen) {
+      if (!isAuthenticated && !isVerificationScreen && !isAuthScreen && !isSplashScreen) {
         return '/login';
       }
       
@@ -160,6 +192,40 @@ final routerProvider = Provider<GoRouter>((ref) {
             );
           },
         ),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        pageBuilder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? AuthService.instance.currentUser?.email ?? '';
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: EmailVerificationScreen(email: email),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: '/auth/verify',
+        pageBuilder: (context, state) {
+          final token = state.uri.queryParameters['token'] ?? '';
+          final type = state.uri.queryParameters['type'] ?? 'verify_email';
+          
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: VerifyTokenHandler(token: token, type: type),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
       ),
       GoRoute(
         path: '/reset-password',

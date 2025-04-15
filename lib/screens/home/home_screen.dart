@@ -5,6 +5,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/widgets/product_card.dart';
+import 'package:dayliz_app/data/mock_products.dart' as mock;
+import 'package:dayliz_app/models/product.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -201,17 +203,61 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildCategoryGrid() {
-    // Mock category data
-    final categories = [
-      {'name': 'Grocery', 'icon': Icons.local_grocery_store},
-      {'name': 'Vegetables', 'icon': Icons.eco},
-      {'name': 'Fruits', 'icon': Icons.apple},
-      {'name': 'Dairy', 'icon': Icons.egg},
-      {'name': 'Bakery', 'icon': Icons.breakfast_dining},
-      {'name': 'Beverages', 'icon': Icons.local_drink},
-      {'name': 'Snacks', 'icon': Icons.fastfood},
-      {'name': 'Household', 'icon': Icons.home},
-    ];
+    // Get unique categories from mock products
+    final categories = mock.productCategories.map((category) {
+      IconData icon;
+      // Assign icons based on category name
+      switch (category.toLowerCase()) {
+        case 'fruits':
+          icon = Icons.apple;
+          break;
+        case 'vegetables':
+          icon = Icons.eco;
+          break;
+        case 'dairy':
+          icon = Icons.egg;
+          break;
+        case 'bakery':
+          icon = Icons.breakfast_dining;
+          break;
+        case 'meat':
+          icon = Icons.lunch_dining;
+          break;
+        case 'seafood':
+          icon = Icons.set_meal;
+          break;
+        case 'organic':
+          icon = Icons.spa;
+          break;
+        case 'pantry':
+          icon = Icons.kitchen;
+          break;
+        case 'beverages':
+          icon = Icons.local_drink;
+          break;
+        case 'grains':
+          icon = Icons.grain;
+          break;
+        case 'protein':
+          icon = Icons.fitness_center;
+          break;
+        case 'fresh':
+          icon = Icons.eco;
+          break;
+        case 'leafy greens':
+          icon = Icons.grass;
+          break;
+        case 'sweeteners':
+          icon = Icons.cake;
+          break;
+        case 'bread':
+          icon = Icons.food_bank;
+          break;
+        default:
+          icon = Icons.category;
+      }
+      return {'name': category, 'icon': icon};
+    }).toList();
 
     return GridView.builder(
       shrinkWrap: true,
@@ -262,18 +308,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildDealsList() {
-    // Mock product data
-    final products = List.generate(
-      5,
-      (index) => {
-        'id': index,
-        'name': 'Product ${index + 1}',
-        'price': 199.0 - (index * 10),
-        'sale_price': 149.0 - (index * 10),
-        'image': 'https://placehold.co/200x200/${(index * 100 + 100).toRadixString(16)}/FFFFFF/png?text=Product${index + 1}',
-        'discount': '${(index + 1) * 5}% off',
-      },
-    );
+    // Get discounted products from mock data
+    final products = mock.discountedProducts;
 
     return SizedBox(
       height: 230,
@@ -294,7 +330,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: CachedNetworkImage(
-                        imageUrl: product['image'] as String,
+                        imageUrl: product.imageUrl,
                         width: 160,
                         height: 160,
                         fit: BoxFit.cover,
@@ -320,7 +356,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          product['discount'] as String,
+                          '${product.discountPercentage}% off',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -334,7 +370,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                 const SizedBox(height: 8),
                 // Product Name
                 Text(
-                  product['name'] as String,
+                  product.name,
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 14,
@@ -347,7 +383,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                 Row(
                   children: [
                     Text(
-                      '₹${product['sale_price']}',
+                      '₹${product.discountedPrice?.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -356,7 +392,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '₹${product['price']}',
+                      '₹${product.price.toStringAsFixed(2)}',
                       style: const TextStyle(
                         decoration: TextDecoration.lineThrough,
                         color: AppTheme.textSecondaryColor,
@@ -374,16 +410,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildFeaturedProducts() {
-    // Mock product data
-    final products = List.generate(
-      6,
-      (index) => {
-        'id': index + 10,
-        'name': 'Featured Product ${index + 1}',
-        'price': 249.0 - (index * 10),
-        'image': 'https://placehold.co/200x200/${(index * 100 + 500).toRadixString(16)}/FFFFFF/png?text=Featured${index + 1}',
-      },
-    );
+    // Get featured products from mock data
+    final products = mock.featuredProducts.take(6).toList();
 
     return GridView.builder(
       shrinkWrap: true,
@@ -398,9 +426,10 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       itemBuilder: (context, index) {
         final product = products[index];
         return ProductCard(
-          name: product['name'] as String,
-          price: product['price'] as double,
-          imageUrl: product['image'] as String,
+          name: product.name,
+          price: product.price,
+          imageUrl: product.imageUrl,
+          salePrice: product.discountedPrice,
           onTap: () {
             // TODO: Navigate to product details
           },

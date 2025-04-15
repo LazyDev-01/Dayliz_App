@@ -9,6 +9,7 @@ class ProductCard extends StatelessWidget {
   final double price;
   final VoidCallback? onTap;
   final double? discountPercentage;
+  final double? salePrice;
   final bool showRating;
   final double rating;
 
@@ -19,9 +20,31 @@ class ProductCard extends StatelessWidget {
     required this.price,
     this.onTap,
     this.discountPercentage,
+    this.salePrice,
     this.showRating = false,
     this.rating = 0.0,
   }) : super(key: key);
+
+  // Calculate discount percentage if sale price is provided
+  double? get _effectiveDiscountPercentage {
+    if (discountPercentage != null) return discountPercentage;
+    if (salePrice != null) {
+      return ((price - salePrice!) / price * 100).roundToDouble();
+    }
+    return null;
+  }
+
+  // Get the effective sale price
+  double? get _effectiveSalePrice {
+    if (salePrice != null) return salePrice;
+    if (discountPercentage != null) {
+      return price * (1 - (discountPercentage! / 100));
+    }
+    return null;
+  }
+
+  // Check if the product has a discount
+  bool get hasDiscount => _effectiveDiscountPercentage != null && _effectiveDiscountPercentage! > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +69,7 @@ class ProductCard extends StatelessWidget {
                     fit: BoxFit.cover,
                   ),
                 ),
-                child: discountPercentage != null
+                child: hasDiscount
                     ? Align(
                         alignment: Alignment.topLeft,
                         child: Container(
@@ -57,7 +80,7 @@ class ProductCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '-${discountPercentage!.toStringAsFixed(0)}%',
+                            '-${_effectiveDiscountPercentage!.toStringAsFixed(0)}%',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -113,17 +136,19 @@ class ProductCard extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          '\$${price.toStringAsFixed(2)}',
+                          hasDiscount 
+                              ? '\$${_effectiveSalePrice!.toStringAsFixed(2)}'
+                              : '\$${price.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                             color: AppTheme.primaryColor,
                           ),
                         ),
-                        if (discountPercentage != null) ...[
+                        if (hasDiscount) ...[
                           const SizedBox(width: 8),
                           Text(
-                            '\$${_calculateOriginalPrice().toStringAsFixed(2)}',
+                            '\$${price.toStringAsFixed(2)}',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey.shade600,
@@ -149,10 +174,5 @@ class ProductCard extends StatelessWidget {
     } else {
       return AssetImage(imageUrl);
     }
-  }
-
-  double _calculateOriginalPrice() {
-    if (discountPercentage == null) return price;
-    return price / (1 - (discountPercentage! / 100));
   }
 } 

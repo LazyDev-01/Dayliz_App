@@ -5,8 +5,9 @@ import 'package:dayliz_app/providers/auth_provider.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/theme/app_spacing.dart';
 import 'package:dayliz_app/utils/validators.dart';
-import 'package:dayliz_app/widgets/buttons/dayliz_button.dart';
 import 'package:dayliz_app/widgets/inputs/dayliz_text_field.dart';
+import 'package:dayliz_app/widgets/buttons/dayliz_button.dart';
+import 'package:dayliz_app/services/auth_service.dart' show AuthException;
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({Key? key}) : super(key: key);
@@ -44,22 +45,33 @@ class SignupScreenState extends ConsumerState<SignupScreen> {
     });
 
     try {
-      await ref.read(authNotifierProvider.notifier).signUpWithEmail(
+      // Set requireEmailVerification to true to send verification email
+      final user = await ref.read(authNotifierProvider.notifier).signUpWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         userData: {
-          'full_name': _nameController.text.trim(),
+          'name': _nameController.text.trim(),
         },
+        requireEmailVerification: true,
       );
       
       if (!mounted) return;
       
-      // Navigation will be handled by the router's redirect
+      // If we get here with email verification required, redirect to the verification screen
+      final authState = ref.read(authNotifierProvider);
+      if (authState == AuthState.emailVerificationRequired) {
+        // Navigate to email verification screen with the email as a parameter
+        context.go('/verify-email?email=${Uri.encodeComponent(_emailController.text.trim())}');
+      }
+      // Otherwise, navigation will be handled by the router's redirect
     } catch (e) {
       if (!mounted) return;
       
       setState(() {
-        _errorMessage = _formatErrorMessage(e.toString());
+        // Use the proper error message from AuthException if available
+        _errorMessage = e is AuthException 
+            ? e.message 
+            : _formatErrorMessage(e.toString());
       });
     } finally {
       if (mounted) {
@@ -86,7 +98,10 @@ class SignupScreenState extends ConsumerState<SignupScreen> {
       if (!mounted) return;
       
       setState(() {
-        _errorMessage = _formatErrorMessage(e.toString());
+        // Use the proper error message from AuthException if available
+        _errorMessage = e is AuthException 
+            ? e.message 
+            : _formatErrorMessage(e.toString());
       });
     } finally {
       if (mounted) {
