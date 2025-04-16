@@ -8,6 +8,8 @@ import 'package:dayliz_app/providers/wishlist_provider.dart';
 import 'package:dayliz_app/services/image_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dayliz_app/widgets/product/product_image_carousel.dart';
+import 'package:dayliz_app/widgets/product/product_price_display.dart';
 
 // Mock product provider - will be replaced with actual API calls
 final selectedProductProvider = StateProvider<Map<String, dynamic>>((ref) => {
@@ -47,8 +49,6 @@ class ProductDetailsScreen extends ConsumerStatefulWidget {
 
 class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   int _quantity = 1;
-  int _currentImageIndex = 0;
-  final PageController _pageController = PageController();
   
   @override
   void initState() {
@@ -56,12 +56,6 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
     
     // Preload additional images if they exist
     _preloadImages();
-  }
-  
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
   }
   
   void _preloadImages() {
@@ -98,7 +92,6 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   Widget build(BuildContext context) {
     final product = widget.product;
     final isInWishlist = ref.watch(isInWishlistProvider(product.id));
-    final cartNotifier = ref.watch(cartProvider.notifier);
     
     // Get screen width for optimizing image size
     final screenWidth = MediaQuery.of(context).size.width;
@@ -123,18 +116,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
               isInWishlist ? Icons.favorite : Icons.favorite_border,
               color: isInWishlist ? Colors.red : null,
             ),
-            onPressed: () {
-              ref.read(wishlistProvider.notifier).toggleWishlistItem(
-                WishlistItem(
-                  id: product.id,
-                  productId: product.id,
-                  name: product.name,
-                  price: product.price,
-                  imageUrl: product.imageUrl,
-                  dateAdded: DateTime.now(),
-                ),
-              );
-            },
+            onPressed: () => _toggleWishlist(),
           ),
           IconButton(
             icon: const Icon(Icons.share),
@@ -148,71 +130,14 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Images with Carousel if there are additional images
-            AspectRatio(
-              aspectRatio: 1,
-              child: Stack(
-                children: [
-                  // Image carousel
-                  PageView.builder(
-                    controller: _pageController,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentImageIndex = index;
-                      });
-                    },
-                    itemCount: product.additionalImages != null 
-                        ? 1 + product.additionalImages!.length 
-                        : 1,
-                    itemBuilder: (context, index) {
-                      // For the first item, use the main image
-                      final imageUrl = index == 0 
-                          ? product.imageUrl 
-                          : product.additionalImages![index - 1];
-                          
-                      return Hero(
-                        tag: index == 0 
-                            ? 'product_image_${product.id}' 
-                            : 'product_image_${product.id}_$index',
-                        child: imageService.getOptimizedImage(
-                          imageUrl: imageUrl,
-                          width: screenWidth,
-                          height: screenWidth,
-                          fit: BoxFit.cover,
-                          // Higher quality for detail view
-                          quality: 90,
-                        ),
-                      );
-                    },
-                  ),
-                  
-                  // Dots indicator for multiple images
-                  if (product.additionalImages != null && product.additionalImages!.isNotEmpty)
-                    Positioned(
-                      bottom: 16,
-                      left: 0,
-                      right: 0,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          1 + (product.additionalImages?.length ?? 0),
-                          (index) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: _currentImageIndex == index ? 12 : 8,
-                            height: _currentImageIndex == index ? 12 : 8,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _currentImageIndex == index 
-                                  ? Theme.of(context).primaryColor 
-                                  : Colors.grey.withOpacity(0.5),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+            // Product Images with Carousel
+            ProductImageCarousel(
+              mainImageUrl: product.imageUrl,
+              additionalImages: product.additionalImages,
+              productId: product.id,
+              width: screenWidth,
+              height: screenWidth,
+              quality: 90,
             ),
             
             // Product Info
@@ -221,122 +146,104 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    product.name,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
+                  _buildProductTitle(product),
                   const SizedBox(height: 8),
                   
                   // Rating
-                  if (product.rating != null) ...[
-                    Row(
-                      children: [
-                        RatingBar(
-                          rating: product.rating,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          "${product.rating.toStringAsFixed(1)} (${product.reviewCount} reviews)",
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                  if (product.rating != null)
+                    _buildRatingBar(product),
+                  
+                  const SizedBox(height: 16),
                   
                   // Price
-                  Row(
-                    children: [
-                      if (product.hasDiscount) ...[
-                        Text(
-                          '\$${product.price.toStringAsFixed(2)}',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            decoration: TextDecoration.lineThrough,
-                            color: Colors.grey,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      Text(
-                        '\$${product.discountedPrice.toStringAsFixed(2)}',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                      if (product.hasDiscount) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '${product.discountPercentage?.toInt()}% OFF',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                  ProductPriceDisplay(
+                    price: product.price,
+                    discountedPrice: product.discountedPrice,
+                    discountPercentage: product.discountPercentage?.toInt(),
                   ),
                   
                   const SizedBox(height: 24),
                   
                   // Description
-                  Text(
-                    'Description',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    product.description,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  
-                  const SizedBox(height: 32),
+                  _buildDescriptionSection(product),
                 ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton(
-            onPressed: () {
-              // Add to cart
-              _addToCart();
-            },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: const Text('Add to Cart'),
+      bottomNavigationBar: _buildBottomAddToCartButton(),
+    );
+  }
+  
+  Widget _buildProductTitle(Product product) {
+    return Text(
+      product.name,
+      style: Theme.of(context).textTheme.headlineSmall,
+    );
+  }
+  
+  Widget _buildRatingBar(Product product) {
+    return Row(
+      children: [
+        RatingBar(
+          rating: product.rating,
+          size: 20,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          "${product.rating.toStringAsFixed(1)} (${product.reviewCount} reviews)",
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildDescriptionSection(Product product) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Description',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
           ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          product.description,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildBottomAddToCartButton() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton(
+          onPressed: _addToCart,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: const Text('Add to Cart'),
         ),
       ),
     );
   }
   
-  double _calculateOriginalPrice(double currentPrice, double discountPercentage) {
-    return currentPrice / (1 - (discountPercentage / 100));
-  }
-  
-  ImageProvider _getImageProvider(String imageUrl) {
-    if (imageUrl.startsWith('http')) {
-      return NetworkImage(imageUrl);
-    } else {
-      return AssetImage(imageUrl);
-    }
+  void _toggleWishlist() {
+    ref.read(wishlistProvider.notifier).toggleWishlistItem(
+      WishlistItem(
+        id: widget.product.id,
+        productId: widget.product.id,
+        name: widget.product.name,
+        price: widget.product.price,
+        imageUrl: widget.product.imageUrl,
+        dateAdded: DateTime.now(),
+      ),
+    );
   }
 
   void _addToCart() {
