@@ -114,6 +114,37 @@ Product detail screen is fully functional with all interactions and information 
 
 ---
 
+### [TASK] Create Product Listing Screen
+
+**Description**  
+Implement a dedicated screen for browsing products by category, subcategory, or search results with filtering and sorting capabilities.
+
+**Action Items**
+- [ ] Design product grid/list view with toggle option
+- [ ] Implement category and subcategory filtering
+- [ ] Add sorting functionality (price, popularity, newest)
+- [ ] Create filtering options (price range, brand, rating)
+- [ ] Implement pagination with infinite scroll
+- [ ] Add product count and category information header
+- [ ] Create empty state and error handling
+- [ ] Implement search results display
+- [ ] Add "Add to Wishlist" functionality on product cards
+- [ ] Create smooth transitions to product details screen
+
+**Definition of Done**  
+Product listing screen is fully functional with filtering, sorting, and browsing features that integrate with the existing home and category screens.
+
+**Effort Estimation**  
+- [ ] 2 (Medium)
+
+**Component**  
+- [ ] Frontend
+
+**Phase**  
+- [ ] Phase 2: Product Browsing
+
+---
+
 ## Cart Functionality
 
 ### [FEATURE] Implement Shopping Cart

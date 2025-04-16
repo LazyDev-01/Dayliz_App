@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dayliz_app/providers/wishlist_provider.dart';
+import 'package:dayliz_app/models/product.dart';
+import 'package:dayliz_app/providers/cart_provider.dart';
 import 'package:dayliz_app/widgets/rating_bar.dart';
-import 'package:frontend/models/product.dart';
-import 'package:frontend/providers/cart_provider.dart';
+import 'package:dayliz_app/providers/wishlist_provider.dart';
 
 // Mock product provider - will be replaced with actual API calls
 final selectedProductProvider = StateProvider<Map<String, dynamic>>((ref) => {
@@ -58,12 +58,12 @@ class ProductDetailsScreen extends ConsumerWidget {
             onPressed: () {
               ref.read(wishlistProvider.notifier).toggleWishlistItem(
                 WishlistItem(
+                  id: product.id,
                   productId: product.id,
                   name: product.name,
                   price: product.price,
                   imageUrl: product.imageUrl,
-                  discountPercentage: product.discountPercentage,
-                  rating: product.rating,
+                  dateAdded: DateTime.now(),
                 ),
               );
             },
@@ -118,9 +118,9 @@ class ProductDetailsScreen extends ConsumerWidget {
                   // Price
                   Row(
                     children: [
-                      if (product.discountPercentage != null) ...[
+                      if (product.hasDiscount) ...[
                         Text(
-                          '\$${_calculateOriginalPrice(product.price, product.discountPercentage!).toStringAsFixed(2)}',
+                          '\$${product.price.toStringAsFixed(2)}',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             decoration: TextDecoration.lineThrough,
                             color: Colors.grey,
@@ -130,13 +130,13 @@ class ProductDetailsScreen extends ConsumerWidget {
                         const SizedBox(width: 8),
                       ],
                       Text(
-                        '\$${product.price.toStringAsFixed(2)}',
+                        '\$${(product.hasDiscount ? product.discountedPrice! : product.price).toStringAsFixed(2)}',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).primaryColor,
                         ),
                       ),
-                      if (product.discountPercentage != null) ...[
+                      if (product.hasDiscount) ...[
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -216,11 +216,22 @@ class ProductDetailsScreen extends ConsumerWidget {
     return Product(
       id: productId,
       name: 'Organic Bananas',
-      price: 4.99,
-      imageUrl: 'assets/images/banana.jpg',
       description: 'Fresh organic bananas from local farms. These bananas are grown without pesticides and are hand-picked to ensure the best quality. Perfect for a healthy snack, smoothies, or as a topping for your morning cereal.',
-      discountPercentage: 10,
+      price: 4.99,
+      discountedPrice: 3.99,
+      imageUrl: 'assets/images/banana.jpg',
+      isInStock: true,
+      stockQuantity: 100,
+      categories: ['Fruits', 'Organic'],
       rating: 4.5,
+      reviewCount: 128,
+      brand: 'Organic Farms',
+      dateAdded: DateTime.now().subtract(const Duration(days: 10)),
+      attributes: {
+        'weight': '1kg',
+        'origin': 'Ecuador',
+        'organic': true,
+      },
     );
   }
   

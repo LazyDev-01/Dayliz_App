@@ -12,6 +12,8 @@ import 'package:dayliz_app/screens/home/address_form_screen.dart';
 import 'package:dayliz_app/screens/cart_screen.dart';
 import 'package:dayliz_app/screens/checkout/checkout_screen.dart';
 import 'package:dayliz_app/screens/order_confirmation_screen.dart';
+import 'package:dayliz_app/screens/product/product_listing_screen.dart';
+import 'package:dayliz_app/screens/product/product_details_screen.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/providers/theme_provider.dart';
 import 'package:dayliz_app/providers/auth_provider.dart';
@@ -395,6 +397,50 @@ final routerProvider = Provider<GoRouter>((ref) {
           return CustomTransitionPage<void>(
             key: state.pageKey,
             child: AddressFormScreen(address: address, addressId: id),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: '/category/:id',
+        pageBuilder: (context, state) {
+          final categoryId = state.pathParameters['id']!;
+          final categoryName = state.uri.queryParameters['name'] ?? 'Products';
+          
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: ProductListingScreen(
+              categoryId: categoryId,
+              categoryName: categoryName,
+            ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: '/product/:id',
+        pageBuilder: (context, state) {
+          final productId = state.pathParameters['id']!;
+          
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: ProductDetailsScreen(productId: productId),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return SlideTransition(
                 position: Tween<Offset>(
