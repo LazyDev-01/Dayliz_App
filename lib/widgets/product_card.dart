@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/models/product.dart';
+import 'package:dayliz_app/services/image_service.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
@@ -42,17 +43,14 @@ class ProductCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Hero(
-                    tag: 'product_image_${product.id}',
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                      child: Container(
-                        color: Colors.grey[200],
-                        child: const Center(
-                          child: Icon(Icons.image_not_supported, color: Colors.grey),
-                        ),
-                      ),
-                    ),
+                  // Product image with optimized loading
+                  imageService.getOptimizedImage(
+                    imageUrl: product.imageUrl,
+                    heroTag: 'product_image_${product.id}',
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                    fit: BoxFit.cover,
+                    // Use 70% quality for thumbnails to save bandwidth
+                    quality: 70,
                   ),
                   
                   // Discount tag if applicable
@@ -130,7 +128,7 @@ class ProductCard extends StatelessWidget {
                           const Icon(Icons.star, color: Colors.amber, size: 16),
                           const SizedBox(width: 2),
                           Text(
-                            product.rating!.toStringAsFixed(1),
+                            product.rating.toStringAsFixed(1),
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
@@ -160,7 +158,7 @@ class ProductCard extends StatelessWidget {
                         ],
                         Expanded(
                           child: Text(
-                            '\$${(product.discountPrice ?? product.price).toStringAsFixed(2)}',
+                            '\$${(product.discountedPrice).toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

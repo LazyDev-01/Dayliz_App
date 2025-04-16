@@ -5,7 +5,9 @@ import 'package:dayliz_app/models/product.dart';
 import 'package:dayliz_app/providers/cart_provider.dart';
 import 'package:dayliz_app/widgets/rating_bar.dart';
 import 'package:dayliz_app/providers/wishlist_provider.dart';
+import 'package:dayliz_app/services/image_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 // Mock product provider - will be replaced with actual API calls
 final selectedProductProvider = StateProvider<Map<String, dynamic>>((ref) => {
@@ -45,12 +47,61 @@ class ProductDetailsScreen extends ConsumerStatefulWidget {
 
 class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   int _quantity = 1;
+  int _currentImageIndex = 0;
+  final PageController _pageController = PageController();
+  
+  @override
+  void initState() {
+    super.initState();
+    
+    // Preload additional images if they exist
+    _preloadImages();
+  }
+  
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+  
+  void _preloadImages() {
+    final product = widget.product;
+    
+    // Preload main image with high quality
+    precacheImage(
+      CachedNetworkImageProvider(
+        imageService.optimizeUrl(
+          product.imageUrl,
+          quality: 90,
+        ),
+      ),
+      context,
+    );
+    
+    // Preload additional images if available
+    if (product.additionalImages != null) {
+      for (final imageUrl in product.additionalImages!) {
+        precacheImage(
+          CachedNetworkImageProvider(
+            imageService.optimizeUrl(
+              imageUrl,
+              quality: 80,
+            ),
+          ),
+          context,
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
     final isInWishlist = ref.watch(isInWishlistProvider(product.id));
     final cartNotifier = ref.watch(cartProvider.notifier);
+    
+    // Get screen width for optimizing image size
+    final screenWidth = MediaQuery.of(context).size.width;
     
     return Scaffold(
       appBar: AppBar(
@@ -79,10 +130,16 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   productId: product.id,
                   name: product.name,
                   price: product.price,
-                  imageUrl: product.imageUrls,
+                  imageUrl: product.imageUrl,
                   dateAdded: DateTime.now(),
                 ),
               );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () {
+              // TODO: Implement sharing functionality
             },
           ),
         ],
@@ -91,17 +148,70 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image
+            // Product Images with Carousel if there are additional images
             AspectRatio(
               aspectRatio: 1,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: _getImageProvider(product.imageUrls),
-                    fit: BoxFit.cover,
+              child: Stack(
+                children: [
+                  // Image carousel
+                  PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentImageIndex = index;
+                      });
+                    },
+                    itemCount: product.additionalImages != null 
+                        ? 1 + product.additionalImages!.length 
+                        : 1,
+                    itemBuilder: (context, index) {
+                      // For the first item, use the main image
+                      final imageUrl = index == 0 
+                          ? product.imageUrl 
+                          : product.additionalImages![index - 1];
+                          
+                      return Hero(
+                        tag: index == 0 
+                            ? 'product_image_${product.id}' 
+                            : 'product_image_${product.id}_$index',
+                        child: imageService.getOptimizedImage(
+                          imageUrl: imageUrl,
+                          width: screenWidth,
+                          height: screenWidth,
+                          fit: BoxFit.cover,
+                          // Higher quality for detail view
+                          quality: 90,
+                        ),
+                      );
+                    },
                   ),
-                ),
+                  
+                  // Dots indicator for multiple images
+                  if (product.additionalImages != null && product.additionalImages!.isNotEmpty)
+                    Positioned(
+                      bottom: 16,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          1 + (product.additionalImages?.length ?? 0),
+                          (index) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: _currentImageIndex == index ? 12 : 8,
+                            height: _currentImageIndex == index ? 12 : 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _currentImageIndex == index 
+                                  ? Theme.of(context).primaryColor 
+                                  : Colors.grey.withOpacity(0.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             
@@ -121,10 +231,13 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   if (product.rating != null) ...[
                     Row(
                       children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 20),
-                        const SizedBox(width: 4),
+                        RatingBar(
+                          rating: product.rating,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
                         Text(
-                          product.rating.toString(),
+                          "${product.rating.toStringAsFixed(1)} (${product.reviewCount} reviews)",
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
@@ -147,7 +260,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                         const SizedBox(width: 8),
                       ],
                       Text(
-                        '\$${product.discountPrice?.toStringAsFixed(2) ?? product.price.toStringAsFixed(2)}',
+                        '\$${product.discountedPrice.toStringAsFixed(2)}',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).primaryColor,
@@ -162,7 +275,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            '${product.discountPercentage}% OFF',
+                            '${product.discountPercentage?.toInt()}% OFF',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,

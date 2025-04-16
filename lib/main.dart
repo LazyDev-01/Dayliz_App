@@ -27,6 +27,8 @@ import 'package:dayliz_app/screens/auth/email_verification_screen.dart';
 import 'package:dayliz_app/screens/auth/verify_token_handler.dart';
 import 'package:dayliz_app/data/seed_database.dart';
 import 'package:dayliz_app/data/mock_products.dart';
+import 'package:dayliz_app/services/image_service.dart';
+import 'package:dayliz_app/services/image_preloader.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -75,6 +77,42 @@ void main() async {
       child: MyApp(),
     ),
   );
+}
+
+/// The main app widget
+class MyApp extends ConsumerStatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    
+    // No need to manually register navigator key since it's now static mutable
+    // NavigationService.navigatorKey is accessible from anywhere
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    
+    // Force authNotifierProvider to initialize
+    ref.watch(authNotifierProvider);
+
+    return MaterialApp.router(
+      title: 'Dayliz',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
+      routerConfig: router,
+    );
+  }
 }
 
 Future<void> _testDatabaseConnections() async {
@@ -468,25 +506,3 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
-
-class MyApp extends ConsumerWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(routerProvider);
-    final themeMode = ref.watch(themeModeProvider);
-    
-    // Force authNotifierProvider to initialize
-    ref.watch(authNotifierProvider);
-    
-    return MaterialApp.router(
-      title: 'Dayliz',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
-      routerConfig: router,
-    );
-  }
-}

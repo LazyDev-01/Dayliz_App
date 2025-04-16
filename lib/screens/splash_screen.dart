@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
+import 'package:dayliz_app/services/image_preloader.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -28,10 +29,14 @@ class SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPro
     );
     _animationController.forward();
 
-    // Check auth state and navigate accordingly
-    Timer(const Duration(seconds: 2), () {
-      _checkAuthAndNavigate();
+    // Start preloading images as soon as splash screen appears
+    // for better initial experience when user gets to home screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      imagePreloader.preloadKeyImages(context);
     });
+    
+    // Start app initialization
+    _initializeApp();
   }
 
   void _checkAuthAndNavigate() {
@@ -43,6 +48,13 @@ class SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPro
     } else {
       context.go('/login');
     }
+  }
+
+  void _initializeApp() {
+    // Check auth state and navigate accordingly
+    Timer(const Duration(seconds: 2), () {
+      _checkAuthAndNavigate();
+    });
   }
 
   @override
