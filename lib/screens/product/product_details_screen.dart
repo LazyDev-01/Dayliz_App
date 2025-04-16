@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dayliz_app/models/cart_item.dart';
 import 'package:dayliz_app/models/product.dart';
 import 'package:dayliz_app/providers/cart_provider.dart';
 import 'package:dayliz_app/widgets/rating_bar.dart';
 import 'package:dayliz_app/providers/wishlist_provider.dart';
+import 'package:go_router/go_router.dart';
 
 // Mock product provider - will be replaced with actual API calls
 final selectedProductProvider = StateProvider<Map<String, dynamic>>((ref) => {
@@ -29,25 +31,40 @@ final selectedProductProvider = StateProvider<Map<String, dynamic>>((ref) => {
 // Provider for wishlist to check if product is in wishlist
 final isInWishlistProvider = StateProvider.family<bool, String>((ref, id) => false);
 
-class ProductDetailsScreen extends ConsumerWidget {
-  final String productId;
+class ProductDetailsScreen extends ConsumerStatefulWidget {
+  final Product product;
 
   const ProductDetailsScreen({
     Key? key,
-    required this.productId,
+    required this.product,
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // This would typically come from a product provider in a real app
-    // For now we'll mock the product data
-    final product = _getMockProduct();
-    
-    final isInWishlist = ref.watch(isInWishlistProvider(productId));
+  ConsumerState<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
+}
+
+class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
+  int _quantity = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final product = widget.product;
+    final isInWishlist = ref.watch(isInWishlistProvider(product.id));
     final cartNotifier = ref.watch(cartProvider.notifier);
     
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            try {
+              Navigator.of(context).pop();
+            } catch (e) {
+              // If pop fails, navigate to home as fallback
+              context.go('/home');
+            }
+          },
+        ),
         title: Text(product.name),
         actions: [
           IconButton(
@@ -62,7 +79,7 @@ class ProductDetailsScreen extends ConsumerWidget {
                   productId: product.id,
                   name: product.name,
                   price: product.price,
-                  imageUrl: product.imageUrl,
+                  imageUrl: product.imageUrls,
                   dateAdded: DateTime.now(),
                 ),
               );
@@ -81,7 +98,7 @@ class ProductDetailsScreen extends ConsumerWidget {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: _getImageProvider(product.imageUrl),
+                    image: _getImageProvider(product.imageUrls),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -130,7 +147,7 @@ class ProductDetailsScreen extends ConsumerWidget {
                         const SizedBox(width: 8),
                       ],
                       Text(
-                        '\$${(product.hasDiscount ? product.discountedPrice! : product.price).toStringAsFixed(2)}',
+                        '\$${product.discountPrice?.toStringAsFixed(2) ?? product.price.toStringAsFixed(2)}',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).primaryColor,
@@ -185,21 +202,7 @@ class ProductDetailsScreen extends ConsumerWidget {
           child: ElevatedButton(
             onPressed: () {
               // Add to cart
-              cartNotifier.addToCart(product);
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${product.name} added to cart'),
-                  duration: const Duration(seconds: 2),
-                  action: SnackBarAction(
-                    label: 'VIEW CART',
-                    onPressed: () {
-                      // Navigate to cart screen
-                      Navigator.of(context).pushNamed('/cart');
-                    },
-                  ),
-                ),
-              );
+              _addToCart();
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -208,30 +211,6 @@ class ProductDetailsScreen extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-  
-  // Mock function to get product details - in a real app, this would come from a provider
-  Product _getMockProduct() {
-    return Product(
-      id: productId,
-      name: 'Organic Bananas',
-      description: 'Fresh organic bananas from local farms. These bananas are grown without pesticides and are hand-picked to ensure the best quality. Perfect for a healthy snack, smoothies, or as a topping for your morning cereal.',
-      price: 4.99,
-      discountedPrice: 3.99,
-      imageUrl: 'assets/images/banana.jpg',
-      isInStock: true,
-      stockQuantity: 100,
-      categories: ['Fruits', 'Organic'],
-      rating: 4.5,
-      reviewCount: 128,
-      brand: 'Organic Farms',
-      dateAdded: DateTime.now().subtract(const Duration(days: 10)),
-      attributes: {
-        'weight': '1kg',
-        'origin': 'Ecuador',
-        'organic': true,
-      },
     );
   }
   
@@ -245,5 +224,22 @@ class ProductDetailsScreen extends ConsumerWidget {
     } else {
       return AssetImage(imageUrl);
     }
+  }
+
+  void _addToCart() {
+    ref.read(cartProvider.notifier).addToCart(widget.product, quantity: _quantity);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${widget.product.name} added to cart'),
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: 'VIEW CART',
+          onPressed: () {
+            Navigator.of(context).pushNamed('/cart');
+          },
+        ),
+      ),
+    );
   }
 } 

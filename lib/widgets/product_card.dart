@@ -18,86 +18,91 @@ class ProductCard extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return GestureDetector(
       onTap: onTap,
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-                  child: AspectRatio(
-                    aspectRatio: 1, // Square image
-                    child: Hero(
-                      tag: 'product_image_${product.id}',
-                      child: Image.network(
-                        product.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.image_not_supported, size: 40),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                
-                // Discount tag if applicable
-                if (product.hasDiscount)
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '-${product.discountPercentage}%',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+            Expanded(
+              flex: 3,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Hero(
+                    tag: 'product_image_${product.id}',
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      child: Container(
+                        color: Colors.grey[200],
+                        child: const Center(
+                          child: Icon(Icons.image_not_supported, color: Colors.grey),
                         ),
                       ),
                     ),
                   ),
-                
-                // Wishlist button
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.8),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.favorite_border),
-                      onPressed: () {
-                        // TODO: Implement wishlist functionality
-                      },
-                      color: Colors.grey[800],
-                      iconSize: 20,
-                      constraints: const BoxConstraints(
-                        minWidth: 30,
-                        minHeight: 30,
+                  
+                  // Discount tag if applicable
+                  if (product.hasDiscount)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '-${product.discountPercentage}%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                      padding: EdgeInsets.zero,
+                    ),
+                  
+                  // Wishlist button
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.8),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.favorite_border),
+                        onPressed: () {
+                          // TODO: Implement wishlist functionality
+                        },
+                        color: Colors.grey[800],
+                        iconSize: 20,
+                        constraints: const BoxConstraints(
+                          minWidth: 30,
+                          minHeight: 30,
+                        ),
+                        padding: EdgeInsets.zero,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             
             Expanded(
@@ -155,7 +160,7 @@ class ProductCard extends StatelessWidget {
                         ],
                         Expanded(
                           child: Text(
-                            '\$${(product.discountedPrice ?? product.price).toStringAsFixed(2)}',
+                            '\$${(product.discountPrice ?? product.price).toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -228,15 +233,11 @@ class ProductListTile extends StatelessWidget {
                   height: 80,
                   child: Hero(
                     tag: 'product_image_${product.id}',
-                    child: Image.network(
-                      product.imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.image_not_supported, size: 40),
-                        );
-                      },
+                    child: Container(
+                      color: Colors.grey[200],
+                      child: const Center(
+                        child: Icon(Icons.image_not_supported, color: Colors.grey),
+                      ),
                     ),
                   ),
                 ),
@@ -276,7 +277,7 @@ class ProductListTile extends StatelessWidget {
                           const SizedBox(width: 4),
                         ],
                         Text(
-                          '\$${(product.discountedPrice ?? product.price).toStringAsFixed(2)}',
+                          '\$${(product.discountPrice ?? product.price).toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,

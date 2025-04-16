@@ -12,6 +12,7 @@ import 'package:dayliz_app/widgets/payment_method_widget.dart';
 import 'package:dayliz_app/theme/dayliz_theme.dart';
 import 'package:dayliz_app/widgets/dayliz_button.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({Key? key}) : super(key: key);
@@ -446,16 +447,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final total = subtotal + shipping + tax;
       
       // Convert to order items
-      final orderItems = cartState.map((item) => OrderItem(
-        productId: item.productId,
-        name: item.name,
-        imageUrl: item.imageUrl,
-        price: item.price,
-        quantity: item.quantity,
-        discountAmount: item.discountedPrice != null ? 
-          item.price - item.discountedPrice! : null,
-        attributes: item.attributes,
-      )).toList();
+      final orderItems = cartState.map((item) => _createOrderItem(item)).toList();
       
       // Determine payment method enum from string
       final paymentMethod = _getPaymentMethodEnum();
@@ -507,6 +499,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       default:
         return PaymentMethod.cashOnDelivery;
     }
+  }
+  
+  OrderItem _createOrderItem(CartItem item) {
+    return OrderItem(
+      id: const Uuid().v4(),
+      productId: item.productId,
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      discountAmount: item.discountPrice != null ? 
+          item.price - item.discountPrice! : null,
+      imageUrl: item.imageUrl,
+      attributes: item.attributes,
+    );
   }
   
   @override

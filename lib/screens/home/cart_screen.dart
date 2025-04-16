@@ -9,32 +9,32 @@ import 'package:dayliz_app/screens/checkout/checkout_screen.dart';
 final cartItemsProvider = StateProvider<List<CartItem>>((ref) {
   return [
     CartItem(
-      id: 1,
-      productId: 1,
+      id: '1',
+      productId: '1',
       name: 'Fresh Tomatoes',
       price: 40.0,
       quantity: 2,
       imageUrl: 'https://placehold.co/100/FF5252/FFFFFF?text=Tomato',
     ),
     CartItem(
-      id: 2,
-      productId: 2,
+      id: '2',
+      productId: '2',
       name: 'Onions (1 kg)',
       price: 30.0,
       quantity: 1,
       imageUrl: 'https://placehold.co/100/9C27B0/FFFFFF?text=Onion',
     ),
     CartItem(
-      id: 3,
-      productId: 3,
+      id: '3',
+      productId: '3',
       name: 'Whole Wheat Bread',
       price: 35.0,
       quantity: 1,
       imageUrl: 'https://placehold.co/100/795548/FFFFFF?text=Bread',
     ),
     CartItem(
-      id: 4,
-      productId: 4,
+      id: '4',
+      productId: '4',
       name: 'Milk (1 liter)',
       price: 65.0,
       quantity: 2,
@@ -44,8 +44,8 @@ final cartItemsProvider = StateProvider<List<CartItem>>((ref) {
 });
 
 class CartItem {
-  final int id;
-  final int productId;
+  final String id;
+  final String productId;
   final String name;
   final double price;
   final int quantity;
@@ -61,8 +61,8 @@ class CartItem {
   });
 
   CartItem copyWith({
-    int? id,
-    int? productId,
+    String? id,
+    String? productId,
     String? name,
     double? price,
     int? quantity,

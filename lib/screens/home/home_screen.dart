@@ -235,20 +235,17 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildEnhancedBannerCarousel() {
-    // Mock banner data with better images and promotion text
+    // Simple placeholder banners with no images
     final banners = [
       {
-        'imageUrl': 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=1350',
         'title': 'Fresh Harvest',
         'subtitle': 'Get 20% off on all fresh produce'
       },
       {
-        'imageUrl': 'https://images.pexels.com/photos/1132047/pexels-photo-1132047.jpeg?auto=compress&cs=tinysrgb&w=1350',
         'title': 'Organic Selection',
         'subtitle': 'Healthy choices for your family'
       },
       {
-        'imageUrl': 'https://images.pexels.com/photos/4353084/pexels-photo-4353084.jpeg?auto=compress&cs=tinysrgb&w=1350',
         'title': 'Free Delivery',
         'subtitle': 'On orders above ₹500'
       },
@@ -283,23 +280,19 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
               width: MediaQuery.of(context).size.width,
               decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey[300],
                   ),
                   child: Stack(
                     children: [
-                      // Banner Image
+                      // Banner placeholder
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(
-                          imageUrl: banner['imageUrl']!,
-                  fit: BoxFit.cover,
+                        child: Container(
+                          color: Colors.grey[300],
                           width: double.infinity,
                           height: double.infinity,
-                  placeholder: (context, url) => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.error),
+                          child: const Center(
+                            child: Icon(Icons.image_not_supported, color: Colors.grey, size: 48),
                           ),
                         ),
                       ),
@@ -496,27 +489,12 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                         tag: 'featured_${product.id}',
                         child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: CachedNetworkImage(
-                            imageUrl: 'https://images.pexels.com/photos/${(index + 1) * 100}/pexels-photo-${(index + 1) * 100}.jpeg?auto=compress&cs=tinysrgb&w=160',
+                      child: Container(
                         width: 160,
                         height: 160,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: Colors.grey[300]!,
-                          highlightColor: Colors.grey[100]!,
-                          child: Container(
-                            width: 160,
-                            height: 160,
-                            color: Colors.white,
-                          ),
-                        ),
-                            errorWidget: (context, url, error) => Container(
-                              width: 160,
-                              height: 160,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.error, color: Colors.red),
-                            ),
-                          ),
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                      ),
                         ),
                       ),
                       if (product.hasDiscount)
@@ -900,26 +878,11 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                         tag: 'sale_${product.id}',
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(
-                            imageUrl: 'https://images.pexels.com/photos/${(index + 1) * 200}/pexels-photo-${(index + 1) * 200}.jpeg?auto=compress&cs=tinysrgb&w=160',
+                          child: Container(
                             width: 160,
                             height: 160,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Shimmer.fromColors(
-                              baseColor: Colors.grey[300]!,
-                              highlightColor: Colors.grey[100]!,
-                              child: Container(
-                                width: 160,
-                                height: 160,
-                                color: Colors.white,
-                              ),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              width: 160,
-                              height: 160,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.error, color: Colors.red),
-                            ),
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.image_not_supported, color: Colors.grey),
                           ),
                         ),
                       ),

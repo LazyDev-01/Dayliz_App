@@ -5,51 +5,73 @@ class Product extends Equatable {
   final String name;
   final String description;
   final double price;
-  final double? discountedPrice;
+  final double? discountPrice;
   final String imageUrl;
   final List<String>? additionalImages;
   final bool isInStock;
-  final int? stockQuantity;
-  final List<String>? categories;
-  final double? rating;
-  final int? reviewCount;
-  final String? brand;
-  final DateTime? dateAdded;
-  final Map<String, dynamic>? attributes;
+  final int stockQuantity;
+  final List<String> categories;
+  final double rating;
+  final int reviewCount;
+  final String brand;
+  final DateTime dateAdded;
+  final Map<String, dynamic> attributes;
 
   const Product({
     required this.id,
     required this.name,
-    this.description = '',
+    required this.description,
     required this.price,
-    this.discountedPrice,
+    this.discountPrice,
     required this.imageUrl,
     this.additionalImages,
-    this.isInStock = true,
-    this.stockQuantity,
-    this.categories,
-    this.rating,
-    this.reviewCount,
-    this.brand,
-    this.dateAdded,
-    this.attributes,
+    required this.isInStock,
+    required this.stockQuantity,
+    required this.categories,
+    required this.rating,
+    required this.reviewCount,
+    required this.brand,
+    required this.dateAdded,
+    this.attributes = const {},
   });
 
-  // Check if product has a discount
-  bool get hasDiscount => discountedPrice != null && discountedPrice! < price;
+  // Getters
+  String get imageUrls => imageUrl;
+  bool get isOnSale => discountPrice != null && discountPrice! < price;
+  double? get discountPercentage => discountPrice != null 
+    ? ((price - discountPrice!) / price * 100).roundToDouble()
+    : null;
+  DateTime? get createdAt => dateAdded;
 
-  // Calculate discount percentage
-  int get discountPercentage {
-    if (!hasDiscount) return 0;
-    return ((price - discountedPrice!) / price * 100).round();
-  }
+  bool get hasDiscount => discountPrice != null;
+
+  double get discountedPrice => discountPrice ?? price;
+
+  @override
+  List<Object?> get props => [
+    id,
+    name,
+    description,
+    price,
+    discountPrice,
+    imageUrl,
+    additionalImages,
+    isInStock,
+    stockQuantity,
+    categories,
+    rating,
+    reviewCount,
+    brand,
+    dateAdded,
+    attributes,
+  ];
 
   Product copyWith({
     String? id,
     String? name,
     String? description,
     double? price,
-    double? discountedPrice,
+    double? discountPrice,
     String? imageUrl,
     List<String>? additionalImages,
     bool? isInStock,
@@ -66,7 +88,7 @@ class Product extends Equatable {
       name: name ?? this.name,
       description: description ?? this.description,
       price: price ?? this.price,
-      discountedPrice: discountedPrice ?? this.discountedPrice,
+      discountPrice: discountPrice ?? this.discountPrice,
       imageUrl: imageUrl ?? this.imageUrl,
       additionalImages: additionalImages ?? this.additionalImages,
       isInStock: isInStock ?? this.isInStock,
@@ -80,41 +102,13 @@ class Product extends Equatable {
     );
   }
 
-  factory Product.fromJson(Map<String, dynamic> json) {
-    return Product(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'] ?? '',
-      price: (json['price'] as num).toDouble(),
-      discountedPrice: json['discounted_price'] != null 
-          ? (json['discounted_price'] as num).toDouble() 
-          : null,
-      imageUrl: json['image_url'],
-      additionalImages: json['additional_images'] != null 
-          ? List<String>.from(json['additional_images']) 
-          : null,
-      isInStock: json['is_in_stock'] ?? true,
-      stockQuantity: json['stock_quantity'],
-      categories: json['categories'] != null 
-          ? List<String>.from(json['categories']) 
-          : null,
-      rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
-      reviewCount: json['review_count'],
-      brand: json['brand'],
-      dateAdded: json['date_added'] != null 
-          ? DateTime.parse(json['date_added']) 
-          : null,
-      attributes: json['attributes'],
-    );
-  }
-
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
       'description': description,
       'price': price,
-      'discounted_price': discountedPrice,
+      'discount_price': discountPrice,
       'image_url': imageUrl,
       'additional_images': additionalImages,
       'is_in_stock': isInStock,
@@ -123,27 +117,34 @@ class Product extends Equatable {
       'rating': rating,
       'review_count': reviewCount,
       'brand': brand,
-      'date_added': dateAdded?.toIso8601String(),
+      'date_added': dateAdded.toIso8601String(),
       'attributes': attributes,
     };
   }
 
-  @override
-  List<Object?> get props => [
-    id,
-    name,
-    description,
-    price,
-    discountedPrice,
-    imageUrl,
-    additionalImages,
-    isInStock,
-    stockQuantity,
-    categories,
-    rating,
-    reviewCount,
-    brand,
-    dateAdded,
-    attributes,
-  ];
+  factory Product.fromJson(Map<String, dynamic> json) {
+    return Product(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String,
+      price: (json['price'] as num).toDouble(),
+      discountPrice: json['discount_price'] != null
+          ? (json['discount_price'] as num).toDouble()
+          : null,
+      imageUrl: json['image_url'] as String,
+      additionalImages: (json['additional_images'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      isInStock: json['is_in_stock'] as bool,
+      stockQuantity: json['stock_quantity'] as int,
+      categories: (json['categories'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      rating: (json['rating'] as num).toDouble(),
+      reviewCount: json['review_count'] as int,
+      brand: json['brand'] as String,
+      dateAdded: DateTime.parse(json['date_added'] as String),
+      attributes: json['attributes'] as Map<String, dynamic>? ?? {},
+    );
+  }
 } 

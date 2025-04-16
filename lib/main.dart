@@ -26,6 +26,7 @@ import 'package:dayliz_app/screens/auth/update_password_screen.dart';
 import 'package:dayliz_app/screens/auth/email_verification_screen.dart';
 import 'package:dayliz_app/screens/auth/verify_token_handler.dart';
 import 'package:dayliz_app/data/seed_database.dart';
+import 'package:dayliz_app/data/mock_products.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -413,13 +414,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/category/:id',
         pageBuilder: (context, state) {
           final categoryId = state.pathParameters['id']!;
-          final categoryName = state.uri.queryParameters['name'] ?? 'Products';
+          final extraData = state.extra as Map<String, dynamic>?;
           
           return CustomTransitionPage<void>(
             key: state.pageKey,
             child: ProductListingScreen(
               categoryId: categoryId,
-              categoryName: categoryName,
+              extraData: extraData,
             ),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return SlideTransition(
@@ -437,10 +438,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/product/:id',
         pageBuilder: (context, state) {
           final productId = state.pathParameters['id']!;
+          final product = mockProducts.firstWhere((p) => p.id == productId);
           
           return CustomTransitionPage<void>(
             key: state.pageKey,
-            child: ProductDetailsScreen(productId: productId),
+            child: ProductDetailsScreen(product: product),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return SlideTransition(
                 position: Tween<Offset>(
