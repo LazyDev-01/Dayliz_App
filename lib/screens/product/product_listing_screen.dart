@@ -4,12 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dayliz_app/models/product.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/widgets/product_card.dart';
-import 'package:dayliz_app/data/mock_products.dart' as mock;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:go_router/go_router.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'dart:math';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:dayliz_app/services/product_service.dart';
 
 // State providers for the product listing screen
 final selectedSubCategoryProvider = StateProvider<String?>((ref) => null);
@@ -21,6 +22,11 @@ final filterOptionsProvider = StateProvider<Map<String, dynamic>>((ref) => {
       'minRating': 0.0,
       'hasDiscount': false,
       'brands': <String>[],
+    });
+
+// Product service provider
+final productServiceProvider = Provider<ProductService>((ref) {
+  return ProductService();
     });
 
 // A class to hold filter and sort parameters
@@ -55,7 +61,103 @@ class FilterSortParams {
       categoryId.hashCode;
 }
 
-// Cache for memoizing filtered results
+// Function to perform filtering and sorting in a separate isolate
+List<Product> _filterAndSortProducts(Map<String, dynamic> params) {
+  final List<Product> products = params['products'];
+  final String? subCategory = params['subCategory'];
+  final String sortOption = params['sortOption'];
+  final Map<String, dynamic> filterOptions = params['filterOptions'];
+  
+  // First apply filters
+  List<Product> filtered = List.from(products);
+  
+  // Filter by subcategory if one is selected (other than 'All')
+  if (subCategory != null && subCategory != 'All') {
+    filtered = filtered.where((product) {
+      // Check if the product's categories contain the subcategory
+      return product.categories.any((cat) => 
+        cat.toLowerCase() == subCategory.toLowerCase());
+    }).toList();
+  }
+  
+  // Apply other filters
+  filtered = filtered.where((product) {
+    // In stock filter
+    if (filterOptions['inStock'] && !product.isInStock) {
+      return false;
+    }
+    
+    // Price range filter
+    final double minPrice = filterOptions['minPrice'];
+    final double maxPrice = filterOptions['maxPrice'];
+    final double effectivePrice = product.discountPrice ?? product.price;
+    if (effectivePrice < minPrice || effectivePrice > maxPrice) {
+      return false;
+    }
+    
+    // Rating filter
+    final double minRating = filterOptions['minRating'];
+    if (product.rating < minRating) {
+      return false;
+    }
+    
+    // Discount filter
+    final bool hasDiscount = filterOptions['hasDiscount'];
+    if (hasDiscount && product.discountPrice == null) {
+      return false;
+    }
+    
+    // Brand filter (if any brands are selected)
+    final List<String> brands = filterOptions['brands'] ?? [];
+    if (brands.isNotEmpty && !brands.contains(product.brand)) {
+      return false;
+    }
+    
+    return true;
+  }).toList();
+  
+  // Then sort the results
+  switch (sortOption) {
+    case 'price_low_high':
+      filtered.sort((a, b) {
+        final priceA = a.discountPrice ?? a.price;
+        final priceB = b.discountPrice ?? b.price;
+        return priceA.compareTo(priceB);
+      });
+      break;
+      
+    case 'price_high_low':
+      filtered.sort((a, b) {
+        final priceA = a.discountPrice ?? a.price;
+        final priceB = b.discountPrice ?? b.price;
+        return priceB.compareTo(priceA);
+      });
+      break;
+      
+    case 'newest':
+      filtered.sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
+      break;
+      
+    case 'rating':
+      filtered.sort((a, b) => b.rating.compareTo(a.rating));
+      break;
+      
+    case 'popularity':
+    default:
+      // Default sort by a combination of rating and review count
+      filtered.sort((a, b) {
+        // Calculate a "popularity score" (rating × review count)
+        final scoreA = a.rating * a.reviewCount;
+        final scoreB = b.rating * b.reviewCount;
+        return scoreB.compareTo(scoreA);
+      });
+      break;
+  }
+  
+  return filtered;
+}
+
+// A simple cache for filtered results
 class _FilterCache {
   static final Map<FilterSortParams, List<Product>> _cache = {};
   
@@ -65,15 +167,9 @@ class _FilterCache {
   
   static void set(FilterSortParams params, List<Product> products) {
     _cache[params] = products;
-    
-    // Limit cache size to prevent memory issues
-    if (_cache.length > 10) {
-      final firstKey = _cache.keys.first;
-      _cache.remove(firstKey);
-    }
   }
   
-  static void invalidate() {
+  static void clear() {
     _cache.clear();
   }
 }
@@ -83,10 +179,10 @@ class ProductListingScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? extraData;
 
   const ProductListingScreen({
-    Key? key,
+    super.key,
     required this.categoryId,
     this.extraData,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<ProductListingScreen> createState() => _ProductListingScreenState();
@@ -161,7 +257,7 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
     if (_allProducts.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _pagingController.refresh();
+      _pagingController.refresh();
         }
       });
     }
@@ -198,51 +294,68 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
 
   Future<void> _loadProducts() async {
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
+      final productService = ref.read(productServiceProvider);
       
-      if (!mounted) return;
-      
-      // Get products from mock data based on the category
-      final products = mock.getProductsByCategory(widget.categoryId);
-      
-      // If no products are found, try to match by category name
-      if (products.isEmpty) {
-        // Try to find products in any category that matches the categoryId
-        final allProducts = mock.mockProducts;
-        final filteredProducts = allProducts.where((product) {
-          if (product.categories == null) return false;
-          return product.categories!.any((category) =>
-              category.toLowerCase().contains(widget.categoryId.toLowerCase()) ||
-              widget.categoryId.toLowerCase().contains(category.toLowerCase()));
-        }).toList();
+      // Check if we're showing products for a specific subcategory
+      if (widget.extraData != null && widget.extraData!.containsKey('parentCategory')) {
+        // This is a subcategory view, so fetch by subcategory ID
+        final products = await productService.getProductsBySubcategory(widget.categoryId);
         
-        // Check if widget is still mounted before updating state
         if (!mounted) return;
-        
-        _allProducts = filteredProducts;
-      } else {
-        // Check if widget is still mounted before updating state
-        if (!mounted) return;
-        
         _allProducts = products;
+      } else {
+        // This is a main category view, fetch by category ID
+        final products = await productService.getProductsByCategory(widget.categoryId);
+        
+        if (!mounted) return;
+        
+        // If no products found, try to fetch all products as fallback
+      if (products.isEmpty) {
+          final allProducts = await productService.getAllProducts();
+          
+          if (!mounted) return;
+          _allProducts = allProducts;
+      } else {
+        _allProducts = products;
+        }
       }
       
       // Refresh paging controller to trigger first page load
       _pagingController.refresh();
     } catch (e) {
+      print('❌ Error loading products: $e');
       // Only set error if widget is still mounted
       if (mounted) {
-        _pagingController.error = e;
+      _pagingController.error = e;
       }
     }
   }
 
   Future<void> _loadSubCategories() async {
-    // In a real app, we would fetch subcategories from API
-    // For now, we'll simulate with hardcoded subcategories based on categoryId
-    
-    // This is just an example, you should adapt this to your data structure
+    try {
+      // Fetch subcategories from Supabase
+      List<String> subcategories = ['All'];
+      
+      if (widget.extraData != null && widget.extraData!.containsKey('parentCategory')) {
+        // For a subcategory view, we use predefined subcategories
+        setState(() {
+          _subCategories = ['All', _categoryName];
+        });
+        return;
+      }
+      
+      // For a main category, fetch subcategories from database
+      final response = await Supabase.instance.client
+          .from('subcategories')
+          .select('name')
+          .eq('category_id', widget.categoryId)
+          .order('display_order');
+      
+      if (response.isNotEmpty) {
+        final names = response.map<String>((item) => item['name'] as String).toList();
+        subcategories.addAll(names);
+      } else {
+        // Fallback to hardcoded subcategories if none found
     final Map<String, List<String>> categoryToSubCategories = {
       'fruits': ['All', 'Fresh Fruits', 'Exotic Fruits', 'Organic Fruits'],
       'vegetables': ['All', 'Fresh Vegetables', 'Exotic Vegetables', 'Organic Vegetables'],
@@ -266,9 +379,21 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
       }
     }
     
+        subcategories = categoryToSubCategories[matchedKey] ?? ['All'];
+      }
+      
+      if (!mounted) return;
     setState(() {
-      _subCategories = categoryToSubCategories[matchedKey] ?? ['All'];
-    });
+        _subCategories = subcategories;
+      });
+    } catch (e) {
+      print('❌ Error fetching subcategories: $e');
+      // Fallback to default subcategories
+      if (!mounted) return;
+      setState(() {
+        _subCategories = ['All'];
+      });
+    }
   }
   
   // Function to fetch a page of filtered products
@@ -334,97 +459,11 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
         _pagingController.appendPage(items, pageKey + 1);
       }
     } catch (e) {
+      print('❌ Error fetching page: $e');
       if (mounted) {
-        _pagingController.error = e;
-      }
+      _pagingController.error = e;
     }
   }
-  
-  // Static method to run in isolate for filtering and sorting
-  static List<Product> _filterAndSortProducts(Map<String, dynamic> params) {
-    final List<Product> products = params['products'];
-    final String? subCategory = params['subCategory'];
-    final String sortOption = params['sortOption'];
-    final Map<String, dynamic> filterOptions = params['filterOptions'];
-    
-    // Start with all products
-    List<Product> filteredProducts = List.from(products);
-    
-    // Apply subcategory filter if not 'All'
-    if (subCategory != null && subCategory != 'All') {
-      filteredProducts = filteredProducts.where((product) {
-        if (product.categories == null) return false;
-        return product.categories!.any((category) =>
-            category.toLowerCase().contains(subCategory.toLowerCase()));
-      }).toList();
-    }
-    
-    // Apply other filters
-    if (filterOptions['inStock'] == true) {
-      filteredProducts = filteredProducts.where((product) => product.isInStock).toList();
-    }
-    
-    if (filterOptions['hasDiscount'] == true) {
-      filteredProducts = filteredProducts.where((product) => product.hasDiscount).toList();
-    }
-    
-    if (filterOptions['brands'].isNotEmpty) {
-      filteredProducts = filteredProducts.where((product) =>
-          product.brand != null &&
-          (filterOptions['brands'] as List<String>).contains(product.brand)).toList();
-    }
-    
-    // Apply min and max price filters
-    filteredProducts = filteredProducts.where((product) {
-      final price = product.hasDiscount ? product.discountedPrice! : product.price;
-      return price >= filterOptions['minPrice'] && price <= filterOptions['maxPrice'];
-    }).toList();
-    
-    // Apply rating filter
-    filteredProducts = filteredProducts.where((product) =>
-        product.rating == null || product.rating! >= filterOptions['minRating']).toList();
-    
-    // Apply sorting
-    switch (sortOption) {
-      case 'price_low_high':
-        filteredProducts.sort((a, b) {
-          final aPrice = a.hasDiscount ? a.discountedPrice! : a.price;
-          final bPrice = b.hasDiscount ? b.discountedPrice! : b.price;
-          return aPrice.compareTo(bPrice);
-        });
-        break;
-      case 'price_high_low':
-        filteredProducts.sort((a, b) {
-          final aPrice = a.hasDiscount ? a.discountedPrice! : a.price;
-          final bPrice = b.hasDiscount ? b.discountedPrice! : b.price;
-          return bPrice.compareTo(aPrice);
-        });
-        break;
-      case 'newest':
-        filteredProducts.sort((a, b) {
-          if (a.dateAdded == null) return 1;
-          if (b.dateAdded == null) return -1;
-          return b.dateAdded!.compareTo(a.dateAdded!);
-        });
-        break;
-      case 'rating':
-        filteredProducts.sort((a, b) {
-          if (a.rating == null) return 1;
-          if (b.rating == null) return -1;
-          return b.rating!.compareTo(a.rating!);
-        });
-        break;
-      case 'popularity':
-      default:
-        // For popularity, we'll use a combination of rating and review count
-        filteredProducts.sort((a, b) {
-          final aPopularity = (a.rating ?? 0) * (a.reviewCount ?? 0);
-          final bPopularity = (b.rating ?? 0) * (b.reviewCount ?? 0);
-          return bPopularity.compareTo(aPopularity);
-        });
-    }
-    
-    return filteredProducts;
   }
 
   @override
@@ -445,125 +484,125 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
         }
       },
       child: Scaffold(
-        body: NestedScrollView(
-          controller: _scrollController,
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              // App Bar with category title and total count
-              SliverAppBar(
-                floating: true,
-                pinned: true,
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    try {
+      body: NestedScrollView(
+        controller: _scrollController,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            // App Bar with category title and total count
+            SliverAppBar(
+              floating: true,
+              pinned: true,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  try {
                       if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
+                    Navigator.of(context).pop();
                       } else {
                         // If we can't pop (we're at the root), navigate to home
                         context.go('/home');
                       }
-                    } catch (e) {
+                  } catch (e) {
                       // If any error occurs during navigation, go to home as fallback
-                      context.go('/home');
+                    context.go('/home');
+                  }
+                },
+              ),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_categoryName),
+                  Consumer(
+                    builder: (context, ref, child) {
+                      // Only update the count text when it changes
+                      return Text(
+                        '${_pagingController.itemList?.length ?? 0} products',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.normal,
+                        ),
+                      );
                     }
-                  },
-                ),
-                title: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_categoryName),
-                    Consumer(
-                      builder: (context, ref, child) {
-                        // Only update the count text when it changes
-                        return Text(
-                          '${_pagingController.itemList?.length ?? 0} products',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.normal,
-                          ),
-                        );
-                      }
-                    ),
-                  ],
-                ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.search),
-                    onPressed: () {
-                      // TODO: Implement search within category
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.shopping_cart_outlined),
-                    onPressed: () {
-                      // Navigate to cart
-                      context.go('/cart');
-                    },
                   ),
                 ],
               ),
-              
-              // Subcategory horizontal scroll
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _SubcategoryHeaderDelegate(
-                  subCategories: _subCategories,
-                  onSubCategorySelected: (subcategory) {
-                    ref.read(selectedSubCategoryProvider.notifier).state = subcategory;
-                  },
-                  selectedSubCategory: subCategory,
-                ),
-              ),
-              
-              // Filter/Sort/Brand section
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _FilterSortHeaderDelegate(
-                  sortOptions: _sortOptions,
-                  selectedSortOption: sortOption,
-                  onSortOptionSelected: (option) {
-                    ref.read(sortOptionProvider.notifier).state = option;
-                  },
-                  onFilterPressed: () {
-                    _showFilterBottomSheet(context);
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: () {
+                    // TODO: Implement search within category
                   },
                 ),
+                IconButton(
+                  icon: const Icon(Icons.shopping_cart_outlined),
+                  onPressed: () {
+                    // Navigate to cart
+                    context.go('/cart');
+                  },
+                ),
+              ],
+            ),
+            
+            // Subcategory horizontal scroll
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _SubcategoryHeaderDelegate(
+                subCategories: _subCategories,
+                onSubCategorySelected: (subcategory) {
+                  ref.read(selectedSubCategoryProvider.notifier).state = subcategory;
+                },
+                selectedSubCategory: subCategory,
               ),
-            ];
-          },
-          body: PagedGridView<int, Product>(
-            pagingController: _pagingController,
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+            ),
+            
+            // Filter/Sort/Brand section
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _FilterSortHeaderDelegate(
+                sortOptions: _sortOptions,
+                selectedSortOption: sortOption,
+                onSortOptionSelected: (option) {
+                  ref.read(sortOptionProvider.notifier).state = option;
+                },
+                onFilterPressed: () {
+                  _showFilterBottomSheet(context);
+                },
+              ),
+            ),
+          ];
+        },
+        body: PagedGridView<int, Product>(
+          pagingController: _pagingController,
+          padding: const EdgeInsets.all(16),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
               childAspectRatio: 0.65,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
-            ),
-            builderDelegate: PagedChildBuilderDelegate<Product>(
-              itemBuilder: (context, product, index) {
-                return ProductCard(
-                  product: product,
-                  onTap: () {
-                    // Navigate to product detail with the product as argument
-                    context.go('/product/${product.id}', extra: product);
-                  },
-                );
-              },
-              firstPageProgressIndicatorBuilder: (_) => _buildLoadingSkeleton(),
-              newPageProgressIndicatorBuilder: (_) => _buildPageLoaderIndicator(),
-              noItemsFoundIndicatorBuilder: (_) => _buildEmptyState(),
-            ),
+          ),
+          builderDelegate: PagedChildBuilderDelegate<Product>(
+            itemBuilder: (context, product, index) {
+              return ProductCard(
+                product: product,
+                onTap: () {
+                  // Navigate to product detail with the product as argument
+                  context.go('/product/${product.id}', extra: product);
+                },
+              );
+            },
+            firstPageProgressIndicatorBuilder: (_) => _buildLoadingSkeleton(),
+            newPageProgressIndicatorBuilder: (_) => _buildPageLoaderIndicator(),
+            noItemsFoundIndicatorBuilder: (_) => _buildEmptyState(),
           ),
         ),
-        floatingActionButton: _showBackToTopButton
-            ? FloatingActionButton(
-                mini: true,
-                onPressed: _scrollToTop,
-                child: const Icon(Icons.arrow_upward),
-              )
-            : null,
+      ),
+      floatingActionButton: _showBackToTopButton
+          ? FloatingActionButton(
+              mini: true,
+              onPressed: _scrollToTop,
+              child: const Icon(Icons.arrow_upward),
+            )
+          : null,
       ),
     );
   }
@@ -752,8 +791,8 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
                               max: 1000,
                               divisions: 100,
                               labels: RangeLabels(
-                                '\$${minPrice.toStringAsFixed(2)}',
-                                '\$${maxPrice.toStringAsFixed(2)}',
+                                '₹${minPrice.toStringAsFixed(2)}',
+                                '₹${maxPrice.toStringAsFixed(2)}',
                               ),
                               onChanged: (values) {
                                 setState(() {

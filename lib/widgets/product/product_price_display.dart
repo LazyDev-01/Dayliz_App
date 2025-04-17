@@ -31,7 +31,7 @@ class ProductPriceDisplay extends StatelessWidget {
       children: [
         if (hasDiscount) ...[
           Text(
-            '\$${price.toStringAsFixed(2)}',
+            '₹${price.toStringAsFixed(2)}',
             style: regularPriceStyle ?? 
                 Theme.of(context).textTheme.titleLarge?.copyWith(
                   decoration: TextDecoration.lineThrough,
@@ -42,7 +42,7 @@ class ProductPriceDisplay extends StatelessWidget {
           const SizedBox(width: 8),
         ],
         Text(
-          '\$${(discountedPrice ?? price).toStringAsFixed(2)}',
+          '₹${(discountedPrice ?? price).toStringAsFixed(2)}',
           style: discountedPriceStyle ??
               Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,

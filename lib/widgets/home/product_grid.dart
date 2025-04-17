@@ -50,7 +50,7 @@ class ProductGrid extends StatelessWidget {
     final product = products[index];
     return ProductCard(
       product: product,
-      onTap: () => context.go('/product/${product.id}'),
+      onTap: () => context.go('/product/${product.id}', extra: product),
       onAddToCart: () {
         // TODO: Implement add to cart
         ScaffoldMessenger.of(context).showSnackBar(

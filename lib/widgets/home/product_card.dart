@@ -113,7 +113,7 @@ class ProductCard extends StatelessWidget {
                     children: [
                       if (product.discountPrice != null) ...[
                         Text(
-                          '\$${product.discountPrice!.toStringAsFixed(2)}',
+                          '₹${product.discountPrice!.toStringAsFixed(2)}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -122,7 +122,7 @@ class ProductCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '\$${product.price.toStringAsFixed(2)}',
+                          '₹${product.price.toStringAsFixed(2)}',
                           style: const TextStyle(
                             decoration: TextDecoration.lineThrough,
                             color: Colors.grey,
@@ -131,7 +131,7 @@ class ProductCard extends StatelessWidget {
                         ),
                       ] else
                         Text(
-                          '\$${product.price.toStringAsFixed(2)}',
+                          '₹${product.price.toStringAsFixed(2)}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,

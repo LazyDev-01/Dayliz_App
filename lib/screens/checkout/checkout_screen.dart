@@ -270,13 +270,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         const Divider(height: 32),
         
         // Price breakdown
-        _buildPriceRow('Subtotal', '\$${subtotal.toStringAsFixed(2)}'),
-        _buildPriceRow('Shipping', '\$${shipping.toStringAsFixed(2)}'),
-        _buildPriceRow('Tax', '\$${tax.toStringAsFixed(2)}'),
+        _buildPriceRow('Subtotal', '₹${subtotal.toStringAsFixed(2)}'),
+        _buildPriceRow('Shipping', '₹${shipping.toStringAsFixed(2)}'),
+        _buildPriceRow('Tax', '₹${tax.toStringAsFixed(2)}'),
         const Divider(height: 16),
         _buildPriceRow(
           'Total', 
-          '\$${total.toStringAsFixed(2)}',
+          '₹${total.toStringAsFixed(2)}',
           isTotal: true,
         ),
         
@@ -341,7 +341,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             Text(
-                  '${item.quantity} x \$${item.price.toStringAsFixed(2)}',
+                  '${item.quantity} x ₹${item.price.toStringAsFixed(2)}',
                   style: TextStyle(
                     color: Colors.grey[600],
               ),
@@ -350,7 +350,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ),
           ),
           Text(
-            '\$${(item.price * item.quantity).toStringAsFixed(2)}',
+            '₹${(item.price * item.quantity).toStringAsFixed(2)}',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ],

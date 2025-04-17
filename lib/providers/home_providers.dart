@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:dayliz_app/models/product.dart';
-import 'package:dayliz_app/data/mock_products.dart' as mock;
 import 'package:dayliz_app/widgets/home/category_grid.dart';
 import 'package:dayliz_app/models/banner.dart';
+import 'package:dayliz_app/services/product_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // State providers for loading indicators
 final bannersLoadingProvider = StateProvider<bool>((ref) => true);
@@ -19,6 +20,11 @@ final homeScreenCategoriesCacheProvider = StateProvider<List<String>?>((ref) => 
 final saleProductsCacheProvider = StateProvider<List<Product>?>((ref) => null);
 final allProductsCacheProvider = StateProvider<List<Product>?>((ref) => null);
 
+// Product service provider
+final productServiceProvider = Provider<ProductService>((ref) {
+  return ProductService();
+});
+
 // Fetch banners
 final bannersProvider = FutureProvider<List<BannerModel>>((ref) async {
   // Check cache first
@@ -28,18 +34,42 @@ final bannersProvider = FutureProvider<List<BannerModel>>((ref) async {
     return cachedBanners;
   }
   
-  // Simulate network delay
-  await Future.delayed(const Duration(milliseconds: 800));
-  
-  print('🔄 Fetching banner data from API');
-  
-  // Mock data (in a real app, this would be API call)
-  final banners = _getBanners();
-  
-  // Cache the results
-  ref.read(bannersCacheProvider.notifier).state = banners;
-  
-  return banners;
+  try {
+    print('🔄 Fetching banner data from Supabase');
+    
+    // Fetch from Supabase
+    final response = await Supabase.instance.client
+        .from('banners')
+        .select('*')
+        .order('display_order');
+    
+    final banners = response.map<BannerModel>((json) => BannerModel(
+      id: json['id'].toString(),
+      title: json['title'] ?? '',
+      subtitle: json['subtitle'] ?? '',
+      imageUrl: json['image_url'] ?? 'https://placehold.co/800x400/4CAF50/FFFFFF?text=Banner',
+      actionUrl: json['action_url'] ?? '/home',
+    )).toList();
+    
+    if (banners.isEmpty) {
+      // Fallback to default banners if none exist in database
+      final defaultBanners = _getDefaultBanners();
+      ref.read(bannersCacheProvider.notifier).state = defaultBanners;
+      return defaultBanners;
+    }
+    
+    // Cache the results
+    ref.read(bannersCacheProvider.notifier).state = banners;
+    
+    return banners;
+  } catch (e) {
+    print('❌ Error fetching banners: $e');
+    
+    // Fallback to default banners on error
+    final defaultBanners = _getDefaultBanners();
+    ref.read(bannersCacheProvider.notifier).state = defaultBanners;
+    return defaultBanners;
+  }
 });
 
 // Listeners for loading state updates
@@ -56,7 +86,7 @@ final bannersLoadingListener = Provider<void>((ref) {
   );
 });
 
-// Fetch featured products
+// Fetch featured products from Supabase
 final featuredProductsProvider = FutureProvider<List<Product>>((ref) async {
   // Check cache first
   final cachedProducts = ref.watch(featuredProductsCacheProvider);
@@ -65,18 +95,18 @@ final featuredProductsProvider = FutureProvider<List<Product>>((ref) async {
     return cachedProducts;
   }
   
-  // Simulate network delay
-  await Future.delayed(const Duration(milliseconds: 1000));
-  
-  print('🔄 Fetching featured products data from API');
-  
-  // Mock data (in a real app, this would be API call)
-  final products = _getFeaturedProducts();
-  
-  // Cache the results
-  ref.read(featuredProductsCacheProvider.notifier).state = products;
-  
-  return products;
+  try {
+    final productService = ref.read(productServiceProvider);
+    final products = await productService.getFeaturedProducts();
+    
+    // Cache the results
+    ref.read(featuredProductsCacheProvider.notifier).state = products;
+    
+    return products;
+  } catch (e) {
+    print('❌ Error fetching featured products: $e');
+    rethrow;
+  }
 });
 
 // Listener for featured products loading state
@@ -102,28 +132,49 @@ final homeScreenCategoriesProvider = FutureProvider<List<String>>((ref) async {
     return cachedCategories;
   }
   
-  // Simulate network delay
-  await Future.delayed(const Duration(milliseconds: 600));
-  
-  print('🔄 Fetching categories data from API');
-  
-  // Mock data (in a real app, this would be API call)
-  final categories = [
-    'Electronics',
-    'Fashion',
-    'Beauty',
-    'Home',
-    'Grocery',
-    'Toys',
-    'Sports',
-    'Books',
-    'Health',
-  ];
-  
-  // Cache the results
-  ref.read(homeScreenCategoriesCacheProvider.notifier).state = categories;
-  
-  return categories;
+  try {
+    print('🔄 Fetching categories data from Supabase');
+    
+    // Get main categories from database
+    final response = await Supabase.instance.client
+        .from('categories')
+        .select('name')
+        .order('display_order');
+    
+    // Extract category names 
+    final categories = response.map<String>((json) => json['name'] as String).toList();
+    
+    if (categories.isEmpty) {
+      // Fallback categories
+      final defaultCategories = [
+        'Grocery & Kitchen',
+        'Snacks & Beverages',
+        'Beauty & Hygiene',
+        'Household & Essentials',
+      ];
+      
+      ref.read(homeScreenCategoriesCacheProvider.notifier).state = defaultCategories;
+      return defaultCategories;
+    }
+    
+    // Cache the results
+    ref.read(homeScreenCategoriesCacheProvider.notifier).state = categories;
+    
+    return categories;
+  } catch (e) {
+    print('❌ Error fetching categories: $e');
+    
+    // Fallback categories on error
+    final defaultCategories = [
+      'Grocery',
+      'Snacks',
+      'Beauty',
+      'Household',
+    ];
+    
+    ref.read(homeScreenCategoriesCacheProvider.notifier).state = defaultCategories;
+    return defaultCategories;
+  }
 });
 
 // Update the listener to use the renamed provider
@@ -140,7 +191,7 @@ final homeLoadingListener = Provider<void>((ref) {
   );
 });
 
-// Fetch sale products
+// Fetch sale products from Supabase
 final saleProductsProvider = FutureProvider<List<Product>>((ref) async {
   // Check cache first
   final cachedProducts = ref.watch(saleProductsCacheProvider);
@@ -149,18 +200,18 @@ final saleProductsProvider = FutureProvider<List<Product>>((ref) async {
     return cachedProducts;
   }
   
-  // Simulate network delay
-  await Future.delayed(const Duration(milliseconds: 1200));
-  
-  print('🔄 Fetching sale products data from API');
-  
-  // Mock data (in a real app, this would be API call)
-  final products = _getSaleProducts();
-  
-  // Cache the results
-  ref.read(saleProductsCacheProvider.notifier).state = products;
-  
-  return products;
+  try {
+    final productService = ref.read(productServiceProvider);
+    final products = await productService.getSaleProducts();
+    
+    // Cache the results
+    ref.read(saleProductsCacheProvider.notifier).state = products;
+    
+    return products;
+  } catch (e) {
+    print('❌ Error fetching sale products: $e');
+    rethrow;
+  }
 });
 
 // Listener for sale products loading state
@@ -177,7 +228,7 @@ final saleProductsLoadingListener = Provider<void>((ref) {
   );
 });
 
-// Fetch all products
+// Fetch all products from Supabase
 final allProductsProvider = FutureProvider<List<Product>>((ref) async {
   // Check cache first
   final cachedProducts = ref.watch(allProductsCacheProvider);
@@ -186,18 +237,18 @@ final allProductsProvider = FutureProvider<List<Product>>((ref) async {
     return cachedProducts;
   }
   
-  // Simulate network delay
-  await Future.delayed(const Duration(milliseconds: 1500));
-  
-  print('🔄 Fetching all products data from API');
-  
-  // Mock data (in a real app, this would be API call)
-  final products = _getAllProducts();
-  
-  // Cache the results
-  ref.read(allProductsCacheProvider.notifier).state = products;
-  
-  return products;
+  try {
+    final productService = ref.read(productServiceProvider);
+    final products = await productService.getAllProducts();
+    
+    // Cache the results
+    ref.read(allProductsCacheProvider.notifier).state = products;
+    
+    return products;
+  } catch (e) {
+    print('❌ Error fetching all products: $e');
+    rethrow;
+  }
 });
 
 // Listener for all products loading state
@@ -214,259 +265,31 @@ final allProductsLoadingListener = Provider<void>((ref) {
   );
 });
 
-// Mock data generators
-List<BannerModel> _getBanners() {
+// Default banners for fallback
+List<BannerModel> _getDefaultBanners() {
   return [
     BannerModel(
       id: '1',
       title: 'Summer Sale',
       subtitle: 'Up to 50% off on all summer essentials',
-      imageUrl: 'https://picsum.photos/id/26/800/400',
+      imageUrl: 'https://placehold.co/800x400/4CAF50/FFFFFF?text=Summer+Sale',
       actionUrl: '/summer-sale',
     ),
     BannerModel(
       id: '2',
       title: 'New Arrivals',
       subtitle: 'Check out our latest collection',
-      imageUrl: 'https://picsum.photos/id/96/800/400',
+      imageUrl: 'https://placehold.co/800x400/2196F3/FFFFFF?text=New+Arrivals',
       actionUrl: '/new-arrivals',
     ),
     BannerModel(
       id: '3',
       title: 'Flash Sale',
       subtitle: 'Limited time offers on premium products',
-      imageUrl: 'https://picsum.photos/id/65/800/400',
+      imageUrl: 'https://placehold.co/800x400/FF9800/FFFFFF?text=Flash+Sale',
       actionUrl: '/flash-sale',
     ),
   ];
-}
-
-List<Product> _getFeaturedProducts() {
-  return [
-    Product(
-      id: '1',
-      name: 'Wireless Earbuds',
-      description: 'High-quality wireless earbuds with noise cancellation.',
-      price: 129.99,
-      discountPrice: 99.99,
-      imageUrl: 'https://picsum.photos/id/100/400/400',
-      rating: 4.5,
-      categoryId: 'electronics',
-      isFeatured: true,
-      isOnSale: false,
-      isInStock: true,
-      stockQuantity: 50,
-      categories: ['Electronics', 'Audio'],
-      reviewCount: 120,
-      brand: 'TechSound',
-      dateAdded: DateTime.now().subtract(const Duration(days: 30)),
-    ),
-    Product(
-      id: '2',
-      name: 'Smart Watch',
-      description: 'Track your fitness and stay connected with this smartwatch.',
-      price: 199.99,
-      discountPrice: null,
-      imageUrl: 'https://picsum.photos/id/111/400/400',
-      rating: 4.2,
-      categoryId: 'electronics',
-      isFeatured: true,
-      isOnSale: false,
-      isInStock: true,
-      stockQuantity: 35,
-      categories: ['Electronics', 'Wearables'],
-      reviewCount: 85,
-      brand: 'SmartLife',
-      dateAdded: DateTime.now().subtract(const Duration(days: 45)),
-    ),
-    Product(
-      id: '3',
-      name: 'Portable Charger',
-      description: '10000mAh portable charger for all your devices.',
-      price: 49.99,
-      discountPrice: 39.99,
-      imageUrl: 'https://picsum.photos/id/160/400/400',
-      rating: 4.7,
-      categoryId: 'electronics',
-      isFeatured: true,
-      isOnSale: true,
-      isInStock: true,
-      stockQuantity: 120,
-      categories: ['Electronics', 'Accessories'],
-      reviewCount: 230,
-      brand: 'PowerMax',
-      dateAdded: DateTime.now().subtract(const Duration(days: 15)),
-    ),
-    Product(
-      id: '4',
-      name: 'Bluetooth Speaker',
-      description: 'Waterproof bluetooth speaker with amazing sound quality.',
-      price: 79.99,
-      discountPrice: null,
-      imageUrl: 'https://picsum.photos/id/119/400/400',
-      rating: 4.0,
-      categoryId: 'electronics',
-      isFeatured: true,
-      isOnSale: false,
-      isInStock: true,
-      stockQuantity: 65,
-      categories: ['Electronics', 'Audio'],
-      reviewCount: 95,
-      brand: 'SoundWave',
-      dateAdded: DateTime.now().subtract(const Duration(days: 60)),
-    ),
-  ];
-}
-
-List<Product> _getSaleProducts() {
-  return [
-    Product(
-      id: '3',
-      name: 'Portable Charger',
-      description: '10000mAh portable charger for all your devices.',
-      price: 49.99,
-      discountPrice: 39.99,
-      imageUrl: 'https://picsum.photos/id/160/400/400',
-      rating: 4.7,
-      categoryId: 'electronics',
-      isFeatured: true,
-      isOnSale: true,
-      isInStock: true,
-      stockQuantity: 120,
-      categories: ['Electronics', 'Accessories'],
-      reviewCount: 230,
-      brand: 'PowerMax',
-      dateAdded: DateTime.now().subtract(const Duration(days: 15)),
-    ),
-    Product(
-      id: '5',
-      name: 'Coffee Maker',
-      description: 'Programmable coffee maker with timer.',
-      price: 89.99,
-      discountPrice: 69.99,
-      imageUrl: 'https://picsum.photos/id/225/400/400',
-      rating: 4.3,
-      categoryId: 'home',
-      isFeatured: false,
-      isOnSale: true,
-      isInStock: true,
-      stockQuantity: 45,
-      categories: ['Home', 'Kitchen'],
-      reviewCount: 78,
-      brand: 'HomeBrew',
-      dateAdded: DateTime.now().subtract(const Duration(days: 20)),
-    ),
-    Product(
-      id: '6',
-      name: 'Running Shoes',
-      description: 'Lightweight running shoes with cushioned soles.',
-      price: 119.99,
-      discountPrice: 89.99,
-      imageUrl: 'https://picsum.photos/id/21/400/400',
-      rating: 4.6,
-      categoryId: 'sports',
-      isFeatured: false,
-      isOnSale: true,
-      isInStock: true,
-      stockQuantity: 55,
-      categories: ['Sports', 'Footwear'],
-      reviewCount: 112,
-      brand: 'SpeedRun',
-      dateAdded: DateTime.now().subtract(const Duration(days: 25)),
-    ),
-    Product(
-      id: '7',
-      name: 'Stand Mixer',
-      description: 'Powerful stand mixer for all your baking needs.',
-      price: 299.99,
-      discountPrice: 249.99,
-      imageUrl: 'https://picsum.photos/id/250/400/400',
-      rating: 4.8,
-      categoryId: 'home',
-      isFeatured: false,
-      isOnSale: true,
-      isInStock: true,
-      stockQuantity: 30,
-      categories: ['Home', 'Kitchen'],
-      reviewCount: 64,
-      brand: 'KitchenPro',
-      dateAdded: DateTime.now().subtract(const Duration(days: 40)),
-    ),
-  ];
-}
-
-List<Product> _getAllProducts() {
-  final List<Product> allProducts = [
-    ..._getFeaturedProducts(),
-    ..._getSaleProducts(),
-    Product(
-      id: '8',
-      name: 'Yoga Mat',
-      description: 'Non-slip yoga mat for home workouts.',
-      price: 29.99,
-      discountPrice: null,
-      imageUrl: 'https://picsum.photos/id/28/400/400',
-      rating: 4.4,
-      categoryId: 'sports',
-      isFeatured: false,
-      isOnSale: false,
-      isInStock: true,
-      stockQuantity: 80,
-      categories: ['Sports', 'Yoga'],
-      reviewCount: 48,
-      brand: 'FlexFit',
-      dateAdded: DateTime.now().subtract(const Duration(days: 10)),
-    ),
-    Product(
-      id: '9',
-      name: 'Air Purifier',
-      description: 'HEPA air purifier for cleaner indoor air.',
-      price: 149.99,
-      discountPrice: null,
-      imageUrl: 'https://picsum.photos/id/118/400/400',
-      rating: 4.2,
-      categoryId: 'home',
-      isFeatured: false,
-      isOnSale: false,
-      isInStock: true,
-      stockQuantity: 25,
-      categories: ['Home', 'Appliances'],
-      reviewCount: 56,
-      brand: 'PureAir',
-      dateAdded: DateTime.now().subtract(const Duration(days: 15)),
-    ),
-    Product(
-      id: '10',
-      name: 'Digital Camera',
-      description: '24MP digital camera with 4K video recording.',
-      price: 599.99,
-      discountPrice: null,
-      imageUrl: 'https://picsum.photos/id/250/400/400',
-      rating: 4.7,
-      categoryId: 'electronics',
-      isFeatured: false,
-      isOnSale: false,
-      isInStock: true,
-      stockQuantity: 15,
-      categories: ['Electronics', 'Photography'],
-      reviewCount: 38,
-      brand: 'PixelPro',
-      dateAdded: DateTime.now().subtract(const Duration(days: 30)),
-    ),
-  ];
-  
-  // Remove duplicates based on id
-  final uniqueProducts = <Product>[];
-  final ids = <String>{};
-  
-  for (final product in allProducts) {
-    if (!ids.contains(product.id)) {
-      uniqueProducts.add(product);
-      ids.add(product.id);
-    }
-  }
-  
-  return uniqueProducts;
 }
 
 // Category grid item class is now imported from category_grid.dart 

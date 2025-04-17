@@ -46,7 +46,7 @@ class ProductHorizontalList extends StatelessWidget {
       width: itemWidth,
       margin: const EdgeInsets.only(right: 16),
       child: GestureDetector(
-        onTap: () => context.go('/product/${product.id}'),
+        onTap: () => context.go('/product/${product.id}', extra: product),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -125,7 +125,7 @@ class ProductHorizontalList extends StatelessWidget {
           children: [
             if (product.hasDiscount)
               Text(
-                '\$${product.price.toStringAsFixed(2)}',
+                '₹${product.price.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontSize: 12,
                   decoration: TextDecoration.lineThrough,
@@ -133,7 +133,7 @@ class ProductHorizontalList extends StatelessWidget {
                 ),
               ),
             Text(
-              '\$${product.discountedPrice.toStringAsFixed(2)}',
+              '₹${product.discountedPrice.toStringAsFixed(2)}',
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,

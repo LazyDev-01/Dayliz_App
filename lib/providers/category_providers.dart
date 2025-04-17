@@ -145,7 +145,7 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) async {
 // but does NOT modify state directly during initialization
 final initializeSelectedCategoryProvider = Provider<void>((ref) {
   ref.listen<AsyncValue<List<Category>>>(
-    categoriesProvider,
+    categoriesProvider, 
     (previous, next) {
       next.whenData((categories) {
         if (categories.isNotEmpty && ref.read(selectedCategoryProvider) == null) {
@@ -168,13 +168,13 @@ final subcategoriesProvider = FutureProvider.family<List<SubCategory>, String>((
     if (cachedCategories != null) {
       // Find the selected category from cache
       final category = cachedCategories.firstWhere(
-        (category) => category.id == categoryId,
+    (category) => category.id == categoryId,
         orElse: () => cachedCategories.first,
       );
       
       if (category.subCategories.isNotEmpty) {
         print('🔄 Using cached subcategories for ${category.name}');
-        return category.subCategories;
+  return category.subCategories;
       }
     }
     

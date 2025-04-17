@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:dayliz_app/models/address.dart';
 import 'package:dayliz_app/models/payment_method.dart';
 import 'package:dayliz_app/models/product.dart';
+import 'package:dayliz_app/utils/type_converters.dart';
 
 // Enums for order status
 enum OrderStatus {
@@ -11,7 +12,7 @@ enum OrderStatus {
   delivered,
   cancelled,
   returned;
-  
+
   String get value {
     switch (this) {
       case OrderStatus.pending: return 'pending';
@@ -22,7 +23,7 @@ enum OrderStatus {
       case OrderStatus.returned: return 'returned';
     }
   }
-  
+
   static OrderStatus fromString(String status) {
     switch (status.toLowerCase()) {
       case 'pending': return OrderStatus.pending;
@@ -42,7 +43,7 @@ enum PaymentStatus {
   completed,
   failed,
   refunded;
-  
+
   String get value {
     switch (this) {
       case PaymentStatus.pending: return 'pending';
@@ -51,7 +52,7 @@ enum PaymentStatus {
       case PaymentStatus.refunded: return 'refunded';
     }
   }
-  
+
   static PaymentStatus fromString(String status) {
     switch (status.toLowerCase()) {
       case 'pending': return PaymentStatus.pending;
@@ -68,7 +69,7 @@ enum PaymentMethod {
   creditCard,
   wallet,
   cashOnDelivery;
-  
+
   String get value {
     switch (this) {
       case PaymentMethod.creditCard: return 'creditCard';
@@ -76,7 +77,7 @@ enum PaymentMethod {
       case PaymentMethod.cashOnDelivery: return 'cashOnDelivery';
     }
   }
-  
+
   static PaymentMethod fromString(String method) {
     switch (method.toLowerCase()) {
       case 'creditcard': return PaymentMethod.creditCard;
@@ -99,7 +100,7 @@ class OrderAddress {
   final String country;
   final String phoneNumber;
   final bool isDefault;
-  
+
   const OrderAddress({
     this.id,
     required this.fullName,
@@ -112,7 +113,7 @@ class OrderAddress {
     required this.phoneNumber,
     this.isDefault = false,
   });
-  
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -127,7 +128,7 @@ class OrderAddress {
       'isDefault': isDefault,
     };
   }
-  
+
   factory OrderAddress.fromJson(Map<String, dynamic> json) {
     return OrderAddress(
       id: json['id'],
@@ -142,7 +143,7 @@ class OrderAddress {
       isDefault: json['isDefault'] ?? false,
     );
   }
-  
+
   // Convert from Address model to OrderAddress
   factory OrderAddress.fromAddress(Address address) {
     return OrderAddress(
@@ -169,7 +170,7 @@ class OrderItem extends Equatable {
   final int quantity;
   final double? discountAmount;
   final Map<String, dynamic>? attributes; // size, color, etc.
-  
+
   const OrderItem({
     this.id,
     required this.productId,
@@ -207,14 +208,14 @@ class OrderItem extends Equatable {
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
-      id: json['id'],
-      productId: json['product_id'],
-      name: json['name'],
-      imageUrl: json['image_url'],
-      price: json['price'].toDouble(),
-      quantity: json['quantity'],
-      discountAmount: json['discount_amount']?.toDouble(),
-      attributes: json['attributes'],
+      id: TypeConverters.toIdString(json['id']),
+      productId: TypeConverters.toIdString(json['product_id']),
+      name: json['name'] ?? '',
+      imageUrl: json['image_url'] ?? '',
+      price: TypeConverters.toPrice(json['price']),
+      quantity: json['quantity'] is int ? json['quantity'] : int.tryParse(json['quantity'].toString()) ?? 1,
+      discountAmount: json['discount_amount'] != null ? TypeConverters.toPrice(json['discount_amount']) : null,
+      attributes: json['attributes'] is Map ? json['attributes'] : null,
     );
   }
 
@@ -272,7 +273,7 @@ class Order extends Equatable {
   final String? trackingNumber;
   final String? cancellationReason;
   final double? refundAmount;
-  
+
   Order({
     this.id,
     required this.userId,
@@ -288,7 +289,7 @@ class Order extends Equatable {
     this.trackingNumber,
     this.cancellationReason,
     this.refundAmount,
-  }) : 
+  }) :
     createdAt = createdAt ?? DateTime.now(),
     updatedAt = updatedAt ?? DateTime.now();
 
@@ -328,15 +329,17 @@ class Order extends Equatable {
 
   factory Order.fromJson(Map<String, dynamic> json) {
     return Order(
-      id: json['id'],
-      userId: json['user_id'],
-      items: (json['items'] as List)
-          .map((item) => OrderItem.fromJson(item))
-          .toList(),
-      totalAmount: json['total_amount']?.toDouble() ?? 0.0,
+      id: TypeConverters.toIdString(json['id']),
+      userId: TypeConverters.toIdString(json['user_id']),
+      items: json['items'] is List
+          ? (json['items'] as List)
+              .map((item) => OrderItem.fromJson(item))
+              .toList()
+          : [],
+      totalAmount: TypeConverters.toPrice(json['total_amount']),
       status: OrderStatus.fromString(json['status'] ?? 'pending'),
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: TypeConverters.toDateTime(json['created_at']) ?? DateTime.now(),
+      updatedAt: TypeConverters.toDateTime(json['updated_at']) ?? DateTime.now(),
       shippingAddress: json['shipping_address'] != null
           ? OrderAddress.fromJson(json['shipping_address'])
           : null,
@@ -347,7 +350,7 @@ class Order extends Equatable {
       paymentStatus: PaymentStatus.fromString(json['payment_status'] ?? 'pending'),
       trackingNumber: json['tracking_number'],
       cancellationReason: json['cancellation_reason'],
-      refundAmount: json['refund_amount']?.toDouble(),
+      refundAmount: json['refund_amount'] != null ? TypeConverters.toPrice(json['refund_amount']) : null,
     );
   }
 
@@ -358,8 +361,8 @@ class Order extends Equatable {
       'items': items.map((item) => item.toJson()).toList(),
       'total_amount': totalAmount,
       'status': status.value,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'created_at': TypeConverters.fromDateTime(createdAt),
+      'updated_at': TypeConverters.fromDateTime(updatedAt),
       'shipping_address': shippingAddress?.toJson(),
       'billing_address': billingAddress?.toJson(),
       'payment_method': paymentMethod.value,
@@ -387,4 +390,4 @@ class Order extends Equatable {
     cancellationReason,
     refundAmount,
   ];
-} 
+}

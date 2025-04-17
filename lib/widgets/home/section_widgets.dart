@@ -125,25 +125,58 @@ class FeaturedProductsSection extends ConsumerWidget {
     final AsyncValue<List<Product>> productsAsync = ref.watch(featuredProductsProvider);
     
     return productsAsync.when(
-      data: (products) => SizedBox(
-        height: 220,
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: products.length,
-          itemBuilder: (context, index) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: ProductCard(product: products[index]),
-            );
-          },
-        ),
-      ),
+      data: (products) {
+        // Check if products list is empty
+        if (products.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: Text(
+                'No featured products available',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+          );
+        }
+        
+        return SizedBox(
+          height: 280, // Increased height for better display
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              // Fix for missing isInWishlist property
+              final safeProduct = products[index].copyWith();
+              
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: SizedBox(
+                  width: 180, // Fixed width for consistent sizing
+                  child: ProductCard(
+                    product: safeProduct,
+                    onTap: () {
+                      // Navigate to product details
+                      Navigator.of(context).pushNamed(
+                        '/product-details',
+                        arguments: safeProduct,
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
       loading: () => _buildProductsSkeleton(),
-      error: (error, stack) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text('Error loading products: $error'),
-      ),
+      error: (error, stack) {
+        print("Error loading featured products: $error");
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('Error loading products: $error'),
+        );
+      },
     );
   }
 }
@@ -285,91 +318,6 @@ class CategoriesSection extends ConsumerWidget {
       error: (error, stack) => Padding(
         padding: const EdgeInsets.all(16),
         child: Text('Error loading categories: $error'),
-      ),
-    );
-  }
-}
-
-/// Limited time sale section widget for home screen
-class LimitedTimeSaleSection extends ConsumerWidget {
-  const LimitedTimeSaleSection({super.key});
-  
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Get loading state
-    final isLoading = ref.watch(saleProductsLoadingProvider);
-    
-    // Force initial fetch
-    if (!ref.watch(saleProductsProvider).hasValue) {
-      ref.read(saleProductsProvider);
-    }
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ui.SectionTitle(
-          title: 'Limited Time Sale',
-          subtitle: 'Special offers just for you',
-          onSeeAllPressed: () {
-            // TODO: Navigate to sale products page
-          },
-        ),
-        const SizedBox(height: 8),
-        if (isLoading)
-          _buildProductsSkeleton()
-        else
-          _buildProducts(ref),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-  
-  Widget _buildProductsSkeleton() {
-    return SizedBox(
-      height: 220,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: 5,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Container(
-              width: 160,
-              height: 220,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-  
-  Widget _buildProducts(WidgetRef ref) {
-    final AsyncValue<List<Product>> productsAsync = ref.watch(saleProductsProvider);
-    
-    return productsAsync.when(
-      data: (products) => SizedBox(
-        height: 220,
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: products.length,
-          itemBuilder: (context, index) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: ProductCard(product: products[index]),
-            );
-          },
-        ),
-      ),
-      loading: () => _buildProductsSkeleton(),
-      error: (error, stack) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text('Error loading products: $error'),
       ),
     );
   }

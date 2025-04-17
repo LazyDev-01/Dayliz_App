@@ -19,6 +19,7 @@ class Product extends Equatable {
   final Map<String, dynamic> attributes;
   final bool isFeatured;
   final bool isOnSale;
+  final bool? isInWishlist;
 
   const Product({
     required this.id,
@@ -39,6 +40,7 @@ class Product extends Equatable {
     this.attributes = const {},
     this.isFeatured = false,
     this.isOnSale = false,
+    this.isInWishlist,
   });
 
   // Getters
@@ -71,6 +73,7 @@ class Product extends Equatable {
     attributes,
     isFeatured,
     isOnSale,
+    isInWishlist,
   ];
 
   Product copyWith({
@@ -92,6 +95,7 @@ class Product extends Equatable {
     Map<String, dynamic>? attributes,
     bool? isFeatured,
     bool? isOnSale,
+    bool? isInWishlist,
   }) {
     return Product(
       id: id ?? this.id,
@@ -112,6 +116,7 @@ class Product extends Equatable {
       attributes: attributes ?? this.attributes,
       isFeatured: isFeatured ?? this.isFeatured,
       isOnSale: isOnSale ?? this.isOnSale,
+      isInWishlist: isInWishlist ?? this.isInWishlist,
     );
   }
 
@@ -135,6 +140,7 @@ class Product extends Equatable {
       'attributes': attributes,
       'is_featured': isFeatured,
       'is_on_sale': isOnSale,
+      'is_in_wishlist': isInWishlist,
     };
   }
 
@@ -164,6 +170,7 @@ class Product extends Equatable {
       attributes: json['attributes'] as Map<String, dynamic>? ?? {},
       isFeatured: json['is_featured'] as bool? ?? false,
       isOnSale: json['is_on_sale'] as bool? ?? false,
+      isInWishlist: json['is_in_wishlist'] as bool?,
     );
   }
 } 

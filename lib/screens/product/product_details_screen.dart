@@ -54,8 +54,12 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   void initState() {
     super.initState();
     
-    // Preload additional images if they exist
-    _preloadImages();
+    // Schedule preloading after the first frame is rendered
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _preloadImages();
+      }
+    });
   }
   
   void _preloadImages() {
@@ -93,18 +97,21 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
     final product = widget.product;
     final isInWishlist = ref.watch(isInWishlistProvider(product.id));
     
-    // Get screen width for optimizing image size
-    final screenWidth = MediaQuery.of(context).size.width;
-    
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             try {
-              Navigator.of(context).pop();
+              // First try to check if we can go back via Navigator
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              } else {
+                // If we can't pop, navigate directly to home
+                context.go('/home');
+              }
             } catch (e) {
-              // If pop fails, navigate to home as fallback
+              // If anything fails, use go_router as fallback
               context.go('/home');
             }
           },
@@ -126,51 +133,57 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Product Images with Carousel
-            ProductImageCarousel(
-              mainImageUrl: product.imageUrl,
-              additionalImages: product.additionalImages,
-              productId: product.id,
-              width: screenWidth,
-              height: screenWidth,
-              quality: 90,
-            ),
-            
-            // Product Info
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildProductTitle(product),
-                  const SizedBox(height: 8),
-                  
-                  // Rating
-                  if (product.rating != null)
-                    _buildRatingBar(product),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Price
-                  ProductPriceDisplay(
-                    price: product.price,
-                    discountedPrice: product.discountedPrice,
-                    discountPercentage: product.discountPercentage?.toInt(),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final availableWidth = constraints.maxWidth;
+          
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Product Images with Carousel
+                ProductImageCarousel(
+                  mainImageUrl: product.imageUrl,
+                  additionalImages: product.additionalImages,
+                  productId: product.id,
+                  width: availableWidth,
+                  height: availableWidth,
+                  quality: 90,
+                ),
+                
+                // Product Info
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildProductTitle(product),
+                      const SizedBox(height: 8),
+                      
+                      // Rating
+                      if (product.rating != null)
+                        _buildRatingBar(product),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Price
+                      ProductPriceDisplay(
+                        price: product.price,
+                        discountedPrice: product.discountedPrice,
+                        discountPercentage: product.discountPercentage?.toInt(),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Description
+                      _buildDescriptionSection(product),
+                    ],
                   ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Description
-                  _buildDescriptionSection(product),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        }
       ),
       bottomNavigationBar: _buildBottomAddToCartButton(),
     );

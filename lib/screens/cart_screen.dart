@@ -132,7 +132,7 @@ class CartScreen extends ConsumerWidget {
                                       Row(
                                         children: [
                                           Text(
-                                            '\$${product.price.toStringAsFixed(2)}',
+                                            '₹${product.price.toStringAsFixed(2)}',
                                             style: const TextStyle(
                                               fontSize: 15,
                                               fontWeight: FontWeight.bold,
@@ -142,7 +142,7 @@ class CartScreen extends ConsumerWidget {
                                           if (product.discountPercentage != null) ...[
                                             const SizedBox(width: 5),
                                             Text(
-                                              '\$${originalPrice.toStringAsFixed(2)}',
+                                              '₹${originalPrice.toStringAsFixed(2)}',
                                               style: const TextStyle(
                                                 fontSize: 13,
                                                 decoration: TextDecoration.lineThrough,
@@ -246,7 +246,7 @@ class CartScreen extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            '\$${cartNotifier.totalAmount.toStringAsFixed(2)}',
+                            '₹${cartNotifier.totalAmount.toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,

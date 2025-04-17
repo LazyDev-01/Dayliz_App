@@ -180,7 +180,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Subtotal'),
-                  Text('\$${(order.totalAmount * 0.9).toStringAsFixed(2)}'),
+                  Text('₹${(order.totalAmount * 0.9).toStringAsFixed(2)}'),
                 ],
               ),
               const SizedBox(height: 8),
@@ -188,7 +188,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Shipping'),
-                  Text('\$${5.99.toStringAsFixed(2)}'),
+                  Text('₹${5.99.toStringAsFixed(2)}'),
                 ],
               ),
               const SizedBox(height: 8),
@@ -196,7 +196,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Tax'),
-                  Text('\$${(order.totalAmount * 0.07).toStringAsFixed(2)}'),
+                  Text('₹${(order.totalAmount * 0.07).toStringAsFixed(2)}'),
                 ],
               ),
               const Divider(height: 24),
@@ -210,7 +210,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    '\$${order.totalAmount.toStringAsFixed(2)}',
+                    '₹${order.totalAmount.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -332,7 +332,7 @@ class OrderConfirmationScreen extends ConsumerWidget {
             
             // Price
             Text(
-              '\$${(item.price * item.quantity).toStringAsFixed(2)}',
+              '₹${(item.price * item.quantity).toStringAsFixed(2)}',
               style: const TextStyle(
                 fontWeight: FontWeight.w500,
               ),

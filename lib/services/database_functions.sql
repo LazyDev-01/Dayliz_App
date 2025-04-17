@@ -172,4 +172,53 @@ BEGIN
     
     RAISE NOTICE 'Successfully added missing subcategories';
 END;
+$$;
+
+-- Function to seed banners
+CREATE OR REPLACE FUNCTION seed_banners() RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Check if banners table has any data
+    IF NOT EXISTS (SELECT 1 FROM public.banners LIMIT 1) THEN
+        -- Insert sample banners
+        INSERT INTO public.banners (
+            title, 
+            subtitle, 
+            image_url, 
+            action_url, 
+            display_order, 
+            is_active
+        )
+        VALUES 
+            (
+                'Summer Sale', 
+                'Up to 50% off on all summer essentials', 
+                'https://placehold.co/800x400/4CAF50/FFFFFF?text=Summer+Sale', 
+                '/summer-sale', 
+                1, 
+                true
+            ),
+            (
+                'New Arrivals', 
+                'Check out our latest collection', 
+                'https://placehold.co/800x400/2196F3/FFFFFF?text=New+Arrivals', 
+                '/new-arrivals', 
+                2, 
+                true
+            ),
+            (
+                'Flash Sale', 
+                'Limited time offers on premium products', 
+                'https://placehold.co/800x400/FF9800/FFFFFF?text=Flash+Sale', 
+                '/flash-sale', 
+                3, 
+                true
+            );
+            
+        RAISE NOTICE 'Successfully seeded banners';
+    ELSE
+        RAISE NOTICE 'Banners already exist in the database';
+    END IF;
+END;
 $$; 

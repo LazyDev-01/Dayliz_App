@@ -20,6 +20,7 @@ import 'package:dayliz_app/providers/theme_provider.dart';
 import 'package:dayliz_app/providers/auth_provider.dart';
 import 'package:dayliz_app/services/auth_service.dart' hide AuthState;
 import 'package:dayliz_app/models/address.dart';
+import 'package:dayliz_app/models/product.dart';
 import 'package:dayliz_app/services/address_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dayliz_app/screens/auth/reset_password_screen.dart';
@@ -477,21 +478,72 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/product/:id',
         pageBuilder: (context, state) {
           final productId = state.pathParameters['id']!;
-          final product = mockProducts.firstWhere((p) => p.id == productId);
+          final Product? productFromExtra = state.extra as Product?;
           
-          return CustomTransitionPage<void>(
-            key: state.pageKey,
-            child: ProductDetailsScreen(product: product),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1, 0),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              );
-            },
-          );
+          // First try to use the product passed as extra data (from navigation)
+          if (productFromExtra != null) {
+            return CustomTransitionPage<void>(
+              key: state.pageKey,
+              child: ProductDetailsScreen(product: productFromExtra),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                );
+              },
+            );
+          }
+          
+          // If no extra data, try to find product in mock data
+          try {
+            final product = mockProducts.firstWhere((p) => p.id == productId);
+            return CustomTransitionPage<void>(
+              key: state.pageKey,
+              child: ProductDetailsScreen(product: product),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                );
+              },
+            );
+          } catch (e) {
+            // If product not found, show error message
+            return CustomTransitionPage<void>(
+              key: state.pageKey,
+              child: Scaffold(
+                appBar: AppBar(title: const Text('Product Not Found')),
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text('Product with ID $productId not found',
+                          style: const TextStyle(fontSize: 16)),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Go Back'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: child,
+                );
+              },
+            );
+          }
         },
       ),
       // Development tools route

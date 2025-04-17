@@ -111,7 +111,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final bannersLoading = ref.watch(bannersLoadingProvider);
     final featuredLoading = ref.watch(featuredProductsLoadingProvider);
     final categoriesData = ref.watch(categoriesProvider);
-    final salesLoading = ref.watch(saleProductsLoadingProvider);
     final allProductsLoading = ref.watch(allProductsLoadingProvider);
 
     return Scaffold(
@@ -125,6 +124,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               // App bar with search
             SliverAppBar(
               floating: true,
+              elevation: 4, // Add shadow to app bar
+              shadowColor: Colors.black.withOpacity(0.3), // Set shadow color
                 title: const Text(
                   'Dayliz',
                   style: TextStyle(
@@ -140,9 +141,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   },
                 ),
                   IconButton(
-                    icon: const Icon(Icons.shopping_cart_outlined),
+                    icon: const Icon(Icons.favorite_border),
                     onPressed: () {
-                      // TODO: Navigate to cart
+                      // Navigate to wishlist
+                      context.go('/wishlist');
                   },
                 ),
               ],
@@ -188,22 +190,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   _buildBannerSection(bannersLoading),
 
                   // Featured products
-                  _buildProductSection(
-                    title: 'Featured Products',
-                    isLoading: featuredLoading,
-                    provider: featuredProductsProvider,
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: FeaturedProductsSection(),
+                    ),
                   ),
 
                   // Categories grid
                   _buildCategoriesSection(categoriesData),
-
-                  // Limited time sale
-                  _buildProductSection(
-                    title: 'Limited Time Sale',
-                    subtitle: 'Special offers just for you',
-                    isLoading: salesLoading,
-                    provider: saleProductsProvider,
-                  ),
 
                   // All products
                   _buildProductSection(
@@ -690,7 +685,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           },
         ),
         
-        const SizedBox(height: 24),
+        // Increased spacing between category sections
+        const SizedBox(height: 32),
       ],
     );
   }
