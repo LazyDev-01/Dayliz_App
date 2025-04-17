@@ -11,11 +11,14 @@ class Product extends Equatable {
   final bool isInStock;
   final int stockQuantity;
   final List<String> categories;
+  final String? categoryId;
   final double rating;
   final int reviewCount;
   final String brand;
   final DateTime dateAdded;
   final Map<String, dynamic> attributes;
+  final bool isFeatured;
+  final bool isOnSale;
 
   const Product({
     required this.id,
@@ -28,22 +31,23 @@ class Product extends Equatable {
     required this.isInStock,
     required this.stockQuantity,
     required this.categories,
+    this.categoryId,
     required this.rating,
     required this.reviewCount,
     required this.brand,
     required this.dateAdded,
     this.attributes = const {},
+    this.isFeatured = false,
+    this.isOnSale = false,
   });
 
   // Getters
   String get imageUrls => imageUrl;
-  bool get isOnSale => discountPrice != null && discountPrice! < price;
+  bool get hasDiscount => discountPrice != null && discountPrice! < price;
   double? get discountPercentage => discountPrice != null 
     ? ((price - discountPrice!) / price * 100).roundToDouble()
     : null;
   DateTime? get createdAt => dateAdded;
-
-  bool get hasDiscount => discountPrice != null;
 
   double get discountedPrice => discountPrice ?? price;
 
@@ -59,11 +63,14 @@ class Product extends Equatable {
     isInStock,
     stockQuantity,
     categories,
+    categoryId,
     rating,
     reviewCount,
     brand,
     dateAdded,
     attributes,
+    isFeatured,
+    isOnSale,
   ];
 
   Product copyWith({
@@ -77,11 +84,14 @@ class Product extends Equatable {
     bool? isInStock,
     int? stockQuantity,
     List<String>? categories,
+    String? categoryId,
     double? rating,
     int? reviewCount,
     String? brand,
     DateTime? dateAdded,
     Map<String, dynamic>? attributes,
+    bool? isFeatured,
+    bool? isOnSale,
   }) {
     return Product(
       id: id ?? this.id,
@@ -94,11 +104,14 @@ class Product extends Equatable {
       isInStock: isInStock ?? this.isInStock,
       stockQuantity: stockQuantity ?? this.stockQuantity,
       categories: categories ?? this.categories,
+      categoryId: categoryId ?? this.categoryId,
       rating: rating ?? this.rating,
       reviewCount: reviewCount ?? this.reviewCount,
       brand: brand ?? this.brand,
       dateAdded: dateAdded ?? this.dateAdded,
       attributes: attributes ?? this.attributes,
+      isFeatured: isFeatured ?? this.isFeatured,
+      isOnSale: isOnSale ?? this.isOnSale,
     );
   }
 
@@ -114,11 +127,14 @@ class Product extends Equatable {
       'is_in_stock': isInStock,
       'stock_quantity': stockQuantity,
       'categories': categories,
+      'category_id': categoryId,
       'rating': rating,
       'review_count': reviewCount,
       'brand': brand,
       'date_added': dateAdded.toIso8601String(),
       'attributes': attributes,
+      'is_featured': isFeatured,
+      'is_on_sale': isOnSale,
     };
   }
 
@@ -140,11 +156,14 @@ class Product extends Equatable {
       categories: (json['categories'] as List<dynamic>)
           .map((e) => e as String)
           .toList(),
+      categoryId: json['category_id'] as String?,
       rating: (json['rating'] as num).toDouble(),
       reviewCount: json['review_count'] as int,
       brand: json['brand'] as String,
       dateAdded: DateTime.parse(json['date_added'] as String),
       attributes: json['attributes'] as Map<String, dynamic>? ?? {},
+      isFeatured: json['is_featured'] as bool? ?? false,
+      isOnSale: json['is_on_sale'] as bool? ?? false,
     );
   }
 } 

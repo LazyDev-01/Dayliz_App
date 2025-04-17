@@ -2,14 +2,55 @@ import 'package:flutter/material.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 
-class CategoryGridItem {
+class CategoryGridItem extends StatelessWidget {
   final String name;
   final IconData icon;
-  
+  final VoidCallback onTap;
+  final Color color;
+
   const CategoryGridItem({
+    super.key,
     required this.name,
     required this.icon,
+    required this.onTap,
+    required this.color,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 30,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            name,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class CategoryGrid extends StatelessWidget {
@@ -52,36 +93,11 @@ class CategoryGrid extends StatelessWidget {
   Widget _buildCategoryItem(BuildContext context, int index) {
     final category = categories[index];
     
-    return GestureDetector(
+    return CategoryGridItem(
+      name: category.name,
+      icon: category.icon,
       onTap: () => _navigateToCategory(context, category.name),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: AppTheme.primaryLightColor,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              category.icon,
-              color: AppTheme.primaryColor,
-              size: 28,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            category.name,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
+      color: AppTheme.primaryColor,
     );
   }
   

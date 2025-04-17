@@ -15,12 +15,12 @@ class MainScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(currentIndexProvider);
     
-    // List of screens to navigate between
+    // List of screens to navigate between with KeepAliveWrapper
     final screens = [
-      const HomeScreen(),
-      const CategoriesScreen(),
-      const CartScreen(),
-      const ProfileScreen(),
+      const KeepAliveWrapper(child: HomeScreen()),
+      const KeepAliveWrapper(child: CategoriesScreen()),
+      const KeepAliveWrapper(child: CartScreen()),
+      const KeepAliveWrapper(child: ProfileScreen()),
     ];
     
     return Scaffold(
@@ -59,4 +59,25 @@ class MainScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// A wrapper widget that keeps its child alive when it would normally be disposed
+class KeepAliveWrapper extends StatefulWidget {
+  final Widget child;
+  
+  const KeepAliveWrapper({Key? key, required this.child}) : super(key: key);
+  
+  @override
+  State<KeepAliveWrapper> createState() => _KeepAliveWrapperState();
+}
+
+class _KeepAliveWrapperState extends State<KeepAliveWrapper> with AutomaticKeepAliveClientMixin {
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+  
+  @override
+  bool get wantKeepAlive => true;
 } 

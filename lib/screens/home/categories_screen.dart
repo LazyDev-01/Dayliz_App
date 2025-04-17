@@ -4,327 +4,82 @@ import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:flutter/animation.dart';
 import 'dart:math' as math;
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:dayliz_app/models/category_models.dart';
+import 'package:dayliz_app/providers/search_providers.dart';
+import 'package:dayliz_app/providers/category_providers.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
-class Category {
-  final String id;
-  final String name;
-  final List<SubCategory> subCategories;
-  final IconData icon;
-  final Color themeColor;
-
-  Category({
-    required this.id,
-    required this.name,
-    required this.subCategories,
-    required this.icon,
-    required this.themeColor,
-  });
-}
-
-class SubCategory {
-  final String id;
-  final String name;
-  final String parentId;
-  final String? imageUrl;
-  final int productCount;
-
-  SubCategory({
-    required this.id,
-    required this.name,
-    required this.parentId,
-    this.imageUrl,
-    required this.productCount,
-  });
-}
-
-final selectedCategoryProvider = StateProvider<String?>((ref) => null);
+// We'll use the selectedCategoryProvider from category_providers.dart
+// final selectedCategoryProvider = StateProvider<String?>((ref) => null);
 
 class CategoriesScreen extends ConsumerStatefulWidget {
-  const CategoriesScreen({Key? key}) : super(key: key);
+  const CategoriesScreen({super.key});
 
   @override
-  CategoriesScreenState createState() => CategoriesScreenState();
+  ConsumerState<CategoriesScreen> createState() => _CategoriesScreenState();
 }
 
-class CategoriesScreenState extends ConsumerState<CategoriesScreen> with SingleTickerProviderStateMixin {
-  late List<Category> _categories;
+class _CategoriesScreenState extends ConsumerState<CategoriesScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  
+
+  // Adding navigateToSubcategory method
+  void navigateToSubcategory(BuildContext context, SubCategory subcategory) {
+    context.go(
+      '/category/${subcategory.id}',
+      extra: {
+        'name': subcategory.name,
+        'parentCategory': subcategory.parentId,
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
-    _categories = _getCategories();
-    
-    // Initialize animation controller
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    ));
     
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
+    // Start animation
+    _animationController.forward();
     
-    _slideAnimation = Tween<Offset>(begin: const Offset(0.05, 0), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    
-    // Set initial selected category
-    Future.microtask(() {
-      if (_categories.isNotEmpty && ref.read(selectedCategoryProvider) == null) {
-        ref.read(selectedCategoryProvider.notifier).state = _categories.first.id;
+    // Force initialization of the categories provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!ref.read(categoriesProvider).hasValue) {
+        ref.read(categoriesProvider);
       }
-      _animationController.forward();
     });
   }
-  
+
   @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
   }
-  
-  // Method to get lighter variant of a color
-  Color _getLighterColor(Color color, [double factor = 0.2]) {
-    final hsl = HSLColor.fromColor(color);
-    return hsl.withLightness((hsl.lightness + factor).clamp(0.0, 1.0)).toColor();
-  }
-
-  List<Category> _getCategories() {
-    return [
-      Category(
-        id: 'grocery_kitchen',
-        name: 'Grocery & Kitchen',
-        icon: Icons.kitchen,
-        themeColor: Colors.green.shade500,
-        subCategories: [
-          SubCategory(
-            id: 'dairy_bread_eggs',
-            name: 'Dairy, Bread & Eggs',
-            parentId: 'grocery_kitchen',
-            imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Dairy',
-            productCount: 42,
-          ),
-          SubCategory(
-            id: 'atta_rice_dal',
-            name: 'Atta, Rice & Dal',
-            parentId: 'grocery_kitchen',
-            imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Rice',
-            productCount: 38,
-          ),
-          SubCategory(
-            id: 'oil_ghee_masala',
-            name: 'Oil, Ghee & Masala',
-            parentId: 'grocery_kitchen',
-            imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Oil',
-            productCount: 24,
-          ),
-          SubCategory(
-            id: 'sauces_spreads',
-            name: 'Sauces & Spreads',
-            parentId: 'grocery_kitchen',
-            imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Sauces',
-            productCount: 18,
-          ),
-          SubCategory(
-            id: 'frozen_food',
-            name: 'Frozen Food',
-            parentId: 'grocery_kitchen',
-            imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Frozen',
-            productCount: 15,
-          ),
-          SubCategory(
-            id: 'vegetables_fruits',
-            name: 'Vegetables & Fruits',
-            parentId: 'grocery_kitchen',
-            imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Veggies',
-            productCount: 64,
-          ),
-        ],
-      ),
-      Category(
-        id: 'snacks_beverages',
-        name: 'Snacks & Beverages',
-        icon: Icons.fastfood,
-        themeColor: Colors.amber.shade600,
-        subCategories: [
-          SubCategory(
-            id: 'cookies_biscuits',
-            name: 'Cookies & Biscuits',
-            parentId: 'snacks_beverages',
-            imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=Cookies',
-            productCount: 32,
-          ),
-          SubCategory(
-            id: 'snacks_chips',
-            name: 'Snacks & Chips',
-            parentId: 'snacks_beverages',
-            imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=Snacks',
-            productCount: 47,
-          ),
-          SubCategory(
-            id: 'cold_drinks_juices',
-            name: 'Cold Drinks & Juices',
-            parentId: 'snacks_beverages',
-            imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=Drinks',
-            productCount: 28,
-          ),
-          SubCategory(
-            id: 'coffee_tea',
-            name: 'Coffee & Tea',
-            parentId: 'snacks_beverages',
-            imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=Coffee',
-            productCount: 19,
-          ),
-          SubCategory(
-            id: 'ice_creams',
-            name: 'Ice Creams & More',
-            parentId: 'snacks_beverages',
-            imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=IceCream',
-            productCount: 22,
-          ),
-          SubCategory(
-            id: 'chocolates_sweets',
-            name: 'Chocolates & Sweets',
-            parentId: 'snacks_beverages',
-            imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=Choco',
-            productCount: 35,
-          ),
-        ],
-      ),
-      Category(
-        id: 'beauty_hygiene',
-        name: 'Beauty & Hygiene',
-        icon: Icons.spa,
-        themeColor: Colors.blue.shade500,
-        subCategories: [
-          SubCategory(
-            id: 'bath_body',
-            name: 'Bath & Body',
-            parentId: 'beauty_hygiene',
-            imageUrl: 'https://placehold.co/100/2196F3/FFFFFF?text=Bath',
-            productCount: 29,
-          ),
-          SubCategory(
-            id: 'skin_face_care',
-            name: 'Skin & Face Care',
-            parentId: 'beauty_hygiene',
-            imageUrl: 'https://placehold.co/100/2196F3/FFFFFF?text=Skin',
-            productCount: 43,
-          ),
-          SubCategory(
-            id: 'hair_care',
-            name: 'Hair Care',
-            parentId: 'beauty_hygiene',
-            imageUrl: 'https://placehold.co/100/2196F3/FFFFFF?text=Hair',
-            productCount: 31,
-          ),
-          SubCategory(
-            id: 'grooming_fragrances',
-            name: 'Grooming & Fragrances',
-            parentId: 'beauty_hygiene',
-            imageUrl: 'https://placehold.co/100/2196F3/FFFFFF?text=Groom',
-            productCount: 25,
-          ),
-          SubCategory(
-            id: 'baby_care',
-            name: 'Baby Care',
-            parentId: 'beauty_hygiene',
-            imageUrl: 'https://placehold.co/100/2196F3/FFFFFF?text=Baby',
-            productCount: 18,
-          ),
-          SubCategory(
-            id: 'beauty_cosmetics',
-            name: 'Beauty & Cosmetics',
-            parentId: 'beauty_hygiene',
-            imageUrl: 'https://placehold.co/100/2196F3/FFFFFF?text=Beauty',
-            productCount: 54,
-          ),
-        ],
-      ),
-      Category(
-        id: 'household_essentials',
-        name: 'Household & Essentials',
-        icon: Icons.home,
-        themeColor: Colors.purple.shade500,
-        subCategories: [
-          SubCategory(
-            id: 'cleaning_supplies',
-            name: 'Cleaning Supplies',
-            parentId: 'household_essentials',
-            imageUrl: 'https://placehold.co/100/9C27B0/FFFFFF?text=Clean',
-            productCount: 36,
-          ),
-          SubCategory(
-            id: 'detergent_fabric_care',
-            name: 'Detergent & Fabric Care',
-            parentId: 'household_essentials',
-            imageUrl: 'https://placehold.co/100/9C27B0/FFFFFF?text=Detergent',
-            productCount: 27,
-          ),
-          SubCategory(
-            id: 'kitchen_accessories',
-            name: 'Kitchen Accessories',
-            parentId: 'household_essentials',
-            imageUrl: 'https://placehold.co/100/9C27B0/FFFFFF?text=Kitchen',
-            productCount: 45,
-          ),
-          SubCategory(
-            id: 'pet_care',
-            name: 'Pet Care',
-            parentId: 'household_essentials',
-            imageUrl: 'https://placehold.co/100/9C27B0/FFFFFF?text=Pet',
-            productCount: 22,
-          ),
-        ],
-      ),
-    ];
-  }
 
   @override
   Widget build(BuildContext context) {
-    final selectedCategory = ref.watch(selectedCategoryProvider);
-    
-    // Find the currently selected category
-    Category? currentCategory = _categories.firstWhere(
-      (category) => category.id == selectedCategory,
-      orElse: () => _categories.first,
-    );
-    
-    // When category changes, restart the animation
-    ref.listen<String?>(selectedCategoryProvider, (previous, current) {
-      if (previous != current) {
-        _animationController.reset();
-        _animationController.forward();
-      }
-    });
+    // We depend on the loading state and categories data
+    final categoriesData = ref.watch(categoriesProvider);
+    final selectedCategoryId = ref.watch(selectedCategoryProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'All Categories',
-          style: TextStyle(
-            color: Colors.white,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: currentCategory.themeColor,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {
-              // TODO: Implement search functionality
-            },
-          ),
-        ],
+        title: const Text('Categories'),
+        elevation: 0,
       ),
       body: Row(
         children: [
@@ -333,171 +88,434 @@ class CategoriesScreenState extends ConsumerState<CategoriesScreen> with SingleT
             width: 80,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                    offset: const Offset(1, 0),
+                border: Border(
+                  right: BorderSide(
+                    color: Theme.of(context).dividerColor,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: categoriesData.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text('Error: $error')),
+                data: (categories) => ListView.builder(
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    final isSelected = category.id == selectedCategoryId;
+                    
+                    return InkWell(
+                      onTap: () {
+                        ref.read(selectedCategoryProvider.notifier).state = category.id;
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 0,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? category.themeColor.withOpacity(0.1)
+                              : Colors.transparent,
+                          border: Border(
+                            left: BorderSide(
+                              color: isSelected ? category.themeColor : Colors.transparent,
+                              width: 3,
+                            ),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              category.icon,
+                              color: isSelected ? category.themeColor : Colors.grey,
+                              size: 28,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              category.name.split(' ')[0],
+                              style: TextStyle(
+                                color: isSelected ? category.themeColor : Colors.black87,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+          
+          // Subcategories section
+          Expanded(
+            child: _buildSubcategoriesSection(selectedCategoryId),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubcategoriesSection(String? selectedCategoryId) {
+    if (selectedCategoryId == null) {
+      return const Center(
+        child: Text('Select a category'),
+      );
+    }
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Consumer(
+          builder: (context, ref, child) {
+            final subcategoriesAsync = ref.watch(
+              subcategoriesProvider(selectedCategoryId),
+            );
+
+            return subcategoriesAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              error: (error, stack) => Center(
+                child: Text('Error: $error'),
+              ),
+              data: (subcategories) {
+                if (subcategories.isEmpty) {
+                  return const Center(
+                    child: Text('No subcategories found'),
+                  );
+                }
+
+                return GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.8,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: subcategories.length,
+                  itemBuilder: (context, index) {
+                    final subcategory = subcategories[index];
+                    return _buildSubcategoryCard(subcategory);
+                  },
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubcategoryCard(SubCategory subcategory) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () {
+          // Use the navigation function
+          navigateToSubcategory(context, subcategory);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
+                child: CachedNetworkImage(
+                  imageUrl: subcategory.imageUrl ?? 'https://placehold.co/400x300/CCCCCC/FFFFFF?text=No+Image',
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.error),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    subcategory.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${subcategory.productCount} Products',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
-              child: ListView.builder(
-                itemCount: _categories.length,
-                itemBuilder: (context, index) {
-                  final category = _categories[index];
-                  final isSelected = category.id == selectedCategory;
-                  
-                  return InkWell(
-                    onTap: () {
-                      ref.read(selectedCategoryProvider.notifier).state = category.id;
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: isSelected ? _getLighterColor(category.themeColor, 0.8) : Colors.transparent,
-                        border: Border(
-                          right: BorderSide(
-                            color: isSelected ? category.themeColor : Colors.transparent,
-                            width: 3,
-                          ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Search modal component
+class CategorySearchModal extends ConsumerStatefulWidget {
+  final Category parentCategory;
+  
+  const CategorySearchModal({
+    Key? key,
+    required this.parentCategory,
+  }) : super(key: key);
+  
+  @override
+  CategorySearchModalState createState() => CategorySearchModalState();
+}
+
+class CategorySearchModalState extends ConsumerState<CategorySearchModal> {
+  final TextEditingController _searchController = TextEditingController();
+  
+  @override
+  void initState() {
+    super.initState();
+    // Set focus on the search field when modal opens
+    Future.microtask(() {
+      FocusScope.of(context).requestFocus(FocusNode());
+    });
+  }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            // Search header
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              decoration: BoxDecoration(
+                color: widget.parentCategory.themeColor.withOpacity(0.1),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        widget.parentCategory.icon,
+                        color: widget.parentCategory.themeColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Search in ${widget.parentCategory.name}',
+                        style: TextStyle(
+                          color: widget.parentCategory.themeColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
                         ),
                       ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            category.icon,
-                            color: isSelected ? category.themeColor : Colors.grey,
-                            size: 24,
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            category.name,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? category.themeColor : Colors.black,
-                            ),
-                          ),
-                        ],
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Search input
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search for products...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          ref.read(searchQueryProvider.notifier).state = '';
+                        },
                       ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    ),
+                    onChanged: (value) {
+                      ref.read(searchQueryProvider.notifier).state = value;
+                    },
+                  ),
+                ],
+              ),
+            ),
+            
+            // Search results
+            Expanded(
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final searchQuery = ref.watch(debouncedSearchQueryProvider);
+                  
+                  if (searchQuery.isEmpty) {
+                    return _buildSearchHint();
+                  }
+                  
+                  final searchResults = ref.watch(subcategorySearchResultsProvider);
+                  
+                  return searchResults.when(
+                    data: (results) {
+                      if (results.isEmpty) {
+                        return _buildNoResults(searchQuery);
+                      }
+                      
+                      return _buildSearchResults(results);
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (error, stackTrace) => Center(
+                      child: Text('Error: $error'),
                     ),
                   );
                 },
               ),
             ),
+          ],
+        );
+      },
+    );
+  }
+  
+  Widget _buildSearchHint() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search,
+            size: 80,
+            color: Colors.grey[300],
           ),
-          
-          // Subcategories grid
-          Expanded(
-            child: AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: child,
-                  ),
-                );
-              },
-              child: Container(
-                color: _getLighterColor(currentCategory.themeColor, 0.85),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            currentCategory.icon,
-                            color: currentCategory.themeColor,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            currentCategory.name,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: currentCategory.themeColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: GridView.builder(
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.8,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                          ),
-                          itemCount: currentCategory.subCategories.length,
-                          itemBuilder: (context, index) {
-                            final subCategory = currentCategory.subCategories[index];
-                            return InkWell(
-                              onTap: () {
-                                // Navigate to product listing screen with category ID and name
-                                context.go(
-                                  '/category/${subCategory.id}',
-                                  extra: {
-                                    'name': subCategory.name,
-                                    'parentCategory': currentCategory.name,
-                                  },
-                                );
-                              },
-                              child: Card(
-                                elevation: 3,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Image.network(
-                                        subCategory.imageUrl ?? 'https://placehold.co/100/CCCCCC/FFFFFF?text=No+Image',
-                                        width: 80,
-                                        height: 80,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                                      child: Text(
-                                        subCategory.name,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          const SizedBox(height: 16),
+          Text(
+            'Type to search for products',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'in ${widget.parentCategory.name}',
+            style: TextStyle(
+              color: widget.parentCategory.themeColor,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
       ),
+    );
+  }
+  
+  Widget _buildNoResults(String query) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.sentiment_dissatisfied,
+            size: 80,
+            color: Colors.grey[300],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No results found for "$query"',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildSearchResults(List<SubCategory> results) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final subCategory = results[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: ListTile(
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: CachedNetworkImage(
+                imageUrl: subCategory.imageUrl ?? 'https://placehold.co/100/CCCCCC/FFFFFF?text=No+Image',
+                width: 50,
+                height: 50,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  width: 50,
+                  height: 50,
+                  color: Colors.grey[200],
+                ),
+                errorWidget: (context, url, error) => Container(
+                  width: 50,
+                  height: 50,
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.error, color: Colors.grey),
+                ),
+              ),
+            ),
+            title: Text(subCategory.name),
+            subtitle: Text('${subCategory.productCount} products'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              // Navigate to product listing
+              context.pop();
+              context.go(
+                '/category/${subCategory.id}',
+                extra: {
+                  'name': subCategory.name,
+                  'parentCategory': widget.parentCategory.name,
+                },
+              );
+            },
+          ),
+        );
+      },
     );
   }
 } 
