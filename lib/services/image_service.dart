@@ -107,6 +107,7 @@ class ImageService {
     BorderRadius? borderRadius,
     int quality = 80,
     bool preload = false,
+    bool offlineFallback = false,
   }) {
     // Handle empty or invalid URLs immediately
     if (imageUrl.isEmpty || _failedUrls.contains(imageUrl)) {
@@ -147,6 +148,12 @@ class ImageService {
       errorWidget: (context, url, error) {
         // Add to failed URLs list for future reference
         _failedUrls.add(imageUrl);
+        
+        if (offlineFallback) {
+          // Use a more informative offline placeholder
+          return _buildOfflinePlaceholder(width, height, errorWidget);
+        }
+        
         return _buildPlaceholderWidget(width, height, errorWidget);
       },
       memCacheWidth: width != null ? (width * devicePixelRatio).toInt() : null,
@@ -211,6 +218,32 @@ class ImageService {
     );
     
     return customErrorWidget ?? defaultErrorWidget;
+  }
+  
+  /// Create a placeholder specifically for offline state
+  Widget _buildOfflinePlaceholder(double? width, double? height, Widget? customErrorWidget) {
+    if (customErrorWidget != null) return customErrorWidget;
+    
+    return Container(
+      width: width,
+      height: height,
+      color: Colors.grey[200],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_off, color: Colors.grey[500], size: 24),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              "Image unavailable offline",
+              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
   }
   
   /// Clear the failed URLs cache, useful if you want to retry loading previously failed images

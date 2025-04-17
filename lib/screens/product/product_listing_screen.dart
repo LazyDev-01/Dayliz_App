@@ -499,9 +499,9 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.75,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+            childAspectRatio: 0.65,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
           ),
           builderDelegate: PagedChildBuilderDelegate<Product>(
             itemBuilder: (context, product, index) {
@@ -534,9 +534,9 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+        childAspectRatio: 0.65,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
       ),
       itemCount: 4, // Show fewer items for skeleton
       itemBuilder: (context, index) {
@@ -546,7 +546,14 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
           ),
         );

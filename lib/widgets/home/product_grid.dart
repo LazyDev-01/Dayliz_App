@@ -18,7 +18,7 @@ class ProductGrid extends StatelessWidget {
     Key? key,
     required this.products,
     this.crossAxisCount = 2,
-    this.childAspectRatio = 0.7,
+    this.childAspectRatio = 0.65,
     this.crossAxisSpacing = 16,
     this.mainAxisSpacing = 16,
     this.padding = EdgeInsets.zero,

@@ -75,11 +75,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       
       // Simulate loading delay for initial app startup
       Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
       });
     });
   }
@@ -120,11 +120,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           controller: _refreshController,
           onRefresh: _onRefresh,
           header: const ClassicHeader(),
-          child: CustomScrollView(
-            slivers: [
+        child: CustomScrollView(
+          slivers: [
               // App bar with search
-              SliverAppBar(
-                floating: true,
+            SliverAppBar(
+              floating: true,
                 title: const Text(
                   'Dayliz',
                   style: TextStyle(
@@ -132,36 +132,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     fontSize: 24,
                   ),
                 ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined),
-                    onPressed: () {
-                      // TODO: Navigate to notifications
-                    },
-                  ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () {
+                    // TODO: Navigate to notifications
+                  },
+                ),
                   IconButton(
                     icon: const Icon(Icons.shopping_cart_outlined),
                     onPressed: () {
                       // TODO: Navigate to cart
-                    },
-                  ),
-                ],
-                bottom: PreferredSize(
+                  },
+                ),
+              ],
+              bottom: PreferredSize(
                   preferredSize: const Size.fromHeight(60),
-                  child: Container(
+                child: Container(
                     height: 50,
                     margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                     child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
+                    controller: _searchController,
+                    decoration: InputDecoration(
                         hintText: 'Search for products...',
-                        prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(25),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[200],
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[200],
                         contentPadding: EdgeInsets.zero,
                       ),
                       onTap: () {
@@ -218,7 +218,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: SizedBox(height: 100),
                   ),
                 ],
-            ],
+          ],
           ),
         ),
       ),
@@ -455,7 +455,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.7,
+            childAspectRatio: 0.65,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
       ),
@@ -496,7 +496,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 0.7,
+                childAspectRatio: 0.65,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
               ),
@@ -540,7 +540,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return SliverToBoxAdapter(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      children: [
           SectionTitle(
             title: 'Shop by Category',
             onSeeAllPressed: () {
@@ -611,10 +611,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
         itemCount: categories.length,
-        itemBuilder: (context, index) {
+      itemBuilder: (context, index) {
           final category = categories[index];
           return _buildCategorySection(category);
         },
@@ -633,16 +633,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       children: [
         // Category header
         InkWell(
-          onTap: () {
+                onTap: () {
             // Set the selected category and navigate
             ref.read(selectedCategoryProvider.notifier).state = category.id;
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const CategoriesScreen(),
-              ),
-            );
-          },
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CategoriesScreen(),
+                    ),
+                  );
+                },
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(
