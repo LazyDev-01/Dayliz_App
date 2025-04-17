@@ -159,7 +159,11 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
     
     // Only refresh if we have products loaded
     if (_allProducts.isNotEmpty) {
-      _pagingController.refresh();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _pagingController.refresh();
+        }
+      });
     }
   }
 
@@ -197,6 +201,8 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
       // Simulate API call
       await Future.delayed(const Duration(seconds: 1));
       
+      if (!mounted) return;
+      
       // Get products from mock data based on the category
       final products = mock.getProductsByCategory(widget.categoryId);
       
@@ -211,15 +217,24 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
               widget.categoryId.toLowerCase().contains(category.toLowerCase()));
         }).toList();
         
+        // Check if widget is still mounted before updating state
+        if (!mounted) return;
+        
         _allProducts = filteredProducts;
       } else {
+        // Check if widget is still mounted before updating state
+        if (!mounted) return;
+        
         _allProducts = products;
       }
       
       // Refresh paging controller to trigger first page load
       _pagingController.refresh();
     } catch (e) {
-      _pagingController.error = e;
+      // Only set error if widget is still mounted
+      if (mounted) {
+        _pagingController.error = e;
+      }
     }
   }
 
@@ -258,6 +273,8 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
   
   // Function to fetch a page of filtered products
   Future<void> _fetchPage(int pageKey) async {
+    if (!mounted) return;
+    
     try {
       final subCategory = ref.read(selectedSubCategoryProvider);
       final sortOption = ref.read(sortOptionProvider);
@@ -295,6 +312,9 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
         filteredProducts = cachedProducts;
       }
       
+      // Check if the widget is still mounted before updating UI
+      if (!mounted) return;
+      
       // Calculate items for this page
       final startIndex = pageKey * _pageSize;
       final endIndex = min(startIndex + _pageSize, filteredProducts.length);
@@ -314,7 +334,9 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
         _pagingController.appendPage(items, pageKey + 1);
       }
     } catch (e) {
-      _pagingController.error = e;
+      if (mounted) {
+        _pagingController.error = e;
+      }
     }
   }
   
@@ -411,121 +433,138 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
     final subCategory = ref.watch(selectedSubCategoryProvider);
     final sortOption = ref.watch(sortOptionProvider);
     
-    return Scaffold(
-      body: NestedScrollView(
-        controller: _scrollController,
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
-            // App Bar with category title and total count
-            SliverAppBar(
-              floating: true,
-              pinned: true,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  try {
-                    Navigator.of(context).pop();
-                  } catch (e) {
-                    // If pop fails, navigate to home as fallback
-                    context.go('/home');
-                  }
-                },
-              ),
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_categoryName),
-                  Consumer(
-                    builder: (context, ref, child) {
-                      // Only update the count text when it changes
-                      return Text(
-                        '${_pagingController.itemList?.length ?? 0} products',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.normal,
-                        ),
-                      );
+    return WillPopScope(
+      onWillPop: () async {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+          return false;
+        } else {
+          // If we can't pop, go to home
+          context.go('/home');
+          return false;
+        }
+      },
+      child: Scaffold(
+        body: NestedScrollView(
+          controller: _scrollController,
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
+            return [
+              // App Bar with category title and total count
+              SliverAppBar(
+                floating: true,
+                pinned: true,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    try {
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      } else {
+                        // If we can't pop (we're at the root), navigate to home
+                        context.go('/home');
+                      }
+                    } catch (e) {
+                      // If any error occurs during navigation, go to home as fallback
+                      context.go('/home');
                     }
+                  },
+                ),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_categoryName),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        // Only update the count text when it changes
+                        return Text(
+                          '${_pagingController.itemList?.length ?? 0} products',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.normal,
+                          ),
+                        );
+                      }
+                    ),
+                  ],
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () {
+                      // TODO: Implement search within category
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.shopping_cart_outlined),
+                    onPressed: () {
+                      // Navigate to cart
+                      context.go('/cart');
+                    },
                   ),
                 ],
               ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () {
-                    // TODO: Implement search within category
+              
+              // Subcategory horizontal scroll
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _SubcategoryHeaderDelegate(
+                  subCategories: _subCategories,
+                  onSubCategorySelected: (subcategory) {
+                    ref.read(selectedSubCategoryProvider.notifier).state = subcategory;
+                  },
+                  selectedSubCategory: subCategory,
+                ),
+              ),
+              
+              // Filter/Sort/Brand section
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _FilterSortHeaderDelegate(
+                  sortOptions: _sortOptions,
+                  selectedSortOption: sortOption,
+                  onSortOptionSelected: (option) {
+                    ref.read(sortOptionProvider.notifier).state = option;
+                  },
+                  onFilterPressed: () {
+                    _showFilterBottomSheet(context);
                   },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.shopping_cart_outlined),
-                  onPressed: () {
-                    // Navigate to cart
-                    context.go('/cart');
+              ),
+            ];
+          },
+          body: PagedGridView<int, Product>(
+            pagingController: _pagingController,
+            padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.65,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            builderDelegate: PagedChildBuilderDelegate<Product>(
+              itemBuilder: (context, product, index) {
+                return ProductCard(
+                  product: product,
+                  onTap: () {
+                    // Navigate to product detail with the product as argument
+                    context.go('/product/${product.id}', extra: product);
                   },
-                ),
-              ],
+                );
+              },
+              firstPageProgressIndicatorBuilder: (_) => _buildLoadingSkeleton(),
+              newPageProgressIndicatorBuilder: (_) => _buildPageLoaderIndicator(),
+              noItemsFoundIndicatorBuilder: (_) => _buildEmptyState(),
             ),
-            
-            // Subcategory horizontal scroll
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _SubcategoryHeaderDelegate(
-                subCategories: _subCategories,
-                onSubCategorySelected: (subcategory) {
-                  ref.read(selectedSubCategoryProvider.notifier).state = subcategory;
-                },
-                selectedSubCategory: subCategory,
-              ),
-            ),
-            
-            // Filter/Sort/Brand section
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _FilterSortHeaderDelegate(
-                sortOptions: _sortOptions,
-                selectedSortOption: sortOption,
-                onSortOptionSelected: (option) {
-                  ref.read(sortOptionProvider.notifier).state = option;
-                },
-                onFilterPressed: () {
-                  _showFilterBottomSheet(context);
-                },
-              ),
-            ),
-          ];
-        },
-        body: PagedGridView<int, Product>(
-          pagingController: _pagingController,
-          padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.65,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
-          builderDelegate: PagedChildBuilderDelegate<Product>(
-            itemBuilder: (context, product, index) {
-              return ProductCard(
-                product: product,
-                onTap: () {
-                  // Navigate to product detail with the product as argument
-                  context.go('/product/${product.id}', extra: product);
-                },
-              );
-            },
-            firstPageProgressIndicatorBuilder: (_) => _buildLoadingSkeleton(),
-            newPageProgressIndicatorBuilder: (_) => _buildPageLoaderIndicator(),
-            noItemsFoundIndicatorBuilder: (_) => _buildEmptyState(),
           ),
         ),
+        floatingActionButton: _showBackToTopButton
+            ? FloatingActionButton(
+                mini: true,
+                onPressed: _scrollToTop,
+                child: const Icon(Icons.arrow_upward),
+              )
+            : null,
       ),
-      floatingActionButton: _showBackToTopButton
-          ? FloatingActionButton(
-              mini: true,
-              onPressed: _scrollToTop,
-              child: const Icon(Icons.arrow_upward),
-            )
-          : null,
     );
   }
 

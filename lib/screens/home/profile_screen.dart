@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dayliz_app/providers/auth_provider.dart';
@@ -155,6 +156,22 @@ class ProfileScreen extends ConsumerWidget {
                     AppSpacing.vMD,
                     _buildLogoutButton(context, ref),
                     AppSpacing.vLG,
+                    // Developer tools section - only visible in debug mode
+                    if (kDebugMode) 
+                      _buildSectionTitle(context, 'Developer Tools'),
+                    if (kDebugMode)
+                      _buildSettingsItem(
+                        context,
+                        icon: Icons.storage,
+                        title: 'Database Seeder',
+                        onTap: () {
+                          context.go('/dev/database-seeder');
+                        },
+                      ),
+                    if (kDebugMode)
+                      const Divider(),
+                    if (kDebugMode)
+                      AppSpacing.vLG,
                   ],
                 ),
               ),

@@ -36,41 +36,79 @@ class AddressService {
       }
       
       debugPrint('Fetching addresses for user: $userId');
-      final response = await _client
-          .from('user_addresses')
-          .select()
-          .eq('user_id', userId)
-          .order('is_default', ascending: false);
       
-      debugPrint('API GET response from user_addresses: Data length: ${response.length}');
-      debugPrint('Fetch response: 200 - Data length: ${response.length}');
-      debugPrint('Parsed ${response.length} addresses');
-      
-      if (response.isEmpty) {
-        debugPrint('No addresses found, using placeholder');
+      // First try with the new schema's 'addresses' table
+      try {
+        final response = await _client
+            .from('addresses')
+            .select()
+            .eq('user_id', userId)
+            .order('is_default', ascending: false);
+            
+        debugPrint('API GET response from addresses: Data length: ${response.length}');
+        
+        return response
+            .map<Address>((json) => Address(
+                  id: json['id'],
+                  userId: json['user_id'],
+                  name: json['name'],
+                  addressLine1: json['address_line1'],
+                  addressLine2: json['address_line2'],
+                  city: json['city'],
+                  state: json['state'],
+                  country: json['country'],
+                  postalCode: json['postal_code'],
+                  phoneNumber: json['phone'] ?? '',
+                  isDefault: json['is_default'] ?? false,
+                  latitude: json['latitude'],
+                  longitude: json['longitude'],
+                  landmark: null,
+                  addressType: null,
+                  street: null,
+                  phone: json['phone'],
+                ))
+            .toList();
+      } catch (e) {
+        debugPrint('❌ Error accessing addresses table: $e');
+        
+        // Fallback to the old schema's 'user_addresses' table
+        try {
+          debugPrint('Trying alternative table name: user_addresses');
+          final response = await _client
+              .from('user_addresses')
+              .select()
+              .eq('user_id', userId)
+              .order('is_default', ascending: false);
+          
+          debugPrint('API GET response from user_addresses: Data length: ${response.length}');
+          
+          return response
+              .map<Address>((json) => Address(
+                    id: json['id'],
+                    userId: json['user_id'],
+                    name: json['name'],
+                    addressLine1: json['address_line1'],
+                    addressLine2: json['address_line2'],
+                    city: json['city'],
+                    state: json['state'],
+                    country: json['country'],
+                    postalCode: json['postal_code'],
+                    phoneNumber: json['phone'] ?? '',
+                    isDefault: json['is_default'] ?? false,
+                    latitude: json['latitude'],
+                    longitude: json['longitude'],
+                    landmark: null,
+                    addressType: null,
+                    street: null,
+                    phone: json['phone'],
+                  ))
+              .toList();
+        } catch (e) {
+          debugPrint('❌ Alternative address table also not found: $e');
+          debugPrint('❌ Address table connection failed - check table name and permissions');
+          return [];
+        }
       }
-      
-      return response
-          .map<Address>((json) => Address(
-                id: json['id'],
-                userId: json['user_id'],
-                name: json['name'],
-                addressLine1: json['address_line1'],
-                addressLine2: json['address_line2'],
-                city: json['city'],
-                state: json['state'],
-                country: json['country'],
-                postalCode: json['postal_code'],
-                phoneNumber: json['phone'] ?? '',
-                isDefault: json['is_default'] ?? false,
-                latitude: json['latitude'],
-                longitude: json['longitude'],
-                landmark: null,
-                addressType: null,
-                street: null,
-                phone: json['phone'],
-              ))
-          .toList();
     } on PostgrestException catch (e) {
       debugPrint('Supabase error in getAddresses: ${e.code} - ${e.message} - ${e.details}');
       return [];
@@ -151,12 +189,12 @@ class AddressService {
 
       // Insert the address
       await _client
-          .from('user_addresses')
+          .from('addresses')
           .insert(cleanData);
       
       // Get the inserted address
       final addressResponse = await _client
-          .from('user_addresses')
+          .from('addresses')
           .select()
           .eq('id', addressId)
           .single();

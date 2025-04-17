@@ -14,6 +14,7 @@ import 'package:dayliz_app/screens/checkout/checkout_screen.dart';
 import 'package:dayliz_app/screens/order_confirmation_screen.dart';
 import 'package:dayliz_app/screens/product/product_listing_screen.dart';
 import 'package:dayliz_app/screens/product/product_details_screen.dart';
+import 'package:dayliz_app/screens/dev/database_seeder_screen.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/providers/theme_provider.dart';
 import 'package:dayliz_app/providers/auth_provider.dart';
@@ -25,7 +26,7 @@ import 'package:dayliz_app/screens/auth/reset_password_screen.dart';
 import 'package:dayliz_app/screens/auth/update_password_screen.dart';
 import 'package:dayliz_app/screens/auth/email_verification_screen.dart';
 import 'package:dayliz_app/screens/auth/verify_token_handler.dart';
-import 'package:dayliz_app/data/seed_database.dart';
+import 'package:dayliz_app/services/database_seeder.dart';
 import 'package:dayliz_app/data/mock_products.dart';
 import 'package:dayliz_app/services/image_service.dart';
 import 'package:dayliz_app/services/image_preloader.dart';
@@ -47,7 +48,7 @@ void main() async {
     try {
       // Only try to seed if Supabase is initialized
       if (AuthService.instance.isInitialized) {
-        await DatabaseSeeder.instance.seedAll();
+        await DatabaseSeeder.instance.seedDatabase();
       } else {
         debugPrint('Skipping database seeding: Auth service not initialized');
       }
@@ -492,6 +493,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           );
         },
+      ),
+      // Development tools route
+      GoRoute(
+        path: '/dev/database-seeder',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const DatabaseSeederScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ),
       ),
     ],
     

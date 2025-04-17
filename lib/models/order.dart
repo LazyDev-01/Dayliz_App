@@ -66,31 +66,22 @@ enum PaymentStatus {
 // Enums for payment method
 enum PaymentMethod {
   creditCard,
-  debitCard,
-  upi,
-  netBanking,
   wallet,
   cashOnDelivery;
   
   String get value {
     switch (this) {
-      case PaymentMethod.creditCard: return 'credit_card';
-      case PaymentMethod.debitCard: return 'debit_card';
-      case PaymentMethod.upi: return 'upi';
-      case PaymentMethod.netBanking: return 'net_banking';
+      case PaymentMethod.creditCard: return 'creditCard';
       case PaymentMethod.wallet: return 'wallet';
-      case PaymentMethod.cashOnDelivery: return 'cash_on_delivery';
+      case PaymentMethod.cashOnDelivery: return 'cashOnDelivery';
     }
   }
   
   static PaymentMethod fromString(String method) {
     switch (method.toLowerCase()) {
-      case 'credit_card': return PaymentMethod.creditCard;
-      case 'debit_card': return PaymentMethod.debitCard;
-      case 'upi': return PaymentMethod.upi;
-      case 'net_banking': return PaymentMethod.netBanking;
+      case 'creditcard': return PaymentMethod.creditCard;
       case 'wallet': return PaymentMethod.wallet;
-      case 'cash_on_delivery': return PaymentMethod.cashOnDelivery;
+      case 'cashondelivery': return PaymentMethod.cashOnDelivery;
       default: return PaymentMethod.cashOnDelivery;
     }
   }

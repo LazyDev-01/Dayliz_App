@@ -152,6 +152,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
         requireEmailVerification: requireEmailVerification,
       );
       
+      // Create user profile in new schema
+      if (response.user != null) {
+        try {
+          final supabase = Supabase.instance.client;
+          
+          // Create user profile
+          await supabase.from('user_profiles').insert({
+            'id': response.user!.id,
+            // Any other default profile data
+          });
+          
+          print('User profile created for new user: ${response.user!.id}');
+        } catch (profileError) {
+          print('Warning: Could not create user profile: $profileError');
+        }
+      }
+      
       if (requireEmailVerification) {
         state = AuthState.emailVerificationRequired;
       } else {

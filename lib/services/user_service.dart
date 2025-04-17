@@ -76,11 +76,23 @@ class UserService {
           await _client.from('users').insert({
             'id': user.id,
             'email': user.email,
-            'name': user.userMetadata?['name'] ?? user.email?.split('@').first ?? 'User',
+            'full_name': user.userMetadata?['name'] ?? user.email?.split('@').first ?? 'User',
             'phone': user.phone,
             'created_at': DateTime.now().toIso8601String(),
-            'last_login_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+            'last_login': DateTime.now().toIso8601String(),
           });
+          
+          // Also create a user profile entry
+          try {
+            await _client.from('user_profiles').insert({
+              'id': user.id,
+            });
+            debugPrint('Successfully created user profile record');
+          } catch (profileError) {
+            debugPrint('Warning: Could not create user profile: $profileError');
+            // Continue even if profile creation fails
+          }
           
           debugPrint('Successfully created user record in public.users table');
           return true;
@@ -126,7 +138,7 @@ class UserService {
       // Build update data with only provided fields
       final Map<String, dynamic> updateData = {
         'updated_at': DateTime.now().toIso8601String(),
-        'last_login_at': DateTime.now().toIso8601String(),
+        'last_login': DateTime.now().toIso8601String(),
       };
       
       if (name != null) updateData['name'] = name;

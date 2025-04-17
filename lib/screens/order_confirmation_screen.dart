@@ -278,16 +278,10 @@ class OrderConfirmationScreen extends ConsumerWidget {
     switch (method) {
       case PaymentMethod.creditCard:
         return 'Credit Card';
-      case PaymentMethod.debitCard:
-        return 'Debit Card';
       case PaymentMethod.wallet:
         return 'Digital Wallet';
       case PaymentMethod.cashOnDelivery:
         return 'Cash on Delivery';
-      case PaymentMethod.upi:
-        return 'UPI';
-      case PaymentMethod.netBanking:
-        return 'Net Banking';
       default:
         return 'Unknown';
     }

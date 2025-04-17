@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dayliz_app/models/category_models.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Cached categories to avoid refetching
 final categoriesCacheProvider = StateProvider<List<Category>?>((ref) => null);
@@ -9,7 +10,34 @@ final categoriesCacheProvider = StateProvider<List<Category>?>((ref) => null);
 // Selected category provider initialized with null
 final selectedCategoryProvider = StateProvider<String?>((ref) => null);
 
-// Categories provider - IMPORTANT: doesn't modify state during initialization
+// Helper for icon conversion
+IconData _getIconFromString(String? iconName) {
+  switch (iconName) {
+    case 'kitchen': return Icons.kitchen;
+    case 'fastfood': return Icons.fastfood;
+    case 'spa': return Icons.spa;
+    case 'devices': return Icons.devices;
+    case 'shopping_bag': return Icons.shopping_bag;
+    case 'checkroom': return Icons.checkroom;
+    case 'sports': return Icons.sports_cricket;
+    case 'face': return Icons.face;
+    case 'home': return Icons.home;
+    case 'toys': return Icons.toys;
+    default: return Icons.category;
+  }
+}
+
+// Helper for color conversion
+Color _getColorFromHex(String? hexColor) {
+  if (hexColor == null) return Colors.grey;
+  hexColor = hexColor.replaceAll('#', '');
+  if (hexColor.length == 6) {
+    hexColor = 'FF$hexColor'; // Add alpha if not present
+  }
+  return Color(int.parse(hexColor, radix: 16));
+}
+
+// Categories provider - updated to work with hierarchical categories
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   try {
     // Check if we have cached data
@@ -24,10 +52,84 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) async {
     
     print('🔄 Fetching categories data from API');
     
-    // Mock data (in a real app, this would be API call)
-    final categories = _getCategories();
+    final supabase = Supabase.instance.client;
     
-    // Update cache state *after* returning - this avoids the "provider modified during build" error
+    // Get top-level categories
+    final response = await supabase
+        .from('categories')
+        .select('id, name, icon_name, theme_color, image_url, display_order')
+        .order('display_order');
+    
+    print('Retrieved ${response.length} categories');
+    
+    // Get all subcategories in one query
+    List<dynamic> subCategoriesResponse = [];
+    try {
+      // Try getting subcategories from the subcategories table first
+      subCategoriesResponse = await supabase
+          .from('subcategories')
+          .select('id, name, category_id, image_url, display_order, icon_name')
+          .order('display_order');
+      
+      print('Retrieved ${subCategoriesResponse.length} subcategories from subcategories table');
+    } catch (e) {
+      print('Error fetching from subcategories table, falling back to old schema: $e');
+      
+      // Fall back to the old schema where subcategories are in the categories table
+      subCategoriesResponse = await supabase
+          .from('categories')
+          .select('id, name, icon, theme_color, parent_id, product_count, image_url, display_order')
+          .not('parent_id', 'is', null) // Get only subcategories
+          .order('display_order');
+      
+      print('Retrieved ${subCategoriesResponse.length} subcategories from categories table');
+    }
+    
+    // Convert to domain models
+    final categories = response.map<Category>((json) {
+      final categoryId = json['id'].toString();
+      
+      // Find subcategories for this parent
+      List<SubCategory> subs = [];
+      
+      if (subCategoriesResponse.isNotEmpty) {
+        // Check if we're using the new subcategories table
+        if (subCategoriesResponse[0].containsKey('category_id')) {
+          subs = subCategoriesResponse
+              .where((sub) => sub['category_id'].toString() == categoryId)
+              .map<SubCategory>((sub) => SubCategory(
+                  id: sub['id'].toString(),
+                  name: sub['name'],
+                  parentId: categoryId,
+                  imageUrl: sub['image_url'],
+                  productCount: 0, // Not using product_count in new schema
+              ))
+              .toList();
+        } else {
+          // Using old schema
+          subs = subCategoriesResponse
+              .where((sub) => sub['parent_id'].toString() == categoryId)
+              .map<SubCategory>((sub) => SubCategory(
+                  id: sub['id'].toString(),
+                  name: sub['name'],
+                  parentId: sub['parent_id'].toString(),
+                  imageUrl: sub['image_url'],
+                  productCount: sub['product_count'] ?? 0,
+              ))
+              .toList();
+        }
+      }
+      
+      return Category(
+        id: categoryId,
+        name: json['name'],
+        icon: _getIconFromString(json['icon_name'] ?? json['icon']),
+        themeColor: _getColorFromHex(json['theme_color'] ?? '#4CAF50'),
+        subCategories: subs,
+      );
+    }).toList();
+    
+    // Update cache state
     Future.microtask(() {
       ref.read(categoriesCacheProvider.notifier).state = categories;
     });
@@ -58,23 +160,69 @@ final initializeSelectedCategoryProvider = Provider<void>((ref) {
   return null;
 });
 
-// Get subcategories for a specific category
+// Get subcategories for a specific category - updated for new schema
 final subcategoriesProvider = FutureProvider.family<List<SubCategory>, String>((ref, categoryId) async {
   try {
-    // Get categories first
-    final categories = await ref.watch(categoriesProvider.future);
+    // Check if we have cached categories first
+    final cachedCategories = ref.read(categoriesCacheProvider);
+    if (cachedCategories != null) {
+      // Find the selected category from cache
+      final category = cachedCategories.firstWhere(
+        (category) => category.id == categoryId,
+        orElse: () => cachedCategories.first,
+      );
+      
+      if (category.subCategories.isNotEmpty) {
+        print('🔄 Using cached subcategories for ${category.name}');
+        return category.subCategories;
+      }
+    }
     
-    // Find the selected category
-    final category = categories.firstWhere(
-      (category) => category.id == categoryId,
-      orElse: () => categories.first,
-    );
+    // If not in cache, fetch directly from database
+    final supabase = Supabase.instance.client;
     
-    // Simulate network delay for subcategories
-    print('🔄 Fetching subcategories for ${category.name}');
-    await Future.delayed(const Duration(milliseconds: 500));
+    print('🔄 Fetching subcategories for category $categoryId');
     
-    return category.subCategories;
+    try {
+      // Fetch from subcategories table
+      final response = await supabase
+          .from('subcategories')
+          .select('id, name, image_url, category_id')
+          .eq('category_id', categoryId)
+          .order('display_order');
+      
+      // Convert to domain models
+      final subcategories = response.map<SubCategory>((json) => SubCategory(
+          id: json['id'].toString(),
+          name: json['name'],
+          parentId: json['category_id'].toString(),
+          imageUrl: json['image_url'],
+          productCount: 0, // Not storing product_count in subcategories table
+      )).toList();
+      
+      print('Found ${subcategories.length} subcategories for category $categoryId');
+      return subcategories;
+    } catch (e) {
+      print('Error fetching from subcategories, falling back to categories table: $e');
+      
+      // Fall back to old approach if subcategories table doesn't exist
+      final response = await supabase
+          .from('categories')
+          .select('id, name, icon, theme_color, parent_id, product_count, image_url')
+          .eq('parent_id', categoryId)
+          .order('display_order');
+      
+      // Convert to domain models
+      final subcategories = response.map<SubCategory>((json) => SubCategory(
+          id: json['id'].toString(),
+          name: json['name'],
+          parentId: json['parent_id'].toString(),
+          imageUrl: json['image_url'],
+          productCount: json['product_count'] ?? 0,
+      )).toList();
+      
+      return subcategories;
+    }
   } catch (e) {
     print('Error fetching subcategories: $e');
     rethrow;
@@ -112,194 +260,4 @@ void navigateToSubcategory(BuildContext context, SubCategory subcategory) {
   );
 }
 
-// Helper function to get mock categories data
-List<Category> _getCategories() {
-  return [
-    Category(
-      id: 'grocery_kitchen',
-      name: 'Grocery & Kitchen',
-      icon: Icons.kitchen,
-      themeColor: Colors.green.shade500,
-      subCategories: [
-        SubCategory(
-          id: 'dairy_bread_eggs',
-          name: 'Dairy, Bread & Eggs',
-          parentId: 'grocery_kitchen',
-          imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Dairy',
-          productCount: 42,
-        ),
-        SubCategory(
-          id: 'atta_rice_dal',
-          name: 'Atta, Rice & Dal',
-          parentId: 'grocery_kitchen',
-          imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Rice',
-          productCount: 38,
-        ),
-        SubCategory(
-          id: 'oil_ghee_masala',
-          name: 'Oil, Ghee & Masala',
-          parentId: 'grocery_kitchen',
-          imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Oil',
-          productCount: 24,
-        ),
-        SubCategory(
-          id: 'sauces_spreads',
-          name: 'Sauces & Spreads',
-          parentId: 'grocery_kitchen',
-          imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Sauces',
-          productCount: 18,
-        ),
-        SubCategory(
-          id: 'frozen_food',
-          name: 'Frozen Food',
-          parentId: 'grocery_kitchen',
-          imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Frozen',
-          productCount: 15,
-        ),
-        SubCategory(
-          id: 'vegetables_fruits',
-          name: 'Vegetables & Fruits',
-          parentId: 'grocery_kitchen',
-          imageUrl: 'https://placehold.co/100/4CAF50/FFFFFF?text=Veggies',
-          productCount: 64,
-        ),
-      ],
-    ),
-    Category(
-      id: 'snacks_beverages',
-      name: 'Snacks & Beverages',
-      icon: Icons.fastfood,
-      themeColor: Colors.amber.shade600,
-      subCategories: [
-        SubCategory(
-          id: 'cookies_biscuits',
-          name: 'Cookies & Biscuits',
-          parentId: 'snacks_beverages',
-          imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=Cookies',
-          productCount: 32,
-        ),
-        SubCategory(
-          id: 'snacks_chips',
-          name: 'Snacks & Chips',
-          parentId: 'snacks_beverages',
-          imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=Snacks',
-          productCount: 47,
-        ),
-        SubCategory(
-          id: 'cold_drinks_juices',
-          name: 'Cold Drinks & Juices',
-          parentId: 'snacks_beverages',
-          imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=Drinks',
-          productCount: 28,
-        ),
-        SubCategory(
-          id: 'coffee_tea',
-          name: 'Coffee & Tea',
-          parentId: 'snacks_beverages',
-          imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=Coffee',
-          productCount: 19,
-        ),
-        SubCategory(
-          id: 'ice_creams',
-          name: 'Ice Creams & More',
-          parentId: 'snacks_beverages',
-          imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=IceCream',
-          productCount: 22,
-        ),
-        SubCategory(
-          id: 'chocolates_sweets',
-          name: 'Chocolates & Sweets',
-          parentId: 'snacks_beverages',
-          imageUrl: 'https://placehold.co/100/FFC107/FFFFFF?text=Choco',
-          productCount: 35,
-        ),
-      ],
-    ),
-    Category(
-      id: 'beauty_hygiene',
-      name: 'Beauty & Hygiene',
-      icon: Icons.spa,
-      themeColor: Colors.pink.shade400,
-      subCategories: [
-        SubCategory(
-          id: 'bath_body',
-          name: 'Bath & Body',
-          parentId: 'beauty_hygiene',
-          imageUrl: 'https://placehold.co/100/E91E63/FFFFFF?text=Bath',
-          productCount: 29,
-        ),
-        SubCategory(
-          id: 'skin_face_care',
-          name: 'Skin & Face Care',
-          parentId: 'beauty_hygiene',
-          imageUrl: 'https://placehold.co/100/E91E63/FFFFFF?text=Skin',
-          productCount: 43,
-        ),
-        SubCategory(
-          id: 'hair_care',
-          name: 'Hair Care',
-          parentId: 'beauty_hygiene',
-          imageUrl: 'https://placehold.co/100/E91E63/FFFFFF?text=Hair',
-          productCount: 31,
-        ),
-        SubCategory(
-          id: 'grooming_fragrances',
-          name: 'Grooming & Fragrances',
-          parentId: 'beauty_hygiene',
-          imageUrl: 'https://placehold.co/100/E91E63/FFFFFF?text=Groom',
-          productCount: 25,
-        ),
-        SubCategory(
-          id: 'baby_care',
-          name: 'Baby Care',
-          parentId: 'beauty_hygiene',
-          imageUrl: 'https://placehold.co/100/E91E63/FFFFFF?text=Baby',
-          productCount: 18,
-        ),
-        SubCategory(
-          id: 'beauty_cosmetics',
-          name: 'Beauty & Cosmetics',
-          parentId: 'beauty_hygiene',
-          imageUrl: 'https://placehold.co/100/E91E63/FFFFFF?text=Beauty',
-          productCount: 54,
-        ),
-      ],
-    ),
-    Category(
-      id: 'household_essentials',
-      name: 'Household & Essentials',
-      icon: Icons.home,
-      themeColor: Colors.purple.shade500,
-      subCategories: [
-        SubCategory(
-          id: 'cleaning_supplies',
-          name: 'Cleaning Supplies',
-          parentId: 'household_essentials',
-          imageUrl: 'https://placehold.co/100/9C27B0/FFFFFF?text=Clean',
-          productCount: 36,
-        ),
-        SubCategory(
-          id: 'detergent_fabric_care',
-          name: 'Detergent & Fabric Care',
-          parentId: 'household_essentials',
-          imageUrl: 'https://placehold.co/100/9C27B0/FFFFFF?text=Detergent',
-          productCount: 27,
-        ),
-        SubCategory(
-          id: 'kitchen_accessories',
-          name: 'Kitchen Accessories',
-          parentId: 'household_essentials',
-          imageUrl: 'https://placehold.co/100/9C27B0/FFFFFF?text=Kitchen',
-          productCount: 45,
-        ),
-        SubCategory(
-          id: 'pet_care',
-          name: 'Pet Care',
-          parentId: 'household_essentials',
-          imageUrl: 'https://placehold.co/100/9C27B0/FFFFFF?text=Pet',
-          productCount: 22,
-        ),
-      ],
-    ),
-  ];
-} 
+// The rest of the mock data functions can be removed as we're now using real data 
