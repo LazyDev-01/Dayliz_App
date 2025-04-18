@@ -3,6 +3,8 @@ import 'package:dayliz_app/models/product.dart';
 import 'package:dayliz_app/models/category_models.dart';
 import 'package:dayliz_app/providers/home_providers.dart';
 import 'dart:async';
+import 'package:dayliz_app/services/product_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Current search query
 final searchQueryProvider = StateProvider<String>((ref) => '');
@@ -31,74 +33,67 @@ final searchLoadingProvider = StateProvider<bool>((ref) => false);
 // Cache for search results
 final searchResultsCacheProvider = StateProvider<Map<String, List<Product>>>((ref) => {});
 
-// Provider for search results based on the debounced query
-final searchResultsProvider = FutureProvider<List<Product>>((ref) async {
-  // Initialize the debouncer
-  ref.watch(searchDebouncerProvider);
-  
-  final query = ref.watch(debouncedSearchQueryProvider);
-  
-  // Empty query returns empty results
-  if (query.isEmpty) {
-    ref.read(searchLoadingProvider.notifier).state = false;
-    return [];
-  }
-  
-  // Check cache first
-  final cache = ref.watch(searchResultsCacheProvider);
-  if (cache.containsKey(query)) {
-    print('🔍 Using cached search results for "$query"');
-    ref.read(searchLoadingProvider.notifier).state = false;
-    return cache[query]!;
-  }
-  
-  // Set loading state
-  ref.read(searchLoadingProvider.notifier).state = true;
-  
-  try {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 800));
-    
-    print('🔍 Searching for "$query"');
-    
-    // In a real app, this would be an API call
-    // For now, we'll filter from the all products list
-    final allProducts = await ref.watch(allProductsProvider.future);
-    
-    // Case-insensitive search in name and description
-    final results = allProducts.where((product) {
-      final name = product.name.toLowerCase();
-      final description = product.description.toLowerCase();
-      final searchTerms = query.toLowerCase().split(' ');
-      
-      // Check if any search term is in the name or description
-      return searchTerms.any((term) => 
-        name.contains(term) || description.contains(term)
-      );
-    }).toList();
-    
-    // Cache the results
-    final updatedCache = Map<String, List<Product>>.from(cache);
-    updatedCache[query] = results;
-    ref.read(searchResultsCacheProvider.notifier).state = updatedCache;
-    
-    return results;
-  } catch (e) {
-    print('🔍 Search error: $e');
-    rethrow;
-  } finally {
-    // Always reset loading state
-    ref.read(searchLoadingProvider.notifier).state = false;
-  }
-});
+// Store recent searches (max 5)
+final recentSearchesProvider = StateNotifierProvider<RecentSearchesNotifier, List<String>>(
+  (ref) => RecentSearchesNotifier(),
+);
 
-// Recent searches (would be persisted in a real app)
-final recentSearchesProvider = StateProvider<List<String>>((ref) => [
-  'Fresh fruits',
-  'Vegetables',
-  'Dairy products',
-  'Bread',
-]);
+class RecentSearchesNotifier extends StateNotifier<List<String>> {
+  static const String _prefsKey = 'recent_searches';
+  static const int _maxSearches = 5;
+  
+  RecentSearchesNotifier() : super([]) {
+    _loadRecentSearches();
+  }
+  
+  Future<void> _loadRecentSearches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final searches = prefs.getStringList(_prefsKey) ?? [];
+      state = searches;
+    } catch (e) {
+      print('Error loading recent searches: $e');
+    }
+  }
+  
+  Future<void> _saveRecentSearches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_prefsKey, state);
+    } catch (e) {
+      print('Error saving recent searches: $e');
+    }
+  }
+  
+  void addSearch(String query) {
+    if (query.trim().isEmpty) return;
+    
+    // Remove if already exists (to avoid duplicates)
+    state = state.where((item) => item.toLowerCase() != query.toLowerCase()).toList();
+    
+    // Add to the beginning of the list
+    final newState = [query, ...state];
+    
+    // Limit to max searches
+    if (newState.length > _maxSearches) {
+      state = newState.sublist(0, _maxSearches);
+    } else {
+      state = newState;
+    }
+    
+    _saveRecentSearches();
+  }
+  
+  void removeSearch(String query) {
+    state = state.where((item) => item != query).toList();
+    _saveRecentSearches();
+  }
+  
+  void clearSearches() {
+    state = [];
+    _saveRecentSearches();
+  }
+}
 
 // Search results provider for subcategories
 final subcategorySearchResultsProvider = FutureProvider<List<SubCategory>>((ref) async {
@@ -113,4 +108,29 @@ final subcategorySearchResultsProvider = FutureProvider<List<SubCategory>>((ref)
   await Future.delayed(const Duration(milliseconds: 500));
   
   return [];
+});
+
+// Search results
+final searchResultsProvider = FutureProvider<List<Product>>((ref) async {
+  final query = ref.watch(searchQueryProvider);
+  
+  if (query.trim().isEmpty) {
+    return [];
+  }
+  
+  // Set loading state
+  ref.read(searchLoadingProvider.notifier).state = true;
+  
+  try {
+    // Add the query to recent searches
+    ref.read(recentSearchesProvider.notifier).addSearch(query);
+    
+    final productService = ref.read(productServiceProvider);
+    final results = await productService.searchProducts(query);
+    
+    return results;
+  } finally {
+    // Clear loading state regardless of result
+    ref.read(searchLoadingProvider.notifier).state = false;
+  }
 }); 

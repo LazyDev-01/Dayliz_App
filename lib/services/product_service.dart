@@ -169,4 +169,35 @@ class ProductService {
         .map<String>((img) => img['image_url'] as String)
         .toList();
   }
+  
+  // Search products by query
+  Future<List<Product>> searchProducts(String query) async {
+    try {
+      print('🔍 Searching for products with query: $query');
+      
+      // First try to get all products
+      final allProducts = await getAllProducts();
+      
+      // Filter products based on search query
+      final searchTerms = query.toLowerCase().split(' ');
+      
+      return allProducts.where((product) {
+        final name = product.name.toLowerCase();
+        final description = product.description.toLowerCase();
+        final brand = product.brand.toLowerCase();
+        final categories = product.categories.join(' ').toLowerCase();
+        
+        // Check if any search term is in the product details
+        return searchTerms.any((term) => 
+          name.contains(term) || 
+          description.contains(term) ||
+          brand.contains(term) ||
+          categories.contains(term)
+        );
+      }).toList();
+    } catch (e) {
+      print('❌ Error searching products: $e');
+      rethrow;
+    }
+  }
 } 

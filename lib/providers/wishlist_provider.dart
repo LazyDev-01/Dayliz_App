@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dayliz_app/models/product.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 // Model class for wishlist item
 class WishlistItem {
@@ -75,47 +78,69 @@ class WishlistItem {
 }
 
 // Wishlist state notifier
-class WishlistNotifier extends StateNotifier<List<WishlistItem>> {
-  WishlistNotifier() : super([]);
-
-  // Add a product to wishlist
-  void addToWishlist(WishlistItem item) {
-    if (!isInWishlist(item.productId)) {
-      state = [...state, item];
+class WishlistNotifier extends StateNotifier<List<Product>> {
+  static const String _prefsKey = 'wishlist_items';
+  
+  WishlistNotifier() : super([]) {
+    _loadWishlist();
+  }
+  
+  Future<void> _loadWishlist() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final items = prefs.getStringList(_prefsKey) ?? [];
+      
+      final loadedItems = items.map((item) {
+        final Map<String, dynamic> json = jsonDecode(item);
+        return Product.fromJson(json);
+      }).toList();
+      
+      state = loadedItems;
+    } catch (e) {
+      print('Error loading wishlist: $e');
     }
   }
-
-  // Remove a product from wishlist by productId
-  void removeFromWishlist(String productId) {
-    state = state.where((item) => item.productId != productId).toList();
-  }
-
-  // Toggle wishlist status (add if not in wishlist, remove if already in wishlist)
-  void toggleWishlistItem(WishlistItem item) {
-    if (isInWishlist(item.productId)) {
-      removeFromWishlist(item.productId);
-    } else {
-      addToWishlist(item);
+  
+  Future<void> _saveWishlist() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final items = state.map((product) => jsonEncode(product.toJson())).toList();
+      await prefs.setStringList(_prefsKey, items);
+    } catch (e) {
+      print('Error saving wishlist: $e');
     }
   }
-
-  // Check if a product is in the wishlist
+  
   bool isInWishlist(String productId) {
-    return state.any((item) => item.productId == productId);
+    return state.any((product) => product.id == productId);
   }
-
-  // Clear the entire wishlist
+  
+  void addToWishlist(Product product) {
+    // Check if already in wishlist
+    if (!isInWishlist(product.id)) {
+      // Update product with isInWishlist = true
+      final updatedProduct = product.copyWith(isInWishlist: true);
+      state = [...state, updatedProduct];
+      _saveWishlist();
+    }
+  }
+  
+  void removeFromWishlist(String productId) {
+    state = state.where((product) => product.id != productId).toList();
+    _saveWishlist();
+  }
+  
+  void toggleWishlist(Product product) {
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist(product);
+    }
+  }
+  
   void clearWishlist() {
     state = [];
-  }
-
-  // Get a wishlist item by productId
-  WishlistItem? getItemById(String productId) {
-    try {
-      return state.firstWhere((item) => item.productId == productId);
-    } catch (e) {
-      return null;
-    }
+    _saveWishlist();
   }
 }
 
@@ -153,12 +178,12 @@ final List<WishlistItem> _initialWishlistItems = [
 ];
 
 // Provider for the wishlist
-final wishlistProvider = StateNotifierProvider<WishlistNotifier, List<WishlistItem>>((ref) {
+final wishlistProvider = StateNotifierProvider<WishlistNotifier, List<Product>>((ref) {
   return WishlistNotifier();
 });
 
 // Provider to check if a product is in wishlist
 final isInWishlistProvider = Provider.family<bool, String>((ref, productId) {
   final wishlistItems = ref.watch(wishlistProvider);
-  return wishlistItems.any((item) => item.productId == productId);
+  return wishlistItems.any((item) => item.id == productId);
 }); 

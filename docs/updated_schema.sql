@@ -146,3 +146,88 @@ CREATE INDEX idx_cart_items_user ON cart_items(user_id);
 CREATE INDEX idx_addresses_user ON addresses(user_id);
 CREATE INDEX idx_payment_methods_user ON payment_methods(user_id);
 CREATE INDEX idx_drivers_user ON drivers(user_id);
+
+
+
+
+
+
+
+-- First add columns to addresses table
+ALTER TABLE IF EXISTS addresses 
+ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,6),
+ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,6),
+ADD COLUMN IF NOT EXISTS zone_id UUID REFERENCES zones(id);
+
+-- Create zones table
+CREATE TABLE IF NOT EXISTS zones (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  description TEXT,
+  delivery_fee DECIMAL(10,2),
+  minimum_order_amount DECIMAL(10,2),
+  is_active BOOLEAN DEFAULT TRUE,
+  polygon GEOMETRY(POLYGON, 4326), -- SRID 4326 corresponds to WGS84 (GPS coordinates)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index on zone geometry for faster spatial queries
+CREATE INDEX IF NOT EXISTS idx_zones_polygon ON zones USING GIST (polygon);
+
+-- Create index for zone_id in addresses table
+CREATE INDEX IF NOT EXISTS idx_addresses_zone_id ON addresses(zone_id);
+
+-- Add RLS policies for zones table
+ALTER TABLE zones ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for admins (can do everything)
+CREATE POLICY "Admins can do everything on zones" ON zones
+  FOR ALL USING (
+    auth.role() = 'authenticated' AND (
+      EXISTS (
+        SELECT 1 FROM users
+        WHERE id = auth.uid() AND role = 'admin'
+      )
+    )
+  );
+
+-- Create policy for read-only access to all authenticated users
+CREATE POLICY "All users can view active zones" ON zones
+  FOR SELECT USING (
+    auth.role() = 'authenticated' AND is_active = TRUE
+  );
+
+-- Function to determine zone based on coordinates
+CREATE OR REPLACE FUNCTION get_zone_id_for_point(
+  lat DECIMAL(10,6),
+  lng DECIMAL(10,6)
+) RETURNS UUID AS $$
+DECLARE
+  zone_id UUID;
+BEGIN
+  -- Create a point geometry from the coordinates
+  SELECT id INTO zone_id FROM zones
+  WHERE ST_Contains(polygon, ST_SetSRID(ST_MakePoint(lng, lat), 4326))
+  AND is_active = TRUE
+  LIMIT 1;
+  
+  RETURN zone_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Add a trigger to automatically update zone_id when lat/long change
+CREATE OR REPLACE FUNCTION update_address_zone() RETURNS TRIGGER AS $$
+BEGIN
+  IF (NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL) THEN
+    NEW.zone_id := get_zone_id_for_point(NEW.latitude, NEW.longitude);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_address_zone
+BEFORE INSERT OR UPDATE OF latitude, longitude
+ON addresses
+FOR EACH ROW
+EXECUTE FUNCTION update_address_zone();

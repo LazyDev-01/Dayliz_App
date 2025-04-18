@@ -148,14 +148,14 @@ class OrderAddress {
   factory OrderAddress.fromAddress(Address address) {
     return OrderAddress(
       id: address.id,
-      fullName: address.name,
+      fullName: address.recipientName ?? 'Recipient',
       addressLine1: address.addressLine1,
       addressLine2: address.addressLine2,
       city: address.city,
       state: address.state,
       postalCode: address.postalCode,
       country: address.country,
-      phoneNumber: address.phoneNumber,
+      phoneNumber: address.recipientPhone ?? '',
       isDefault: address.isDefault,
     );
   }

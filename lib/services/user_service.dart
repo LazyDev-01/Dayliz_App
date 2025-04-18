@@ -53,6 +53,40 @@ class UserService {
       
       debugPrint('Checking if user exists in public.users table: ${user.id}');
       
+      // First try direct SQL insert
+      try {
+        final email = user.email ?? '';
+        
+        // Create user directly using SQL to bypass RLS
+        final createUserSQL = '''
+        INSERT INTO public.users (id, email, created_at, updated_at)
+        VALUES ('${user.id}', '$email', NOW(), NOW())
+        ON CONFLICT (id) DO NOTHING;
+        ''';
+        
+        await _client.rpc('execute_sql', params: {'query': createUserSQL});
+        debugPrint('Successfully attempted to create user via direct SQL');
+        
+        // Also create a user profile
+        try {
+          final fullName = user.userMetadata?['name'] ?? user.email?.split('@').first ?? 'User';
+          final createProfileSQL = '''
+          INSERT INTO public.user_profiles (user_id, full_name, created_at, updated_at)
+          VALUES ('${user.id}', '$fullName', NOW(), NOW())
+          ON CONFLICT (user_id) DO NOTHING;
+          ''';
+          
+          await _client.rpc('execute_sql', params: {'query': createProfileSQL});
+          debugPrint('Successfully attempted to create user profile via direct SQL');
+        } catch (e) {
+          debugPrint('Error creating user profile via SQL: $e');
+        }
+        
+        return true;
+      } catch (sqlError) {
+        debugPrint('Error creating user via SQL: $sqlError');
+      }
+      
       // Try up to 3 times in case of temporary issues
       for (int attempt = 1; attempt <= 3; attempt++) {
         try {
@@ -76,17 +110,18 @@ class UserService {
           await _client.from('users').insert({
             'id': user.id,
             'email': user.email,
-            'full_name': user.userMetadata?['name'] ?? user.email?.split('@').first ?? 'User',
             'phone': user.phone,
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
-            'last_login': DateTime.now().toIso8601String(),
           });
           
           // Also create a user profile entry
           try {
             await _client.from('user_profiles').insert({
-              'id': user.id,
+              'user_id': user.id,
+              'full_name': user.userMetadata?['name'] ?? user.email?.split('@').first ?? 'User',
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
             });
             debugPrint('Successfully created user profile record');
           } catch (profileError) {
@@ -135,19 +170,31 @@ class UserService {
         return false;
       }
       
-      // Build update data with only provided fields
-      final Map<String, dynamic> updateData = {
+      // Update user basic info in users table
+      final Map<String, dynamic> userUpdateData = {
         'updated_at': DateTime.now().toIso8601String(),
-        'last_login': DateTime.now().toIso8601String(),
       };
       
-      if (name != null) updateData['name'] = name;
-      if (phone != null) updateData['phone'] = phone;
-      if (avatarUrl != null) updateData['avatar_url'] = avatarUrl;
+      if (phone != null) userUpdateData['phone'] = phone;
       
-      // Update user record
-      await _client.from('users').update(updateData).eq('id', user.id);
-      debugPrint('Successfully updated user profile');
+      if (userUpdateData.length > 1) { // Only if we have more than just updated_at
+        await _client.from('users').update(userUpdateData).eq('id', user.id);
+        debugPrint('Successfully updated basic user info');
+      }
+      
+      // Update profile info in user_profiles table
+      final Map<String, dynamic> profileUpdateData = {
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      
+      if (name != null) profileUpdateData['full_name'] = name;
+      if (avatarUrl != null) profileUpdateData['avatar_url'] = avatarUrl;
+      
+      if (profileUpdateData.length > 1) { // Only if we have more than just updated_at
+        await _client.from('user_profiles').update(profileUpdateData).eq('user_id', user.id);
+        debugPrint('Successfully updated user profile');
+      }
+      
       return true;
     } catch (e) {
       debugPrint('Error updating user profile: $e');

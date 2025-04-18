@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dayliz_app/models/product.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/widgets/product_card.dart';
+import 'package:dayliz_app/widgets/animated_product_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +12,10 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dayliz_app/services/product_service.dart';
+import 'package:dayliz_app/screens/search/search_screen.dart';
+import 'package:dayliz_app/providers/cart_provider.dart';
+import 'package:dayliz_app/screens/cart_screen.dart';
+import 'dart:isolate';
 
 // State providers for the product listing screen
 final selectedSubCategoryProvider = StateProvider<String?>((ref) => null);
@@ -530,15 +535,32 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
                 IconButton(
                   icon: const Icon(Icons.search),
                   onPressed: () {
-                    // TODO: Implement search within category
+                    // Open SearchScreen with MaterialPageRoute
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const SearchScreen(),
+                      ),
+                    );
                   },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.shopping_cart_outlined),
-                  onPressed: () {
-                    // Navigate to cart
-                    context.go('/cart');
-                  },
+                Consumer(
+                  builder: (context, ref, child) {
+                    final cartItems = ref.watch(cartProvider);
+                    return IconButton(
+                      icon: Badge(
+                        isLabelVisible: cartItems.isNotEmpty,
+                        label: Text(
+                          cartItems.length.toString(),
+                          style: const TextStyle(color: Colors.white, fontSize: 10),
+                        ),
+                        child: const Icon(Icons.shopping_cart_outlined),
+                      ),
+                      onPressed: () {
+                        // Navigate to cart using GoRouter for consistency
+                        context.go('/cart');
+                      },
+                    );
+                  }
                 ),
               ],
             ),
@@ -582,7 +604,7 @@ class _ProductListingScreenState extends ConsumerState<ProductListingScreen> {
           ),
           builderDelegate: PagedChildBuilderDelegate<Product>(
             itemBuilder: (context, product, index) {
-              return ProductCard(
+              return AnimatedProductCard(
                 product: product,
                 onTap: () {
                   // Navigate to product detail with the product as argument
@@ -965,33 +987,44 @@ class _SubcategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: ListView.builder(
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        itemCount: subCategories.length,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemBuilder: (context, index) {
-          final subCategory = subCategories[index];
-          final isSelected = selectedSubCategory == subCategory;
-          
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(subCategory),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  onSubCategorySelected(subCategory);
-                }
-              },
-              backgroundColor: Colors.grey[200],
-              selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-              labelStyle: TextStyle(
-                color: isSelected ? AppTheme.primaryColor : Colors.black,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          );
-        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: subCategories.map((subCategory) {
+              final isSelected = selectedSubCategory == subCategory;
+              
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ElevatedButton(
+                  onPressed: () {
+                    onSubCategorySelected(subCategory);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isSelected 
+                        ? Colors.green 
+                        : Colors.grey[200],
+                    foregroundColor: isSelected 
+                        ? Colors.white 
+                        : Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    elevation: isSelected ? 2 : 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  child: Text(
+                    subCategory,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
       ),
     );
   }

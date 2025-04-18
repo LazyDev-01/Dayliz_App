@@ -47,19 +47,46 @@ class ProductDetailsScreen extends ConsumerStatefulWidget {
   ConsumerState<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
 }
 
-class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
+class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> with SingleTickerProviderStateMixin {
   int _quantity = 1;
+  late AnimationController _animationController;
+  bool _isInCart = false;
   
   @override
   void initState() {
     super.initState();
     
+    // Initialize animation controller
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    
     // Schedule preloading after the first frame is rendered
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _preloadImages();
+        _checkIfInCart();
       }
     });
+  }
+  
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+  
+  void _checkIfInCart() {
+    final cartItems = ref.read(cartProvider);
+    final cartItem = cartItems.where((item) => item.productId == widget.product.id).toList();
+    
+    if (cartItem.isNotEmpty) {
+      setState(() {
+        _isInCart = true;
+        _quantity = cartItem.first.quantity;
+      });
+    }
   }
   
   void _preloadImages() {
@@ -96,6 +123,19 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   Widget build(BuildContext context) {
     final product = widget.product;
     final isInWishlist = ref.watch(isInWishlistProvider(product.id));
+    
+    // Check cart state
+    final cartItems = ref.watch(cartProvider);
+    final cartItem = cartItems.where((item) => item.productId == product.id).toList();
+    
+    // Update cart state if changed
+    if (cartItem.isNotEmpty && (!_isInCart || cartItem.first.quantity != _quantity)) {
+      _isInCart = true;
+      _quantity = cartItem.first.quantity;
+    } else if (cartItem.isEmpty && _isInCart) {
+      _isInCart = false;
+      _quantity = 1;
+    }
     
     return Scaffold(
       appBar: AppBar(
@@ -235,44 +275,121 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: ElevatedButton(
-          onPressed: _addToCart,
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          child: const Text('Add to Cart'),
-        ),
+        child: _isInCart 
+            ? _buildGoToCartWithQuantity() 
+            : ElevatedButton(
+                onPressed: _addToCart,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('Add to Cart'),
+              ),
       ),
     );
   }
   
-  void _toggleWishlist() {
-    ref.read(wishlistProvider.notifier).toggleWishlistItem(
-      WishlistItem(
-        id: widget.product.id,
-        productId: widget.product.id,
-        name: widget.product.name,
-        price: widget.product.price,
-        imageUrl: widget.product.imageUrl,
-        dateAdded: DateTime.now(),
-      ),
+  Widget _buildGoToCartWithQuantity() {
+    return Row(
+      children: [
+        // Quantity controls
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Decrease button
+              IconButton(
+                icon: const Icon(Icons.remove),
+                onPressed: _decreaseQuantity,
+                iconSize: 16,
+                constraints: const BoxConstraints(
+                  minWidth: 36,
+                  minHeight: 36,
+                ),
+                padding: EdgeInsets.zero,
+              ),
+              
+              // Quantity display
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  _quantity.toString(),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              
+              // Increase button
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: _increaseQuantity,
+                iconSize: 16,
+                constraints: const BoxConstraints(
+                  minWidth: 36,
+                  minHeight: 36,
+                ),
+                padding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(width: 12),
+        
+        // Go to Cart button
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () => context.go('/cart'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Colors.green,
+            ),
+            child: const Text('Go to Cart'),
+          ),
+        ),
+      ],
     );
+  }
+  
+  void _toggleWishlist() {
+    ref.read(wishlistProvider.notifier).toggleWishlist(widget.product);
   }
 
   void _addToCart() {
+    // Add to cart using the provider
     ref.read(cartProvider.notifier).addToCart(widget.product, quantity: _quantity);
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${widget.product.name} added to cart'),
-        duration: const Duration(seconds: 2),
-        action: SnackBarAction(
-          label: 'VIEW CART',
-          onPressed: () {
-            Navigator.of(context).pushNamed('/cart');
-          },
-        ),
-      ),
-    );
+    // Update state
+    setState(() {
+      _isInCart = true;
+      _quantity = 1;
+    });
+  }
+  
+  void _increaseQuantity() {
+    ref.read(cartProvider.notifier).updateQuantity(widget.product.id, _quantity + 1);
+    setState(() {
+      _quantity += 1;
+    });
+  }
+  
+  void _decreaseQuantity() {
+    if (_quantity <= 1) {
+      ref.read(cartProvider.notifier).removeFromCart(widget.product.id);
+      setState(() {
+        _isInCart = false;
+        _quantity = 1;
+      });
+    } else {
+      ref.read(cartProvider.notifier).updateQuantity(widget.product.id, _quantity - 1);
+      setState(() {
+        _quantity -= 1;
+      });
+    }
   }
 } 

@@ -167,7 +167,7 @@ class AddressSelectionWidget extends ConsumerWidget {
                         Row(
                           children: [
                             Text(
-                              address.name,
+                              address.recipientName ?? 'Recipient',
                               style: theme.textTheme.titleMedium,
                             ),
                             if (address.isDefault) ...[
@@ -189,11 +189,30 @@ class AddressSelectionWidget extends ConsumerWidget {
                                 ),
                               ),
                             ],
+                            if (address.addressType != null) ...[
+                              AppSpacing.hSM,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.secondary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  address.addressType!,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.secondary,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         AppSpacing.vXS,
                         Text(
-                          address.phoneNumber,
+                          address.recipientPhone ?? 'No phone number',
                           style: theme.textTheme.bodyMedium,
                         ),
                         AppSpacing.vXS,
@@ -270,7 +289,7 @@ class AddressSelectionWidget extends ConsumerWidget {
       MaterialPageRoute(
         builder: (context) => Scaffold(
           appBar: AppBar(title: const Text('Edit Address')),
-          body: Center(child: Text('Mock Edit Address Screen for ${address.name}')),
+          body: Center(child: Text('Mock Edit Address Screen for ${address.recipientName ?? "Address"}')),
         ),
       ),
     );

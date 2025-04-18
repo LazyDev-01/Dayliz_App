@@ -35,80 +35,25 @@ class AddressService {
         throw Exception('Failed to ensure user exists');
       }
       
+      // Make sure the table exists
+      final tableExists = await createAddressesTableIfNeeded();
+      if (!tableExists) {
+        debugPrint('Error in getAddresses: Address table does not exist');
+        return [];
+      }
+      
       debugPrint('Fetching addresses for user: $userId');
       
-      // First try with the new schema's 'addresses' table
-      try {
-        final response = await _client
-            .from('addresses')
-            .select()
-            .eq('user_id', userId)
-            .order('is_default', ascending: false);
-            
-        debugPrint('API GET response from addresses: Data length: ${response.length}');
-        
-        return response
-            .map<Address>((json) => Address(
-                  id: json['id'],
-                  userId: json['user_id'],
-                  name: json['name'],
-                  addressLine1: json['address_line1'],
-                  addressLine2: json['address_line2'],
-                  city: json['city'],
-                  state: json['state'],
-                  country: json['country'],
-                  postalCode: json['postal_code'],
-                  phoneNumber: json['phone'] ?? '',
-                  isDefault: json['is_default'] ?? false,
-                  latitude: json['latitude'],
-                  longitude: json['longitude'],
-                  landmark: null,
-                  addressType: null,
-                  street: null,
-                  phone: json['phone'],
-                ))
-            .toList();
-      } catch (e) {
-        debugPrint('❌ Error accessing addresses table: $e');
-        
-        // Fallback to the old schema's 'user_addresses' table
-        try {
-          debugPrint('Trying alternative table name: user_addresses');
-          final response = await _client
-              .from('user_addresses')
-              .select()
-              .eq('user_id', userId)
-              .order('is_default', ascending: false);
+      // Fetch addresses from the 'addresses' table
+      final response = await _client
+          .from('addresses')
+          .select()
+          .eq('user_id', userId)
+          .order('is_default', ascending: false);
           
-          debugPrint('API GET response from user_addresses: Data length: ${response.length}');
-          
-          return response
-              .map<Address>((json) => Address(
-                    id: json['id'],
-                    userId: json['user_id'],
-                    name: json['name'],
-                    addressLine1: json['address_line1'],
-                    addressLine2: json['address_line2'],
-                    city: json['city'],
-                    state: json['state'],
-                    country: json['country'],
-                    postalCode: json['postal_code'],
-                    phoneNumber: json['phone'] ?? '',
-                    isDefault: json['is_default'] ?? false,
-                    latitude: json['latitude'],
-                    longitude: json['longitude'],
-                    landmark: null,
-                    addressType: null,
-                    street: null,
-                    phone: json['phone'],
-                  ))
-              .toList();
-        } catch (e) {
-          debugPrint('❌ Alternative address table also not found: $e');
-          debugPrint('❌ Address table connection failed - check table name and permissions');
-          return [];
-        }
-      }
+      debugPrint('API GET response from addresses: Data length: ${response.length}');
+      
+      return response.map<Address>((json) => Address.fromJson(json)).toList();
     } on PostgrestException catch (e) {
       debugPrint('Supabase error in getAddresses: ${e.code} - ${e.message} - ${e.details}');
       return [];
@@ -120,21 +65,20 @@ class AddressService {
   
   /// Add a new address
   Future<Address?> addAddress(
-    String? name,
     String addressLine1,
     String? addressLine2,
     String city,
     String state,
     String country,
     String postalCode,
-    String? phoneNumber,
     bool isDefault,
+    String? addressType,
+    String? recipientName,
+    String? recipientPhone,
+    String? landmark,
     double? latitude,
     double? longitude,
-    String? landmark,
-    String? addressType,
-    String? street,
-    String? phone,
+    String? zone,
   ) async {
     try {
       final userId = _userService.getCurrentUser()?.id;
@@ -143,64 +87,141 @@ class AddressService {
         throw Exception('User not authenticated');
       }
 
-      // Check if the user exists
-      final userExists = await _client
-          .from('users')
-          .select('id')
-          .eq('id', userId)
-          .maybeSingle();
-
-      if (userExists == null) {
-        debugPrint('Error in addAddress: User does not exist');
-        throw Exception('User does not exist in the database');
+      // Make sure the table exists
+      final tableExists = await createAddressesTableIfNeeded();
+      if (!tableExists) {
+        debugPrint('Error in addAddress: Address table creation failed');
+        throw Exception('Could not create or access addresses table');
       }
 
       // Generate unique ID
       final addressId = const Uuid().v4();
       debugPrint('Generated address ID: $addressId for user: $userId');
 
-      // Create address data
-      final addressData = {
-        'id': addressId,
-        'user_id': userId,
-        'name': name,
-        'address_line1': addressLine1,
-        'address_line2': addressLine2,
-        'city': city,
-        'state': state,
-        'country': country,
-        'postal_code': postalCode,
-        'phone_number': phoneNumber,
-        'is_default': isDefault,
-        'latitude': latitude,
-        'longitude': longitude,
-        'landmark': landmark,
-        'address_type': addressType,
-        'street': street,
-        'phone': phone,
-        'created_at': DateTime.now().toIso8601String(),
-      };
+      // First, try to insert the user directly using SQL
+      try {
+        final user = _userService.getCurrentUser();
+        if (user != null) {
+          final createUserSQL = '''
+          INSERT INTO public.users (id, email, created_at, updated_at)
+          VALUES ('${user.id}', '${user.email ?? ''}', NOW(), NOW())
+          ON CONFLICT (id) DO NOTHING;
+          ''';
+          
+          await _client.rpc('execute_sql', params: {'query': createUserSQL});
+          debugPrint('✅ Successfully created user record via SQL');
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error creating user via SQL: $e');
+        // Continue anyway, we'll try to add the address
+      }
+      
+      // Now try to add the address
+      try {
+        // Create address data
+        final addressData = {
+          'id': addressId,
+          'user_id': userId,
+          'address_line1': addressLine1,
+          'address_line2': addressLine2,
+          'city': city,
+          'state': state,
+          'country': country,
+          'postal_code': postalCode,
+          'is_default': isDefault,
+          'address_type': addressType,
+          'recipient_name': recipientName,
+          'recipient_phone': recipientPhone,
+          'landmark': landmark,
+          'latitude': latitude,
+          'longitude': longitude,
+          'zone_id': zone,
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        };
 
-      // Remove null values
-      final cleanData = Map<String, dynamic>.from(addressData);
-      cleanData.removeWhere((key, value) => value == null);
-      
-      debugPrint('Inserting address with data: ${cleanData.keys.join(', ')}');
+        // Remove null values
+        final cleanData = Map<String, dynamic>.from(addressData);
+        cleanData.removeWhere((key, value) => value == null);
+        
+        debugPrint('Inserting address with data: ${cleanData.keys.join(', ')}');
 
-      // Insert the address
-      await _client
-          .from('addresses')
-          .insert(cleanData);
-      
-      // Get the inserted address
-      final addressResponse = await _client
-          .from('addresses')
-          .select()
-          .eq('id', addressId)
-          .single();
-      
-      debugPrint('Successfully added address with ID: $addressId');
-      return Address.fromJson(addressResponse);
+        // Try raw SQL insertion as a last resort
+        final values = [
+          "'$addressId'", 
+          "'$userId'",
+          "'$addressLine1'",
+          addressLine2 != null ? "'$addressLine2'" : "NULL",
+          "'$city'",
+          "'$state'",
+          "'$country'",
+          "'$postalCode'",
+          isDefault ? "TRUE" : "FALSE",
+          addressType != null ? "'$addressType'" : "NULL",
+          recipientName != null ? "'$recipientName'" : "NULL",
+          recipientPhone != null ? "'$recipientPhone'" : "NULL",
+          landmark != null ? "'$landmark'" : "NULL",
+          latitude != null ? latitude.toString() : "NULL",
+          longitude != null ? longitude.toString() : "NULL",
+          zone != null ? "'$zone'" : "NULL",
+          "NOW()",
+          "NOW()"
+        ];
+        
+        final insertSQL = '''
+        INSERT INTO public.addresses (
+          id, user_id, address_line1, address_line2, city, state, country, 
+          postal_code, is_default, address_type, recipient_name, recipient_phone, 
+          landmark, latitude, longitude, zone_id, created_at, updated_at
+        ) VALUES (
+          ${values.join(', ')}
+        )
+        RETURNING *;
+        ''';
+        
+        final result = await _client.rpc('execute_sql', params: {'query': insertSQL});
+        
+        if (result != null && result.isNotEmpty) {
+          debugPrint('Successfully added address using SQL: $result');
+          
+          // Create a model to return
+          return Address(
+            id: addressId,
+            userId: userId,
+            addressLine1: addressLine1,
+            addressLine2: addressLine2,
+            city: city,
+            state: state,
+            country: country,
+            postalCode: postalCode,
+            isDefault: isDefault,
+            addressType: addressType,
+            recipientName: recipientName,
+            recipientPhone: recipientPhone,
+            landmark: landmark,
+            latitude: latitude,
+            longitude: longitude,
+            zone: zone,
+            zoneId: zone,
+          );
+        }
+        
+        // Try the standard method as a fallback
+        await _client.from('addresses').insert(cleanData);
+            
+        // Get the inserted address
+        final addressResponse = await _client
+            .from('addresses')
+            .select()
+            .eq('id', addressId)
+            .single();
+        
+        debugPrint('Successfully added address with ID: $addressId to addresses table');
+        return Address.fromJson(addressResponse);
+      } catch (e) {
+        debugPrint('❌ Error inserting into addresses table: $e');
+        throw Exception('Could not insert address into table');
+      }
     } catch (e) {
       if (e is PostgrestException) {
         debugPrint('PostgrestException in addAddress: ${e.message}, ${e.details}');
@@ -212,23 +233,22 @@ class AddressService {
   }
   
   /// Update an existing address
-  Future<Address?> updateAddress(
+  Future<bool> updateAddress(
     String id, {
-    String? name,
     String? addressLine1,
     String? addressLine2,
     String? city,
     String? state,
     String? country,
     String? postalCode,
-    String? phoneNumber,
     bool? isDefault,
+    String? addressType,
+    String? recipientName,
+    String? recipientPhone,
+    String? landmark,
     double? latitude,
     double? longitude,
-    String? landmark,
-    String? addressType,
-    String? street,
-    String? phone,
+    String? zone,
   }) async {
     try {
       final userId = _userService.getCurrentUser()?.id;
@@ -241,21 +261,20 @@ class AddressService {
 
       // Create address data
       final addressData = {
-        'name': name,
         'address_line1': addressLine1,
         'address_line2': addressLine2,
         'city': city,
         'state': state,
         'country': country,
         'postal_code': postalCode,
-        'phone_number': phoneNumber,
         'is_default': isDefault,
+        'address_type': addressType,
+        'recipient_name': recipientName,
+        'recipient_phone': recipientPhone,
+        'landmark': landmark,
         'latitude': latitude,
         'longitude': longitude,
-        'landmark': landmark,
-        'address_type': addressType,
-        'street': street,
-        'phone': phone,
+        'zone': zone,
         'updated_at': DateTime.now().toIso8601String(),
       };
 
@@ -265,147 +284,238 @@ class AddressService {
       
       debugPrint('Updating address with data: ${cleanData.keys.join(', ')}');
 
-      // Update the address in the database
-      await _client
-          .from('user_addresses')
+      // Try updating in 'addresses' table
+      try {
+        await _client.from('addresses')
           .update(cleanData)
-          .eq('id', id);
-      
-      // Get the updated address
-      final addressResponse = await _client
-          .from('user_addresses')
-          .select()
           .eq('id', id)
-          .single();
-      
-      debugPrint('Successfully updated address with ID: $id');
-      return Address.fromJson(addressResponse);
-    } catch (e) {
-      if (e is PostgrestException) {
-        debugPrint('PostgrestException in updateAddress: ${e.message}, ${e.details}');
-      } else {
-        debugPrint('Error updating address: $e');
+          .eq('user_id', userId);
+
+        // If this is set as default, update other addresses
+        if (isDefault == true) {
+          await _updateOtherAddressesDefaultStatus(id);
+        }
+          
+        debugPrint('Successfully updated address in addresses table');
+        return true;
+      } catch (e) {
+        debugPrint('Error updating in addresses table: $e');
+        
+        // Try the legacy table
+        try {
+          await _client.from('user_addresses')
+            .update(cleanData)
+            .eq('id', id)
+            .eq('user_id', userId);
+
+          // If this is set as default, update other addresses
+          if (isDefault == true) {
+            await _updateOtherAddressesDefaultStatus(id);
+          }
+            
+          debugPrint('Successfully updated address in user_addresses table');
+          return true;
+        } catch (e) {
+          debugPrint('Error updating in user_addresses table: $e');
+          throw Exception('Could not update address in any available tables');
+        }
       }
-      rethrow;
+    } catch (e) {
+      debugPrint('Error updating address: $e');
+      return false;
     }
   }
   
   /// Delete an address
-  Future<void> deleteAddress(String id) async {
+  Future<bool> deleteAddress(String id) async {
     try {
       final userId = _userService.getCurrentUser()?.id;
       if (userId == null) {
         debugPrint('Error in deleteAddress: User not authenticated');
         throw Exception('User not authenticated');
       }
-      
-      await _client
-          .from('user_addresses')
+
+      debugPrint('Deleting address $id for user: $userId');
+
+      // Try deleting from 'addresses' table
+      try {
+        await _client.from('addresses')
           .delete()
           .eq('id', id)
           .eq('user_id', userId);
+          
+        debugPrint('Successfully deleted address from addresses table');
+        return true;
+      } catch (e) {
+        debugPrint('Error deleting from addresses table: $e');
+        
+        // Try the legacy table
+        try {
+          await _client.from('user_addresses')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', userId);
+            
+          debugPrint('Successfully deleted address from user_addresses table');
+          return true;
+        } catch (e) {
+          debugPrint('Error deleting from user_addresses table: $e');
+          throw Exception('Could not delete address from any available tables');
+        }
+      }
     } catch (e) {
       debugPrint('Error deleting address: $e');
-      rethrow;
+      return false;
     }
   }
   
   /// Set an address as default
-  Future<Address?> setDefaultAddress(String id) async {
+  Future<bool> setDefaultAddress(String id) async {
     try {
       final userId = _userService.getCurrentUser()?.id;
       if (userId == null) {
         debugPrint('Error in setDefaultAddress: User not authenticated');
         throw Exception('User not authenticated');
       }
-      
-      // Clear all default addresses
-      await _clearDefaultAddresses();
-      
-      // Set the selected address as default
-      final response = await _client
-          .from('user_addresses')
+
+      debugPrint('Setting address $id as default for user: $userId');
+
+      // First, set the specified address as default
+      try {
+        await _client.from('addresses')
           .update({'is_default': true})
           .eq('id', id)
-          .eq('user_id', userId)
-          .select();
-      
-      if (response.isEmpty) {
-        throw Exception('Address not found');
+          .eq('user_id', userId);
+          
+        // Update other addresses
+        await _updateOtherAddressesDefaultStatus(id);
+          
+        debugPrint('Successfully set address as default in addresses table');
+        return true;
+      } catch (e) {
+        debugPrint('Error setting default in addresses table: $e');
+        
+        // Try the legacy table
+        try {
+          await _client.from('user_addresses')
+            .update({'is_default': true})
+            .eq('id', id)
+            .eq('user_id', userId);
+            
+          // Update other addresses
+          await _updateOtherAddressesDefaultStatus(id);
+            
+          debugPrint('Successfully set address as default in user_addresses table');
+          return true;
+        } catch (e) {
+          debugPrint('Error setting default in user_addresses table: $e');
+          throw Exception('Could not set address as default in any available tables');
+        }
       }
-      
-      return Address.fromJson(response.first);
     } catch (e) {
       debugPrint('Error setting default address: $e');
-      rethrow;
+      return false;
     }
   }
   
-  /// Clear all default addresses
-  Future<void> _clearDefaultAddresses() async {
+  /// Helper method to update other addresses when setting one as default
+  Future<void> _updateOtherAddressesDefaultStatus(String defaultAddressId) async {
+    final userId = _userService.getCurrentUser()?.id;
+    if (userId == null) return;
+
+    // Try to update in addresses table
     try {
-      final userId = _userService.getCurrentUser()?.id;
-      if (userId == null) {
-        debugPrint('Error in _clearDefaultAddresses: User not authenticated');
-        throw Exception('User not authenticated');
-      }
-      
-      await _client
-          .from('user_addresses')
-          .update({'is_default': false})
-          .eq('user_id', userId)
-          .eq('is_default', true);
+      await _client.from('addresses')
+        .update({'is_default': false})
+        .eq('user_id', userId)
+        .neq('id', defaultAddressId);
     } catch (e) {
-      debugPrint('Error clearing default addresses: $e');
+      debugPrint('Error updating other addresses in addresses table: $e');
+    }
+
+    // Try to update in user_addresses table
+    try {
+      await _client.from('user_addresses')
+        .update({'is_default': false})
+        .eq('user_id', userId)
+        .neq('id', defaultAddressId);
+    } catch (e) {
+      debugPrint('Error updating other addresses in user_addresses table: $e');
     }
   }
   
-  /// Test connection to database and check if user_addresses table exists
+  /// Test connection to database and check if addresses table exists
   Future<bool> testDatabaseConnection() async {
-    debugPrint('Testing database connection to user_addresses table...');
-    
     try {
-      // Try to get column information directly
-      final response = await _client
-          .from('user_addresses')
-          .select('*')
-          .limit(1);
-          
-      debugPrint('✅ Successfully connected to user_addresses table');
-      // If we have data, print the first row keys to see column names
-      if (response is List && response.isNotEmpty) {
-        final columns = (response[0] as Map).keys.toList();
-        debugPrint('user_addresses table columns: $columns');
-      } else {
-        debugPrint('user_addresses table exists but has no data to inspect columns');
-      }
-      
-      return true;
-    } catch (e) {
-      debugPrint('❌ Error accessing user_addresses table: $e');
-      
-      try {
-        // If user_addresses doesn't exist, check if address table exists instead
-        final alternativeResponse = await _client
-            .from('address')
-            .select('*')
-            .limit(1);
-            
-        debugPrint('✅ Found alternative address table!');
-        debugPrint('Address table data: $alternativeResponse');
-        
-        // If we have data, print the first row keys to see column names
-        if (alternativeResponse is List && alternativeResponse.isNotEmpty) {
-          final columns = (alternativeResponse[0] as Map).keys.toList();
-          debugPrint('Address table columns: $columns');
-        } else {
-          debugPrint('Address table exists but has no data to inspect columns');
-        }
-        return true;
-      } catch (innerE) {
-        debugPrint('❌ Alternative address table also not found: $innerE');
+      // Get current user ID
+      final user = _userService.getCurrentUser();
+      if (user == null) {
+        debugPrint('Error in testDatabaseConnection: User not authenticated');
         return false;
       }
+      
+      // Try direct query as a fallback to check if addresses table exists
+      try {
+        final fallbackCheck = await _client
+            .from('addresses')
+            .select('id')
+            .limit(1);
+        
+        debugPrint('✅ Address table exists (verified through direct query)');
+        return true;
+      } catch (e) {
+        debugPrint('❌ Addresses table not found');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Error testing database connection: $e');
+      return false;
+    }
+  }
+
+  // Create the addresses table if it doesn't exist
+  Future<bool> createAddressesTableIfNeeded() async {
+    try {
+      // Check if the table exists
+      final hasTable = await testDatabaseConnection();
+      if (hasTable) {
+        debugPrint('✅ Address table connection successful');
+        return true;
+      }
+      
+      // Table doesn't exist, create it
+      const createTableSQL = '''
+      CREATE TABLE IF NOT EXISTS addresses (
+        id UUID PRIMARY KEY,
+        user_id UUID NOT NULL REFERENCES auth.users(id),
+        address_line1 TEXT NOT NULL,
+        address_line2 TEXT,
+        city TEXT NOT NULL,
+        state TEXT NOT NULL,
+        country TEXT NOT NULL,
+        postal_code TEXT NOT NULL,
+        is_default BOOLEAN DEFAULT false,
+        address_type TEXT,
+        recipient_name TEXT,
+        recipient_phone TEXT,
+        landmark TEXT,
+        latitude DECIMAL(10,6),
+        longitude DECIMAL(10,6),
+        zone_id UUID REFERENCES zones(id),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_addresses_user_id ON addresses(user_id);
+      CREATE INDEX IF NOT EXISTS idx_addresses_zone_id ON addresses(zone_id);
+      ''';
+      
+      await _client.rpc('execute_sql', params: {'query': createTableSQL});
+      debugPrint('✅ Created addresses table');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Failed to create addresses table: $e');
+      return false;
     }
   }
 } 

@@ -14,8 +14,22 @@ class CartScreen extends ConsumerWidget {
     final cartNotifier = ref.watch(cartProvider.notifier);
 
     return Scaffold(
+      extendBody: true,
       appBar: AppBar(
         title: const Text('My Cart'),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Try to pop first, if not possible, go to home as fallback
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              // Go to home if there's nothing to pop
+              context.go('/home');
+            }
+          },
+        ),
         actions: [
           if (cartItems.isNotEmpty)
             IconButton(
@@ -46,20 +60,28 @@ class CartScreen extends ConsumerWidget {
         ],
       ),
       body: cartItems.isEmpty
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey),
-                  SizedBox(height: 20),
-                  Text(
+                  const Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey),
+                  const SizedBox(height: 20),
+                  const Text(
                     'Your cart is empty',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 10),
-                  Text(
+                  const SizedBox(height: 10),
+                  const Text(
                     'Add items to get started',
                     style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Navigate to home screen
+                      context.go('/home');
+                    },
+                    child: const Text('Start Shopping'),
                   ),
                 ],
               ),

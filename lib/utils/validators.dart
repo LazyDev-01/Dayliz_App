@@ -37,16 +37,20 @@ class Validators {
     return null;
   }
   
-  /// Validates a phone number.
+  /// Validates a phone number specifically for Indian format.
   static String? phone(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter a phone number';
     }
     
-    // Simple regex for phone validation (allow +, digits, spaces, and dashes)
-    final phoneRegex = RegExp(r'^\+?[\d\s-]{10,15}$');
-    if (!phoneRegex.hasMatch(value)) {
-      return 'Please enter a valid phone number';
+    // Remove any spaces, dashes or other formatting characters
+    final cleanedValue = value.replaceAll(RegExp(r'[\s-]'), '');
+    
+    // Check if it starts with +91 (optional) and has 10 digits after that
+    // Or just 10 digits for Indian numbers without the country code
+    final indianPhoneRegex = RegExp(r'^(\+91)?[6-9]\d{9}$');
+    if (!indianPhoneRegex.hasMatch(cleanedValue)) {
+      return 'Please enter a valid 10-digit Indian phone number';
     }
     
     return null;
@@ -65,16 +69,16 @@ class Validators {
     return null;
   }
   
-  /// Validates a postal code/ZIP code.
+  /// Validates an Indian postal code (PIN code).
   static String? postalCode(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter a postal code';
     }
     
-    // Simple regex for postal code validation (5-6 digits, can include letters for some countries)
-    final postalCodeRegex = RegExp(r'^[a-zA-Z0-9]{5,7}$');
+    // Indian PIN codes are exactly 6 digits
+    final postalCodeRegex = RegExp(r'^\d{6}$');
     if (!postalCodeRegex.hasMatch(value)) {
-      return 'Please enter a valid postal code';
+      return 'Please enter a valid 6-digit PIN code';
     }
     
     return null;

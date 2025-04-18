@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:frontend/providers/wishlist_provider.dart';
-import 'package:frontend/widgets/product_card.dart';
-import 'package:frontend/screens/product/product_details_screen.dart';
+import 'package:dayliz_app/providers/wishlist_provider.dart';
+import 'package:dayliz_app/widgets/product_card.dart';
+import 'package:dayliz_app/models/product.dart';
+import 'package:go_router/go_router.dart';
 
 class WishlistScreen extends ConsumerWidget {
   const WishlistScreen({Key? key}) : super(key: key);
@@ -57,7 +58,7 @@ class WishlistScreen extends ConsumerWidget {
           Icon(
             Icons.favorite_border,
             size: 80,
-            color: Colors.grey.shade400,
+            color: Colors.grey[400],
           ),
           const SizedBox(height: 16),
           Text(
@@ -69,38 +70,44 @@ class WishlistScreen extends ConsumerWidget {
             'Add items to your wishlist to save them for later',
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              // Navigate to home screen using go_router
+              context.go('/home');
+            }, 
+            child: const Text('Continue Shopping'),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildWishlistGrid(
-      BuildContext context, List<WishlistItem> items, WidgetRef ref) {
+      BuildContext context, List<Product> items, WidgetRef ref) {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+        childAspectRatio: 0.65, // Same aspect ratio as product screen
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 20, // Same spacing as product screen
       ),
       itemCount: items.length,
       itemBuilder: (context, index) {
-        final item = items[index];
+        final product = items[index];
         return ProductCard(
-          imageUrl: item.imageUrl,
-          name: item.name,
-          price: item.price,
-          discountPercentage: item.discountPercentage,
-          rating: item.rating,
-          showRating: item.rating != null,
+          product: product,
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProductDetailsScreen(productId: item.productId),
-              ),
+            // Navigate to product details
+            Navigator.of(context).pushNamed(
+              '/product-details',
+              arguments: product,
             );
+          },
+          onWishlistToggle: () {
+            // Remove from wishlist when clicked
+            ref.read(wishlistProvider.notifier).removeFromWishlist(product.id);
           },
         );
       },

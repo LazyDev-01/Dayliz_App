@@ -120,41 +120,70 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildSearchSuggestions() {
-    final recentSearches = [
-      'Fresh fruits',
-      'Vegetables',
-      'Dairy products',
-      'Bread'
-    ]; // Mock data, should come from provider
+    final recentSearches = ref.watch(recentSearchesProvider);
 
     return Expanded(
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
           const SizedBox(height: 16),
-          const Text(
-            'Recent Searches',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recent Searches',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              if (recentSearches.isNotEmpty)
+                TextButton(
+                  onPressed: () {
+                    ref.read(recentSearchesProvider.notifier).clearSearches();
+                  },
+                  child: const Text('Clear All'),
+                ),
+            ],
           ),
           const SizedBox(height: 8),
-          ...recentSearches.map((search) => ListTile(
-                leading: const Icon(Icons.history),
-                title: Text(search),
-                onTap: () {
-                  _searchController.text = search;
-                  _performSearch(search);
-                },
-                trailing: IconButton(
-                  icon: const Icon(Icons.north_west),
-                  onPressed: () {
+          if (recentSearches.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 32),
+              child: Center(
+                child: Text(
+                  'No recent searches',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            )
+          else
+            ...recentSearches.map((search) => ListTile(
+                  leading: const Icon(Icons.history),
+                  title: Text(search),
+                  onTap: () {
                     _searchController.text = search;
                     _performSearch(search);
                   },
-                ),
-              )),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.north_west),
+                        onPressed: () {
+                          _searchController.text = search;
+                          _performSearch(search);
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          ref.read(recentSearchesProvider.notifier).removeSearch(search);
+                        },
+                      ),
+                    ],
+                  ),
+                )),
         ],
       ),
     );
@@ -196,13 +225,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.7,
+        childAspectRatio: 0.65,
         crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+        mainAxisSpacing: 20,
       ),
       itemCount: products.length,
       itemBuilder: (context, index) {
-        return ProductCard(product: products[index]);
+        final product = products[index];
+        return ProductCard(
+          product: product,
+          onTap: () {
+            Navigator.of(context).pushNamed(
+              '/product-details',
+              arguments: product,
+            );
+          },
+        );
       },
     );
   }

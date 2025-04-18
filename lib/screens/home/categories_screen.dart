@@ -10,6 +10,7 @@ import 'package:dayliz_app/models/category_models.dart';
 import 'package:dayliz_app/providers/search_providers.dart';
 import 'package:dayliz_app/providers/category_providers.dart';
 import 'package:visibility_detector/visibility_detector.dart';
+import 'package:dayliz_app/screens/search/search_screen.dart';
 
 // We'll use the selectedCategoryProvider from category_providers.dart
 // final selectedCategoryProvider = StateProvider<String?>((ref) => null);
@@ -79,7 +80,26 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> with Single
     return Scaffold(
       appBar: AppBar(
         title: const Text('Categories'),
+        centerTitle: true,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            context.go('/home');
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const SearchScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Row(
         children: [

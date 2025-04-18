@@ -140,7 +140,7 @@ class FeaturedProductsSection extends ConsumerWidget {
         }
         
         return SizedBox(
-          height: 280, // Increased height for better display
+          height: 250, // Reduced from 280
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -152,7 +152,7 @@ class FeaturedProductsSection extends ConsumerWidget {
               return Padding(
                 padding: const EdgeInsets.only(right: 16),
                 child: SizedBox(
-                  width: 180, // Fixed width for consistent sizing
+                  width: 160, // Reduced from 180
                   child: ProductCard(
                     product: safeProduct,
                     onTap: () {

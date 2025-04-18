@@ -4,119 +4,129 @@ import 'package:uuid/uuid.dart';
 class Address extends Equatable {
   final String id;
   final String userId;
-  final String name;
   final String addressLine1;
   final String? addressLine2;
   final String city;
   final String state;
-  final String country;
   final String postalCode;
-  final String phoneNumber;
+  final String country;
   final bool isDefault;
+  final String? addressType;
+  final String? recipientName;
+  final String? recipientPhone;
+  final String? landmark;
   final double? latitude;
   final double? longitude;
-  final String? landmark;
-  final String? addressType; // 'home', 'work', 'other'
-  final String? street;
-  final String? phone;
+  final String? zone;
+  final String? zoneId;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const Address({
     required this.id,
     required this.userId,
-    required this.name,
     required this.addressLine1,
     this.addressLine2,
     required this.city,
     required this.state,
-    required this.country,
     required this.postalCode,
-    required this.phoneNumber,
+    required this.country,
     this.isDefault = false,
+    this.addressType,
+    this.recipientName,
+    this.recipientPhone,
+    this.landmark,
     this.latitude,
     this.longitude,
-    this.landmark,
-    this.addressType,
-    this.street,
-    this.phone,
+    this.zone,
+    this.zoneId,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory Address.create({
     String? id,
     required String userId,
-    required String name,
     required String addressLine1,
     String? addressLine2,
     required String city,
     required String state,
-    required String country,
     required String postalCode,
-    required String phoneNumber,
+    required String country,
     bool isDefault = false,
+    String? addressType,
+    String? recipientName,
+    String? recipientPhone,
+    String? landmark,
     double? latitude,
     double? longitude,
-    String? landmark,
-    String? addressType,
-    String? street,
-    String? phone,
+    String? zone,
+    String? zoneId,
   }) {
     return Address(
       id: id ?? const Uuid().v4(),
       userId: userId,
-      name: name,
       addressLine1: addressLine1,
       addressLine2: addressLine2,
       city: city,
       state: state,
-      country: country,
       postalCode: postalCode,
-      phoneNumber: phoneNumber,
+      country: country,
       isDefault: isDefault,
+      addressType: addressType,
+      recipientName: recipientName,
+      recipientPhone: recipientPhone,
+      landmark: landmark,
       latitude: latitude,
       longitude: longitude,
-      landmark: landmark,
-      addressType: addressType,
-      street: street,
-      phone: phone,
+      zone: zone,
+      zoneId: zoneId,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
   }
 
   Address copyWith({
     String? id,
     String? userId,
-    String? name,
     String? addressLine1,
     String? addressLine2,
     String? city,
     String? state,
-    String? country,
     String? postalCode,
-    String? phoneNumber,
+    String? country,
     bool? isDefault,
+    String? addressType,
+    String? recipientName,
+    String? recipientPhone,
+    String? landmark,
     double? latitude,
     double? longitude,
-    String? landmark,
-    String? addressType,
-    String? street,
-    String? phone,
+    String? zone,
+    String? zoneId,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return Address(
       id: id ?? this.id,
       userId: userId ?? this.userId,
-      name: name ?? this.name,
       addressLine1: addressLine1 ?? this.addressLine1,
       addressLine2: addressLine2 ?? this.addressLine2,
       city: city ?? this.city,
       state: state ?? this.state,
-      country: country ?? this.country,
       postalCode: postalCode ?? this.postalCode,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
+      country: country ?? this.country,
       isDefault: isDefault ?? this.isDefault,
+      addressType: addressType ?? this.addressType,
+      recipientName: recipientName ?? this.recipientName,
+      recipientPhone: recipientPhone ?? this.recipientPhone,
+      landmark: landmark ?? this.landmark,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
-      landmark: landmark ?? this.landmark,
-      addressType: addressType ?? this.addressType,
-      street: street ?? this.street,
-      phone: phone ?? this.phone,
+      zone: zone ?? this.zone,
+      zoneId: zoneId ?? this.zoneId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -124,17 +134,23 @@ class Address extends Equatable {
     return {
       'id': id,
       'user_id': userId,
-      'name': name,
       'address_line1': addressLine1,
       'address_line2': addressLine2,
       'city': city,
       'state': state,
-      'country': country,
       'postal_code': postalCode,
-      'phone': phoneNumber,
+      'country': country,
       'is_default': isDefault,
+      'address_type': addressType,
+      'recipient_name': recipientName,
+      'recipient_phone': recipientPhone,
+      'landmark': landmark,
       'latitude': latitude,
       'longitude': longitude,
+      'zone': zone,
+      'zone_id': zoneId,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
   }
 
@@ -142,21 +158,27 @@ class Address extends Equatable {
     return Address(
       id: json['id'] ?? const Uuid().v4(),
       userId: json['user_id'] ?? '',
-      name: json['name'] ?? '',
       addressLine1: json['address_line1'] ?? '',
       addressLine2: json['address_line2'],
       city: json['city'] ?? '',
       state: json['state'] ?? '',
-      country: json['country'] ?? '',
       postalCode: json['postal_code'] ?? '',
-      phoneNumber: json['phone'] ?? '',
+      country: json['country'] ?? '',
       isDefault: json['is_default'] ?? false,
+      addressType: json['address_type'],
+      recipientName: json['recipient_name'],
+      recipientPhone: json['recipient_phone'],
+      landmark: json['landmark'],
       latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
       longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
-      landmark: null,
-      addressType: null,
-      street: null,
-      phone: json['phone'],
+      zone: json['zone'],
+      zoneId: json['zone_id'],
+      createdAt: json['created_at'] != null 
+          ? DateTime.tryParse(json['created_at'].toString()) 
+          : null,
+      updatedAt: json['updated_at'] != null 
+          ? DateTime.tryParse(json['updated_at'].toString()) 
+          : null,
     );
   }
 
@@ -164,21 +186,23 @@ class Address extends Equatable {
   List<Object?> get props => [
     id, 
     userId, 
-    name, 
     addressLine1, 
     addressLine2, 
     city, 
     state, 
-    country, 
     postalCode, 
-    phoneNumber, 
+    country, 
     isDefault,
+    addressType,
+    recipientName,
+    recipientPhone,
+    landmark,
     latitude,
     longitude,
-    landmark,
-    addressType,
-    street,
-    phone,
+    zone,
+    zoneId,
+    createdAt,
+    updatedAt,
   ];
 
   String get fullAddress {
@@ -193,12 +217,18 @@ class Address extends Equatable {
   }
 
   String get formattedAddress {
-    return street != null ? 
-      '$street, $city, $state, $postalCode, $country' : 
-      '$addressLine1, ${addressLine2 != null ? "$addressLine2, " : ""}$city, $state, $postalCode, $country';
+    return '$addressLine1, ${addressLine2 != null ? "$addressLine2, " : ""}$city, $state, $postalCode, $country';
   }
 
   String get shortAddress {
     return '$city, $state, $postalCode';
+  }
+  
+  // Helper method to get coordinates as a string
+  String? get coordinates {
+    if (latitude != null && longitude != null) {
+      return '$latitude, $longitude';
+    }
+    return null;
   }
 } 

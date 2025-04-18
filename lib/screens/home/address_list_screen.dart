@@ -209,7 +209,7 @@ class AddressListScreenState extends ConsumerState<AddressListScreen> {
                       Row(
                         children: [
                           Text(
-                            address.name,
+                            address.recipientName ?? 'Recipient',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -234,11 +234,30 @@ class AddressListScreenState extends ConsumerState<AddressListScreen> {
                               ),
                             ),
                           ],
+                          if (address.addressType != null) ...[
+                            AppSpacing.hSM,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.secondary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                address.addressType!,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.secondary,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                       AppSpacing.vXS,
                       Text(
-                        address.phone ?? '',
+                        address.recipientPhone ?? 'No phone number',
                         style: theme.textTheme.bodyMedium,
                       ),
                       AppSpacing.vXS,

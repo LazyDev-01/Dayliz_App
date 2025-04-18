@@ -213,7 +213,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              selectedAddress.name,
+              selectedAddress.recipientName ?? 'Recipient',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
@@ -222,9 +222,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Text(selectedAddress.addressLine2!),
             Text('${selectedAddress.city}, ${selectedAddress.state} ${selectedAddress.postalCode}'),
             Text(selectedAddress.country),
-            if (selectedAddress.phone != null) ...[
+            if (selectedAddress.recipientPhone != null) ...[
               const SizedBox(height: 4),
-              Text('Phone: ${selectedAddress.phone}'),
+              Text('Phone: ${selectedAddress.recipientPhone}'),
             ],
           ],
         ),
@@ -289,10 +289,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-          Text(selectedAddress.name),
+          Text(selectedAddress.recipientName ?? 'Recipient'),
           Text(selectedAddress.formattedAddress),
-          if (selectedAddress.phone != null)
-            Text('Phone: ${selectedAddress.phone}'),
+          if (selectedAddress.recipientPhone != null)
+            Text('Phone: ${selectedAddress.recipientPhone}'),
         ],
         
         const SizedBox(height: 16),

@@ -452,7 +452,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             crossAxisCount: 2,
             childAspectRatio: 0.65,
         crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+        mainAxisSpacing: 20,
       ),
           itemCount: 4,
       itemBuilder: (context, index) {
@@ -493,7 +493,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 crossAxisCount: 2,
                 childAspectRatio: 0.65,
                 crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+                mainAxisSpacing: 20,
               ),
               itemCount: productList.length,
               itemBuilder: (context, index) {
@@ -665,6 +665,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
         ),
+        
+        // Add spacing between header and subcategories
+        const SizedBox(height: 16),
         
         // Subcategories (3-grid)
         GridView.builder(

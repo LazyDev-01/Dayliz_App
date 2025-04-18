@@ -28,9 +28,11 @@ import 'package:dayliz_app/screens/auth/update_password_screen.dart';
 import 'package:dayliz_app/screens/auth/email_verification_screen.dart';
 import 'package:dayliz_app/screens/auth/verify_token_handler.dart';
 import 'package:dayliz_app/services/database_seeder.dart';
+import 'package:dayliz_app/services/database_migrations.dart';
 import 'package:dayliz_app/data/mock_products.dart';
 import 'package:dayliz_app/services/image_service.dart';
 import 'package:dayliz_app/services/image_preloader.dart';
+import 'package:dayliz_app/screens/wishlist/wishlist_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +45,13 @@ void main() async {
   
   // Test database connections
   await _testDatabaseConnections();
+  
+  // Run database migrations
+  if (AuthService.instance.isInitialized) {
+    await DatabaseMigrations.instance.runMigrations();
+  } else {
+    debugPrint('Skipping database migrations: Auth service not initialized');
+  }
   
   // Seed database with test data
   if (kDebugMode) {
@@ -137,6 +146,9 @@ Future<void> _testDatabaseConnections() async {
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   
+  // Create a navigator observer to handle index updates
+  final indexObserver = IndexObserver(ref);
+  
   return GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
@@ -185,9 +197,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     
-    // Setup observers for deep linking
+    // Setup observers for deep linking and index tracking
     observers: [
       NavigatorObserver(),
+      indexObserver,
     ],
     
     // Enable deep link debugging
@@ -311,10 +324,27 @@ final routerProvider = Provider<GoRouter>((ref) {
           key: state.pageKey,
           child: const MainScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/categories',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const MainScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/profile',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const MainScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
           },
         ),
       ),
@@ -324,13 +354,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           key: state.pageKey,
           child: const CartScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 1),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
+            return FadeTransition(opacity: animation, child: child);
           },
         ),
       ),
@@ -560,6 +584,23 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
+      // Wishlist screen route
+      GoRoute(
+        path: '/wishlist',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const WishlistScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
     ],
     
     // Add error handling for routes
@@ -573,3 +614,39 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+/// Navigator observer to update the current index based on routes
+class IndexObserver extends NavigatorObserver {
+  final ProviderRef ref;
+  
+  IndexObserver(this.ref);
+  
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    _updateIndexFromRoute(route);
+  }
+  
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    if (newRoute != null) {
+      _updateIndexFromRoute(newRoute);
+    }
+  }
+
+  void _updateIndexFromRoute(Route<dynamic> route) {
+    final routeName = route.settings.name;
+    if (routeName != null) {
+      if (routeName == '/home') {
+        ref.read(currentIndexProvider.notifier).state = 0;
+      } else if (routeName == '/categories') {
+        ref.read(currentIndexProvider.notifier).state = 1;
+      } else if (routeName == '/cart') {
+        ref.read(currentIndexProvider.notifier).state = 2;
+      } else if (routeName == '/profile') {
+        ref.read(currentIndexProvider.notifier).state = 3;
+      }
+    }
+  }
+}

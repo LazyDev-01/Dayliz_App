@@ -5,9 +5,11 @@ import 'package:shimmer/shimmer.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/models/product.dart';
 import 'package:dayliz_app/services/image_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dayliz_app/providers/wishlist_provider.dart';
 
 /// A modular product image area that handles image loading, discount tags, and wishlist button
-class ProductImageArea extends StatelessWidget {
+class ProductImageArea extends ConsumerWidget {
   final Product product;
   final VoidCallback? onWishlistToggle;
   final bool useHeroAnimation;
@@ -23,7 +25,10 @@ class ProductImageArea extends StatelessWidget {
   }) : super(key: key);
   
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Check if product is in wishlist
+    final isInWishlist = ref.watch(isInWishlistProvider(product.id));
+    
     return Stack(
         fit: StackFit.expand,
         children: [
@@ -43,7 +48,7 @@ class ProductImageArea extends StatelessWidget {
             _buildDiscountTag(),
           
           // Wishlist button
-          _buildWishlistButton(),
+          _buildWishlistButton(context, ref, isInWishlist),
         ],
     );
   }
@@ -70,7 +75,7 @@ class ProductImageArea extends StatelessWidget {
     );
   }
   
-  Widget _buildWishlistButton() {
+  Widget _buildWishlistButton(BuildContext context, WidgetRef ref, bool isInWishlist) {
     return Positioned(
       top: 8,
       right: 8,
@@ -87,14 +92,14 @@ class ProductImageArea extends StatelessWidget {
             icon: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
               child: Icon(
-                product.isInWishlist ?? false ? Icons.favorite : Icons.favorite_border,
-                key: ValueKey(product.isInWishlist ?? false),
-                color: product.isInWishlist ?? false ? Colors.red : Colors.grey[800],
+                isInWishlist ? Icons.favorite : Icons.favorite_border,
+                key: ValueKey(isInWishlist),
+                color: isInWishlist ? Colors.red : Colors.grey[800],
                 size: 16,
               ),
             ),
-            onPressed: _handleWishlistToggle,
-            tooltip: product.isInWishlist ?? false ? "Remove from wishlist" : "Add to wishlist",
+            onPressed: () => _handleWishlistToggle(ref),
+            tooltip: isInWishlist ? "Remove from wishlist" : "Add to wishlist",
           color: Colors.grey[800],
             iconSize: 16,
           constraints: const BoxConstraints(
@@ -108,14 +113,19 @@ class ProductImageArea extends StatelessWidget {
     );
   }
   
-  void _handleWishlistToggle() {
+  void _handleWishlistToggle(WidgetRef ref) {
     // Debounce wishlist button taps
     if (_lastWishlistTap == null || 
         DateTime.now().difference(_lastWishlistTap!) > const Duration(milliseconds: 500)) {
       _lastWishlistTap = DateTime.now();
       HapticFeedback.selectionClick();
+      
+      // Use custom callback if provided
       if (onWishlistToggle != null) {
         onWishlistToggle!();
+      } else {
+        // Otherwise use the default wishlist provider
+        ref.read(wishlistProvider.notifier).toggleWishlist(product);
       }
     }
   }
@@ -261,7 +271,7 @@ class ProductInfoArea extends StatelessWidget {
   
   Widget _buildQuantityControl(BuildContext context) {
     return Container(
-      height: 30,
+      height: 26,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
         borderRadius: BorderRadius.circular(4),
@@ -279,11 +289,11 @@ class ProductInfoArea extends StatelessWidget {
                 bottomLeft: Radius.circular(3),
               ),
               child: SizedBox(
-                width: 28,
-                height: 28,
+                width: 20,
+                height: 24,
                 child: Icon(
                   Icons.remove,
-                  size: 16,
+                  size: 12,
                   color: Colors.grey[700],
                 ),
               ),
@@ -292,7 +302,7 @@ class ProductInfoArea extends StatelessWidget {
           
           // Quantity display
         Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
               border: Border(
                 left: BorderSide(color: Colors.grey[300]!),
@@ -302,7 +312,7 @@ class ProductInfoArea extends StatelessWidget {
             child: Text(
               quantity.toString(),
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey[800],
               ),
@@ -319,11 +329,11 @@ class ProductInfoArea extends StatelessWidget {
                 bottomRight: Radius.circular(3),
               ),
               child: SizedBox(
-                width: 28,
-                height: 28,
+                width: 20,
+                height: 24,
                 child: Icon(
                   Icons.add,
-                  size: 16,
+                  size: 12,
                   color: Colors.grey[700],
                 ),
               ),
