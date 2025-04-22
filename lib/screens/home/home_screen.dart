@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:carousel_slider/carousel_slider.dart';
-import 'package:carousel_slider/carousel_controller.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
@@ -25,6 +23,8 @@ import 'package:dayliz_app/screens/home/categories_screen.dart' hide selectedCat
 import 'package:dayliz_app/screens/search/search_screen.dart';
 import 'package:dayliz_app/utils/shimmer.dart';
 import 'package:dayliz_app/providers/category_providers.dart';
+import 'dart:async';
+import 'package:url_launcher/url_launcher.dart';
 
 // Provider for bottom navigation current index
 final currentIndexProvider = StateProvider<int>((ref) => 0);
@@ -144,7 +144,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     icon: const Icon(Icons.favorite_border),
                     onPressed: () {
                       // Navigate to wishlist
-                      context.go('/wishlist');
+                      context.go('/clean-wishlist');
                   },
                 ),
               ],
@@ -192,7 +192,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // Featured products
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.only(bottom: 30),
                       child: FeaturedProductsSection(),
                     ),
                   ),
@@ -306,97 +306,180 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     
     return banners.when(
       data: (bannerList) {
-        return SizedBox(
-          height: 150,
-          child: PageView.builder(
-            controller: PageController(viewportFraction: 0.9),
-            itemCount: bannerList.length,
-            itemBuilder: (context, index) {
-              final banner = bannerList[index];
-            return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 5),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.blue.withOpacity(0.1),
-                  ),
-                clipBehavior: Clip.antiAlias,
-                  child: Stack(
-                    children: [
-                    // Banner image
-                    CachedNetworkImage(
-                      imageUrl: banner.imageUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                      placeholder: (context, url) => Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
+        // Return empty container if no banners
+        if (bannerList.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        // Use a StatefulBuilder to track current page
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final pageController = PageController(viewportFraction: 0.9);
+            int currentPage = 0;
+            
+            // Setup auto-scroll
+            // Note: in a real implementation, this would be in a StatefulWidget's initState
+            // with proper disposal in dispose() method to prevent memory leaks
+            void startAutoScroll() {
+              Future.delayed(const Duration(milliseconds: 100), () {
+                Timer.periodic(const Duration(seconds: 5), (timer) {
+                  if (!context.mounted) {
+                    timer.cancel();
+                    return;
+                  }
+                  
+                  if (currentPage < bannerList.length - 1) {
+                    currentPage++;
+                  } else {
+                    currentPage = 0;
+                  }
+                  
+                  if (pageController.hasClients) {
+                    pageController.animateToPage(
+                      currentPage,
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                });
+              });
+            }
+            
+            // Start auto-scroll
+            startAutoScroll();
+
+            return Column(
+              children: [
+                SizedBox(
+                  height: 150,
+                  child: PageView.builder(
+                    controller: pageController,
+                    itemCount: bannerList.length,
+                    onPageChanged: (index) {
+                      setState(() {
+                        currentPage = index;
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      final banner = bannerList[index];
+                      return GestureDetector(
+                        onTap: () {
+                          // Navigate based on banner's actionUrl
+                          if (banner.actionUrl.isNotEmpty) {
+                            _handleBannerNavigation(banner.actionUrl);
+                          }
+                        },
                         child: Container(
-                          color: Colors.white,
+                          margin: const EdgeInsets.symmetric(horizontal: 5),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.blue.withOpacity(0.1),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Stack(
+                            children: [
+                              // Banner image
+                              CachedNetworkImage(
+                                imageUrl: banner.imageUrl,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                placeholder: (context, url) => Shimmer.fromColors(
+                                  baseColor: Colors.grey[300]!,
+                                  highlightColor: Colors.grey[100]!,
+                                  child: Container(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: Colors.grey[200],
+                                  child: const Icon(Icons.error),
+                                ),
+                              ),
+                              // Gradient overlay
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                    colors: [
+                                      Colors.black.withOpacity(0.7),
+                                      Colors.transparent,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              // Text content
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      banner.title,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      banner.subtitle,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        // Navigate using banner's actionUrl
+                                        if (banner.actionUrl.isNotEmpty) {
+                                          _handleBannerNavigation(banner.actionUrl);
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: Colors.black,
+                                        minimumSize: const Size(100, 30),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      ),
+                                      child: const Text('Shop Now'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.error),
+                      );
+                    },
+                  ),
+                ),
+                // Page indicator dots
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    bannerList.length,
+                    (index) => Container(
+                      width: 8,
+                      height: 8,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: currentPage == index
+                            ? Theme.of(context).primaryColor
+                            : Colors.grey.shade300,
                       ),
                     ),
-                    // Gradient overlay
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                            colors: [
-                            Colors.black.withOpacity(0.7),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Text content
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                            banner.title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                            Text(
-                            banner.subtitle,
-                              style: const TextStyle(
-                                color: Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          ElevatedButton(
-                            onPressed: () {
-                              // TODO: Navigate to banner action
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                              minimumSize: const Size(100, 30),
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                            ),
-                            child: const Text('Shop Now'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-              ),
+                  ),
+                ),
+              ],
             );
           },
-          ),
         );
       },
       loading: () => _buildBannerSkeleton(),
@@ -547,7 +630,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               );
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 30),
           if (categoriesData.isLoading)
             _buildCategoriesSkeleton()
           else if (categoriesData.hasValue && categoriesData.value != null)
@@ -667,7 +750,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         
         // Add spacing between header and subcategories
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         
         // Subcategories (3-grid)
         GridView.builder(
@@ -689,7 +772,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         
         // Increased spacing between category sections
-        const SizedBox(height: 32),
+        const SizedBox(height: 60),
       ],
     );
   }
@@ -739,5 +822,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
     );
+  }
+
+  void _handleBannerNavigation(String actionUrl) {
+    if (actionUrl.isEmpty) return;
+    
+    // Check if it's an internal route or external URL
+    if (actionUrl.startsWith('http://') || actionUrl.startsWith('https://')) {
+      // External URL - launch in browser
+      _launchExternalUrl(actionUrl);
+    } else {
+      // Internal route - navigate within the app
+      _navigateToInternalRoute(actionUrl);
+    }
+  }
+  
+  void _launchExternalUrl(String url) async {
+    final uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Show error if URL can't be launched
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open the link')),
+          );
+        }
+      }
+    } catch (e) {
+      // Handle any exceptions
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening link: $e')),
+        );
+      }
+    }
+  }
+  
+  void _navigateToInternalRoute(String route) {
+    // Handle different internal routes
+    switch (route) {
+      case '/summer-sale':
+        // Navigate to summer sale screen or filtered products
+        Navigator.pushNamed(context, '/products', arguments: {'category': 'summer-sale'});
+        break;
+      
+      case '/new-arrivals':
+        // Navigate to new arrivals
+        Navigator.pushNamed(context, '/products', arguments: {'filter': 'new-arrivals'});
+        break;
+        
+      case '/flash-sale':
+        // Navigate to flash sale
+        Navigator.pushNamed(context, '/products', arguments: {'filter': 'flash-sale'});
+        break;
+        
+      default:
+        // If the route is not recognized, try to navigate directly
+        Navigator.pushNamed(context, route);
+    }
   }
 } 

@@ -169,6 +169,16 @@ class ProfileScreen extends ConsumerWidget {
                         },
                       ),
                     if (kDebugMode)
+                      _buildSettingsItem(
+                        context,
+                        icon: Icons.architecture,
+                        title: 'Clean Architecture Demo',
+                        subtitle: 'Test the new product feature implementation',
+                        onTap: () {
+                          context.push('/test/product-feature');
+                        },
+                      ),
+                    if (kDebugMode)
                       const Divider(),
                     if (kDebugMode)
                       AppSpacing.vLG,
@@ -250,6 +260,7 @@ class ProfileScreen extends ConsumerWidget {
     required IconData icon,
     required String title,
     String? value,
+    String? subtitle,
     Widget? trailing,
     VoidCallback? onTap,
   }) {
@@ -261,6 +272,7 @@ class ProfileScreen extends ConsumerWidget {
         color: theme.colorScheme.primary,
       ),
       title: Text(title),
+      subtitle: subtitle != null ? Text(subtitle) : null,
       trailing: trailing ?? (value != null
           ? Text(
               value,

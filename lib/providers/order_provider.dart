@@ -163,9 +163,10 @@ final selectedOrderProvider = Provider<Order?>((ref) {
   return ref.watch(orderNotifierProvider).selectedOrder;
 });
 
-// User orders provider
-final userOrdersProvider = Provider<List<Order>>((ref) {
-  return ref.watch(orderNotifierProvider).userOrders;
+// Provider to get the list of user orders
+final legacyUserOrdersProvider = Provider<List<Order>>((ref) {
+  final orderState = ref.watch(orderNotifierProvider);
+  return orderState.userOrders;
 });
 
 // Order loading state provider

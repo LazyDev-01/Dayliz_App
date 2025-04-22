@@ -1,32 +1,48 @@
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/material.dart';
 
 /// A [NavigatorObserver] that logs navigation events for debugging.
 /// Used with GoRouter to observe navigation events and handle deep links.
 class GoRouterObserver extends NavigatorObserver {
-  GoRouterObserver();
+  final Function(String)? onRouteChange;
+
+  GoRouterObserver({this.onRouteChange});
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    debugPrint('🧭 Navigator: PUSHED ${route.settings.name} (previous: ${previousRoute?.settings.name})');
-    _logRouteInfo(route);
+    super.didPush(route, previousRoute);
+    _handleRouteChange(route);
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    debugPrint('🧭 Navigator: POPPED ${route.settings.name} (previous: ${previousRoute?.settings.name})');
-  }
-
-  @override
-  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    debugPrint('🧭 Navigator: REMOVED ${route.settings.name} (previous: ${previousRoute?.settings.name})');
+    super.didPop(route, previousRoute);
+    if (previousRoute != null) {
+      _handleRouteChange(previousRoute);
+    }
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    debugPrint('🧭 Navigator: REPLACED ${oldRoute?.settings.name} → ${newRoute?.settings.name}');
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
     if (newRoute != null) {
-      _logRouteInfo(newRoute);
+      _handleRouteChange(newRoute);
+    }
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didRemove(route, previousRoute);
+    if (previousRoute != null) {
+      _handleRouteChange(previousRoute);
+    }
+  }
+
+  void _handleRouteChange(Route<dynamic> route) {
+    final routeName = route.settings.name;
+    if (routeName != null && onRouteChange != null) {
+      onRouteChange!(routeName);
     }
   }
 

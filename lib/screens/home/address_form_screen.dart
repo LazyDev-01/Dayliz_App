@@ -13,8 +13,8 @@ import 'package:dayliz_app/widgets/address/zone_info_widget.dart';
 import 'package:dayliz_app/widgets/buttons/dayliz_button.dart';
 import 'package:dayliz_app/widgets/inputs/dayliz_dropdown.dart';
 import 'package:dayliz_app/widgets/inputs/dayliz_text_field.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
+// import 'package:geolocator/geolocator.dart';
+// import 'package:geocoding/geocoding.dart';
 import 'dart:async';
 
 // Northeast India states provider
@@ -190,9 +190,9 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     }
   }
 
-  // Check and request location permissions
+  // Request location permission
   Future<bool> _handleLocationPermission() async {
-    return await PermissionHelper.checkAndRequestLocationPermission(context);
+    return await PermissionHelper.requestLocationPermission(context);
   }
 
   // Detect location and perform reverse geocoding silently
@@ -205,151 +205,96 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       if (!hasPermission) return;
       
       // Get current position
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high
-      );
+      // final position = await Geolocator.getCurrentPosition(
+      //   desiredAccuracy: LocationAccuracy.high
+      // );
       
       if (!mounted) return;
       
       setState(() {
-        _latitude = position.latitude;
-        _longitude = position.longitude;
+        // _latitude = position.latitude;
+        // _longitude = position.longitude;
         
         // Determine zone based on coordinates
-        _zone = ref.read(zoneProvider)(_latitude!, _longitude!);
+        // _zone = ref.read(zoneProvider)(_latitude!, _longitude!);
       });
       
-      debugPrint('Location detected: $_latitude, $_longitude (Zone: $_zone)');
+      // debugPrint('Location detected: $_latitude, $_longitude (Zone: $_zone)');
       
       // Only populate fields if they are empty (don't override user input)
       if (_streetController.text.isEmpty && 
           _cityController.text.isEmpty && 
           _postalCodeController.text.isEmpty) {
-        await _performReverseGeocoding(position);
+        // await _performReverseGeocoding(position);
       }
     } catch (e) {
       // Only log the error but don't show UI feedback since this is a silent operation
-      debugPrint('Error detecting location silently: $e');
+      // debugPrint('Error detecting location silently: $e');
     }
   }
   
-  // Manually detect location with UI feedback
+  // Detect current location silently (for background location detection)
   Future<void> _detectLocation() async {
-    // Don't proceed if we're already detecting location
-    if (_isDetectingLocation) return;
-    
-    // Debounce the location detection to prevent multiple requests
-    if (_locationDebounce?.isActive ?? false) {
-      _locationDebounce!.cancel();
-    }
-    
-    _locationDebounce = Timer(const Duration(milliseconds: 300), () async {
-      setState(() {
-        _isDetectingLocation = true;
-      });
-      
-      try {
-        final hasPermission = await _handleLocationPermission();
-        if (!hasPermission) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Location permission denied'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return;
-        }
-        
-        // Get current position
-        final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high
-        );
-        
-        if (!mounted) return;
-        
-        setState(() {
-          _latitude = position.latitude;
-          _longitude = position.longitude;
-          
-          // Determine zone based on coordinates
-          _zone = ref.read(zoneProvider)(_latitude!, _longitude!);
-        });
-        
-        await _performReverseGeocoding(position);
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Location detected successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        debugPrint('Error detecting location: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error detecting location: ${e.toString().split('\n').first}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isDetectingLocation = false;
-          });
-        }
-      }
-    });
+    // This is a stub implementation since we've removed location packages temporarily
+    debugPrint('Location detection is currently unavailable during architecture migration');
   }
   
-  // Perform reverse geocoding to get address details from coordinates
+  // Request location with user interaction and permission handling
+  Future<void> _requestLocation() async {
+    // Show a dialog indicating that this feature is unavailable
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Feature Unavailable'),
+        content: const Text(
+          'Location detection is currently unavailable while we migrate to the new architecture. '
+          'Please enter your address manually.'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // Comment out the entire method that depends on geocoding
+  /*
   Future<void> _performReverseGeocoding(Position position) async {
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,
-        position.longitude
+        position.longitude,
       );
       
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
         
-        // Only update if the field is empty (don't override user input)
         setState(() {
-          if (_streetController.text.isEmpty) {
-            _streetController.text = '${place.street ?? ''} ${place.subThoroughfare ?? ''}'
-                .trim();
-          }
+          _streetController.text = place.street ?? '';
+          _cityController.text = place.locality ?? '';
+          _postalCodeController.text = place.postalCode ?? '';
+          _stateController.text = place.administrativeArea ?? '';
+          _countryController.text = place.country ?? '';
           
-          if (_cityController.text.isEmpty && place.locality != null) {
-            _cityController.text = place.locality!;
-          }
+          // Set state/province dropdown if it exists in our list
+          _selectedState = _states.firstWhere(
+            (state) => state.name.toLowerCase() == place.administrativeArea?.toLowerCase(),
+            orElse: () => _states.first,
+          );
           
-          if (_postalCodeController.text.isEmpty && place.postalCode != null) {
-            _postalCodeController.text = place.postalCode!;
-          }
-          
-          // Match state to our northeastern states list or use default
-          if (place.administrativeArea != null) {
-            final states = ref.read(northeastStatesProvider);
-            final stateMatch = states.firstWhere(
-              (state) => state.value.toLowerCase() == place.administrativeArea!.toLowerCase(),
-              orElse: () => states.first,
-            );
-            _state = stateMatch.value;
-          }
+          debugPrint('Location geocoded successfully: ${place.locality}, ${place.administrativeArea}');
         });
-        
-        debugPrint('Location geocoded successfully: ${place.locality}, ${place.administrativeArea}');
       }
     } catch (e) {
       debugPrint('Error in reverse geocoding: $e');
     }
   }
+  */
 
   Future<void> _saveAddress() async {
     if (_isLoading) return;
@@ -431,7 +376,7 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
         throw Exception('User not authenticated');
       }
       
-      debugPrint("Creating address for user: $userId");
+      // debugPrint("Creating address for user: $userId");
       
       // Get zone ID if coordinates are available
       String? zoneId;
@@ -440,7 +385,7 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
           (latitude: _latitude!, longitude: _longitude!)
         ).future);
         zoneId = zone?.id;
-        debugPrint("Zone detected: ${zone?.name ?? 'None'} (ID: $zoneId)");
+        // debugPrint("Zone detected: ${zone?.name ?? 'None'} (ID: $zoneId)");
       }
       
       // Create address object
@@ -463,7 +408,7 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
         zoneId: zoneId,
       );
 
-      debugPrint("Saving address: ${address.id}");
+      // debugPrint("Saving address: ${address.id}");
       
       bool success = false;
       if (widget.address == null) {
@@ -501,7 +446,7 @@ class AddressFormScreenState extends ConsumerState<AddressFormScreen> {
         );
       }
     } catch (e) {
-      debugPrint("Error saving address: $e");
+      // debugPrint("Error saving address: $e");
       if (!mounted) return;
       
       // Show error message
