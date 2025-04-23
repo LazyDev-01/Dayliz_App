@@ -16,6 +16,7 @@ import '../domain/usecases/logout_usecase.dart';
 import '../domain/usecases/get_current_user_usecase.dart';
 import '../domain/usecases/is_authenticated_usecase.dart';
 import '../domain/usecases/forgot_password_usecase.dart';
+import '../domain/usecases/sign_in_with_google_usecase.dart';
 import '../domain/repositories/product_repository.dart';
 import '../data/repositories/product_repository_impl.dart';
 import '../data/datasources/product_remote_data_source.dart';
@@ -89,6 +90,14 @@ import '../domain/usecases/is_in_wishlist_usecase.dart';
 import '../domain/usecases/clear_wishlist_usecase.dart';
 import '../domain/usecases/get_wishlist_products_usecase.dart';
 import '../data/datasources/wishlist_local_adapter.dart';
+import '../data/datasources/cart_data_source_factory.dart' show CartDataSourceFactory;
+import '../domain/repositories/payment_method_repository.dart';
+import '../data/repositories/payment_method_repository_impl.dart';
+import '../data/datasources/payment_method_remote_data_source.dart';
+import '../data/datasources/payment_method_local_data_source.dart';
+import '../domain/usecases/payment_method/get_payment_methods_usecase.dart';
+import '../domain/usecases/payment_method/add_payment_method_usecase.dart';
+import '../domain/usecases/payment_method/set_default_payment_method_usecase.dart';
 
 /// Global service locator for clean architecture components
 final sl = GetIt.instance;
@@ -105,40 +114,40 @@ Future<void> initCleanArchitecture() async {
     // For other platforms, use the regular implementation
     return NetworkInfoImpl(sl());
   });
-  
+
   // External
   sl.registerLazySingleton(() => http.Client());
-  
+
   // Only register InternetConnectionChecker for non-web platforms
   if (!kIsWeb) {
     sl.registerLazySingleton(() => InternetConnectionChecker());
   }
-  
+
   final sharedPreferences = await SharedPreferences.getInstance();
   sl.registerLazySingleton(() => sharedPreferences);
-  
+
   // Services - Use existing instances for backward compatibility
   sl.registerLazySingleton(() => AuthService.instance);
   sl.registerLazySingleton(() => ProductService());
-  
+
   // Initialize app configuration
   await AppConfig.init();
-  
+
   //-------------------------------------------------------------------------
   // Authentication
   //-------------------------------------------------------------------------
-  
+
   // Auth Data Sources - Using a factory for backend flexibility
   sl.registerLazySingleton<AuthDataSource>(
     () => AuthDataSourceFactory.getActiveDataSource(),
     instanceName: 'remote',
   );
-  
+
   sl.registerLazySingleton<AuthDataSource>(
     () => AuthDataSourceFactory.getDataSource(BackendType.supabase),
     instanceName: 'local',
   );
-  
+
   // Auth Repository
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(
@@ -147,7 +156,7 @@ Future<void> initCleanArchitecture() async {
       networkInfo: sl(),
     ),
   );
-  
+
   // Auth Use Cases
   sl.registerLazySingleton(() => LoginUseCase(sl()));
   sl.registerLazySingleton(() => RegisterUseCase(sl()));
@@ -155,20 +164,21 @@ Future<void> initCleanArchitecture() async {
   sl.registerLazySingleton(() => GetCurrentUserUseCase(sl()));
   sl.registerLazySingleton(() => IsAuthenticatedUseCase(sl()));
   sl.registerLazySingleton(() => ForgotPasswordUseCase(sl()));
-  
+  sl.registerLazySingleton(() => SignInWithGoogleUseCase(sl()));
+
   //-------------------------------------------------------------------------
   // Product
   //-------------------------------------------------------------------------
-  
+
   // Product Data Sources
   sl.registerLazySingleton<ProductRemoteDataSource>(
     () => ProductRemoteDataSourceImpl(client: sl()),
   );
-  
+
   sl.registerLazySingleton<ProductLocalDataSource>(
     () => ProductLocalDataSourceImpl(sharedPreferences: sl()),
   );
-  
+
   // Product Repository
   sl.registerLazySingleton<ProductRepository>(
     () => ProductRepositoryImpl(
@@ -177,17 +187,17 @@ Future<void> initCleanArchitecture() async {
       networkInfo: sl(),
     ),
   );
-  
+
   // Product Use Cases
   sl.registerLazySingleton(() => GetProductsUseCase(sl()));
   sl.registerLazySingleton(() => GetProductByIdUseCase(sl()));
   sl.registerLazySingleton(() => GetProductsBySubcategoryUseCase(sl()));
   sl.registerLazySingleton(() => GetRelatedProductsUseCase(sl()));
-  
+
   //-------------------------------------------------------------------------
   // Category
   //-------------------------------------------------------------------------
-  
+
   // Register Category Repository with mock implementation
   sl.registerLazySingleton<CategoryRepository>(
     () => CategoryRepositoryImpl(
@@ -195,26 +205,26 @@ Future<void> initCleanArchitecture() async {
       remoteDataSource: null, // Use mock data for now
     ),
   );
-  
+
   // Register Category Use Cases
   sl.registerLazySingleton(() => GetCategoriesUseCase(sl()));
   sl.registerLazySingleton(() => GetCategoriesWithSubcategoriesUseCase(sl()));
   sl.registerLazySingleton(() => GetCategoryByIdUseCase(sl()));
   sl.registerLazySingleton(() => GetSubcategoriesUseCase(sl()));
-  
+
   //-------------------------------------------------------------------------
   // Cart
   //-------------------------------------------------------------------------
-  
-  // Cart Data Sources
+
+  // Register cart data sources
   sl.registerLazySingleton<CartRemoteDataSource>(
-    () => CartRemoteDataSourceImpl(client: sl()),
+    () => CartDataSourceFactory.getActiveDataSource(),
   );
-  
+
   sl.registerLazySingleton<CartLocalDataSource>(
     () => CartLocalDataSourceImpl(sharedPreferences: sl()),
   );
-  
+
   // Cart Repository
   sl.registerLazySingleton<CartRepository>(
     () => CartRepositoryImpl(
@@ -223,7 +233,7 @@ Future<void> initCleanArchitecture() async {
       networkInfo: sl(),
     ),
   );
-  
+
   // Cart Use Cases
   sl.registerLazySingleton(() => GetCartItemsUseCase(sl()));
   sl.registerLazySingleton(() => AddToCartUseCase(sl()));
@@ -233,11 +243,11 @@ Future<void> initCleanArchitecture() async {
   sl.registerLazySingleton(() => GetCartTotalPriceUseCase(sl()));
   sl.registerLazySingleton(() => GetCartItemCountUseCase(sl()));
   sl.registerLazySingleton(() => IsInCartUseCase(sl()));
-  
+
   //-------------------------------------------------------------------------
   // User Profile
   //-------------------------------------------------------------------------
-  
+
   // User Profile Use cases
   sl.registerLazySingleton(() => GetUserProfileUseCase(sl()));
   sl.registerLazySingleton(() => UpdateUserProfileUseCase(sl()));
@@ -250,12 +260,12 @@ Future<void> initCleanArchitecture() async {
   sl.registerLazySingleton(() => SetDefaultAddressUseCase(sl()));
   sl.registerLazySingleton(() => UpdateUserPreferencesUseCase(sl()));
   sl.registerLazySingleton(() => UpdatePreferencesUseCase(sl()));
-  
+
   // API clients
   sl.registerLazySingleton<StorageFileApi>(
     () => StorageFileApiImpl(),
   );
-  
+
   // Repository
   sl.registerLazySingleton<UserProfileRepository>(
     () => UserProfileRepositoryImpl(
@@ -264,7 +274,7 @@ Future<void> initCleanArchitecture() async {
       networkInfo: sl(),
     ),
   );
-  
+
   // Data sources
   sl.registerLazySingleton<UserProfileDataSource>(
     () => UserProfileRemoteDataSource(
@@ -274,27 +284,27 @@ Future<void> initCleanArchitecture() async {
     ),
     instanceName: 'remote',
   );
-  
+
   sl.registerLazySingleton<UserProfileDataSource>(
     () => UserProfileLocalDataSource(sharedPreferences: sl()),
     instanceName: 'local',
   );
-  
+
   //-------------------------------------------------------------------------
   // Orders
   //-------------------------------------------------------------------------
-  
+
   // Order Data Sources
   sl.registerLazySingleton<OrderDataSource>(
     () => OrderRemoteDataSource(client: sl()),
     instanceName: 'remote',
   );
-  
+
   sl.registerLazySingleton<OrderDataSource>(
     () => OrderLocalDataSource(sharedPreferences: sl()),
     instanceName: 'local',
   );
-  
+
   // Order Repository
   sl.registerLazySingleton<OrderRepository>(
     () => OrderRepositoryImpl(
@@ -303,7 +313,7 @@ Future<void> initCleanArchitecture() async {
       networkInfo: sl(),
     ),
   );
-  
+
   // Order Use Cases
   sl.registerLazySingleton(() => GetOrdersUseCase(sl()));
   sl.registerLazySingleton(() => GetOrderByIdUseCase(sl()));
@@ -311,21 +321,21 @@ Future<void> initCleanArchitecture() async {
   sl.registerLazySingleton(() => CancelOrderUseCase(sl()));
   sl.registerLazySingleton(() => CreateOrderUseCase(sl()));
   sl.registerLazySingleton(() => TrackOrderUseCase(sl()));
-  
+
   //-------------------------------------------------------------------------
   // Wishlist
   //-------------------------------------------------------------------------
-  
+
   // Wishlist Data Sources
   sl.registerLazySingleton<WishlistLocalDataSource>(
     () => WishlistLocalDataSourceImpl(sharedPreferences: sl()),
   );
-  
+
   // Register the WishlistRemoteDataSource with our adapter
   sl.registerLazySingleton<WishlistRemoteDataSource>(
     () => LocalWishlistAdapter(localDataSource: sl()),
   );
-  
+
   // Wishlist Repository
   sl.registerLazySingleton<WishlistRepository>(
     () => WishlistRepositoryImpl(
@@ -334,7 +344,7 @@ Future<void> initCleanArchitecture() async {
       networkInfo: sl(),
     ),
   );
-  
+
   // Wishlist Use Cases
   sl.registerLazySingleton(() => GetWishlistItemsUseCase(sl()));
   sl.registerLazySingleton(() => AddToWishlistUseCase(sl()));
@@ -342,7 +352,41 @@ Future<void> initCleanArchitecture() async {
   sl.registerLazySingleton(() => IsInWishlistUseCase(sl()));
   sl.registerLazySingleton(() => ClearWishlistUseCase(sl()));
   sl.registerLazySingleton(() => GetWishlistProductsUseCase(sl()));
-  
+
+  //-------------------------------------------------------------------------
+  // Payment Methods
+  //-------------------------------------------------------------------------
+
+  // Register Payment Method Data Sources
+  sl.registerLazySingleton<PaymentMethodRemoteDataSource>(
+    () => PaymentMethodRemoteDataSourceImpl(
+      client: sl(),
+      baseUrl: AppConfig.useFastAPI ?
+        AppConfig.fastApiBaseUrl :
+        AppConfig.supabaseUrl,
+    ),
+  );
+
+  sl.registerLazySingleton<PaymentMethodLocalDataSource>(
+    () => PaymentMethodLocalDataSourceImpl(
+      sharedPreferences: sl(),
+    ),
+  );
+
+  // Register Payment Method Repository
+  sl.registerLazySingleton<PaymentMethodRepository>(
+    () => PaymentMethodRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      networkInfo: sl(),
+    ),
+  );
+
+  // Register Payment Method Use Cases
+  sl.registerLazySingleton(() => GetPaymentMethodsUseCase(sl()));
+  sl.registerLazySingleton(() => AddPaymentMethodUseCase(sl()));
+  sl.registerLazySingleton(() => SetDefaultPaymentMethodUseCase(sl()));
+
   print('Clean architecture component registration complete');
 }
 
@@ -352,18 +396,18 @@ Future<void> reInitializeAuthDependencies() async {
   sl.unregister<AuthDataSource>(instanceName: 'remote');
   sl.unregister<AuthDataSource>(instanceName: 'local');
   sl.unregister<AuthRepository>();
-  
+
   // Re-register with new backend selection
   sl.registerLazySingleton<AuthDataSource>(
     () => AuthDataSourceFactory.getActiveDataSource(),
     instanceName: 'remote',
   );
-  
+
   sl.registerLazySingleton<AuthDataSource>(
     () => AuthDataSourceFactory.getDataSource(BackendType.supabase),
     instanceName: 'local',
   );
-  
+
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(
       remoteDataSource: sl.get<AuthDataSource>(instanceName: 'remote'),
@@ -371,4 +415,4 @@ Future<void> reInitializeAuthDependencies() async {
       networkInfo: sl(),
     ),
   );
-} 
+}

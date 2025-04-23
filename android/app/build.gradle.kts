@@ -28,6 +28,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Google Sign-In configuration
+        manifestPlaceholders["com.google.android.gms.client_id"] = "@string/web_client_id"
     }
 
     buildTypes {

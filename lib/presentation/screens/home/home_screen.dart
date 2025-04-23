@@ -59,7 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildFeaturedCategories(BuildContext context) {
     final categoriesAsyncValue = ref.watch(categoriesProvider);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -229,7 +229,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: ElevatedButton.icon(
               onPressed: () {
                 // Navigate to the clean login screen
-                context.push('/clean/login');
+                context.push('/login');
               },
               icon: const Icon(Icons.login),
               label: const Text("Clean Login"),
@@ -247,7 +247,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildTrendingProductsSection(BuildContext context) {
     final productsAsyncValue = ref.watch(saleProductsProvider);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -298,7 +298,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildFeaturedProductsSection(BuildContext context) {
     final productsAsyncValue = ref.watch(featuredProductsProvider);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -358,7 +358,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildProductCard(BuildContext context, Product product, {bool isGrid = false}) {
     final hasDiscount = product.discountPercentage != null && product.discountPercentage! > 0;
-    
+
     return GestureDetector(
       onTap: () {
         context.push('/product/${product.id}', extra: product);
@@ -512,4 +512,4 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
-} 
+}

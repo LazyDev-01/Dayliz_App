@@ -16,7 +16,7 @@ abstract class AuthRemoteDataSource {
   /// Register a new user
   /// Returns the newly registered user
   /// Throws [Exception] on error
-  Future<User> register(String email, String password, String name);
+  Future<User> register(String email, String password, String name, {String? phone});
 
   /// Sign out the current user
   /// Returns true on success
@@ -80,12 +80,13 @@ class AuthRemoteDataSourceImpl implements AuthDataSource {
   }
 
   @override
-  Future<User> register(String email, String password, String name) async {
+  Future<User> register(String email, String password, String name, {String? phone}) async {
     // Mock implementation for now
     return User(
       id: '1',
       email: email,
       name: name,
+      phone: phone,
     );
   }
 
@@ -142,14 +143,25 @@ class AuthRemoteDataSourceImpl implements AuthDataSource {
     // Return a mock token
     return 'mock_token_12345';
   }
-  
+
+  @override
+  Future<User> signInWithGoogle() async {
+    // Mock implementation for now
+    return User(
+      id: '1',
+      email: 'google_user@example.com',
+      name: 'Google User',
+      isEmailVerified: true,
+    );
+  }
+
   @override
   Future<void> cacheUser(User user) async {
     // For remote data source, caching might not apply directly
     // This is typically handled by the local data source
     // However, we need to implement it to satisfy the interface
-    
+
     // No-op implementation as the remote data source doesn't handle caching
     return;
   }
-} 
+}

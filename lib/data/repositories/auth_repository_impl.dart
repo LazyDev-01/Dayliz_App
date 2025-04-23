@@ -10,7 +10,7 @@ import '../datasources/auth_local_data_source.dart';
 // Add a class for the missing AuthException
 class AuthException implements Exception {
   final String message;
-  
+
   AuthException(this.message);
 }
 
@@ -30,11 +30,39 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, domain.User>> login({
     required String email,
     required String password,
+    bool rememberMe = true,
   }) async {
     if (await networkInfo.isConnected) {
       try {
+        // Note: We're not passing rememberMe to the data source yet
+        // This would require updating the data source interface
         final user = await remoteDataSource.login(email, password);
+
+        // Only cache the user if rememberMe is true
+        if (rememberMe) {
+          await localDataSource.cacheUser(user);
+        }
+
+        return Right(user);
+      } on ServerException catch (e) {
+        return Left(ServerFailure(message: e.message));
+      } catch (e) {
+        return Left(ServerFailure(message: e.toString()));
+      }
+    } else {
+      return Left(NetworkFailure(message: 'No internet connection'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, domain.User>> signInWithGoogle() async {
+    if (await networkInfo.isConnected) {
+      try {
+        final user = await remoteDataSource.signInWithGoogle();
+
+        // Cache the user locally
         await localDataSource.cacheUser(user);
+
         return Right(user);
       } on ServerException catch (e) {
         return Left(ServerFailure(message: e.message));
@@ -53,20 +81,41 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
     String? phone,
   }) async {
-    if (await networkInfo.isConnected) {
+    print('AuthRepositoryImpl: Starting registration for $email');
+    print('AuthRepositoryImpl: remoteDataSource = $remoteDataSource');
+    print('AuthRepositoryImpl: localDataSource = $localDataSource');
+    print('AuthRepositoryImpl: networkInfo = $networkInfo');
+
+    final isConnected = await networkInfo.isConnected;
+    print('AuthRepositoryImpl: Network is connected: $isConnected');
+
+    if (isConnected) {
       try {
-        final user = await remoteDataSource.register(email, password, name);
+        print('AuthRepositoryImpl: Calling remoteDataSource.register');
+        final user = await remoteDataSource.register(email, password, name, phone: phone);
+        print('AuthRepositoryImpl: Registration successful, user ID: ${user.id}');
+        print('AuthRepositoryImpl: User details: email=${user.email}, name=${user.name}');
+
         // Cache user locally if remote registration was successful
         if (localDataSource is AuthLocalDataSourceImpl) {
+          print('AuthRepositoryImpl: Caching user locally');
           await (localDataSource as AuthLocalDataSourceImpl).cacheUser(user);
+          print('AuthRepositoryImpl: User cached successfully');
+        } else {
+          print('AuthRepositoryImpl: localDataSource is not AuthLocalDataSourceImpl, skipping caching');
         }
         return Right(user);
-      } on ServerException catch (e) {
+      } on ServerException catch (e, stackTrace) {
+        print('AuthRepositoryImpl: ServerException: ${e.message}');
+        print('AuthRepositoryImpl: Stack trace: $stackTrace');
         return Left(ServerFailure(message: e.message));
-      } catch (e) {
+      } catch (e, stackTrace) {
+        print('AuthRepositoryImpl: Unexpected error: ${e.toString()}');
+        print('AuthRepositoryImpl: Stack trace: $stackTrace');
         return Left(ServerFailure(message: e.toString()));
       }
     } else {
+      print('AuthRepositoryImpl: No internet connection');
       return Left(NetworkFailure(message: 'No internet connection'));
     }
   }
@@ -90,7 +139,7 @@ class AuthRepositoryImpl implements AuthRepository {
       if (localUser != null) {
         return Right(localUser);
       }
-      
+
       // If no local user and we have network, try to get from remote
       if (await networkInfo.isConnected) {
         final remoteUser = await remoteDataSource.getCurrentUser();
@@ -102,7 +151,7 @@ class AuthRepositoryImpl implements AuthRepository {
           return Right(remoteUser);
         }
       }
-      
+
       // No user found, throw error
       return Left(AuthFailure(message: "No authenticated user found"));
     } on CacheException catch (e) {
@@ -122,13 +171,13 @@ class AuthRepositoryImpl implements AuthRepository {
       if (isLocalAuthenticated) {
         return true;
       }
-      
+
       // If not authenticated locally and we have network, check remote
       if (await networkInfo.isConnected) {
         final isRemoteAuthenticated = await remoteDataSource.isAuthenticated();
         return isRemoteAuthenticated;
       }
-      
+
       return false;
     } catch (e) {
       return false;
@@ -214,4 +263,4 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(NetworkFailure(message: 'No internet connection'));
     }
   }
-} 
+}

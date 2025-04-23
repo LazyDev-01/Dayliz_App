@@ -3,9 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:dayliz_app/core/config/app_config.dart';
 import 'package:dayliz_app/screens/splash_screen.dart';
-import 'package:dayliz_app/screens/auth/login_screen.dart';
-import 'package:dayliz_app/screens/auth/signup_screen.dart';
+// Legacy auth screens removed
+import 'package:dayliz_app/presentation/providers/auth_providers.dart' as clean_auth;
 import 'package:dayliz_app/screens/home/main_screen.dart';
 import 'package:dayliz_app/screens/home/address_list_screen.dart';
 import 'package:dayliz_app/screens/home/address_form_screen.dart';
@@ -15,6 +16,8 @@ import 'package:dayliz_app/screens/order_confirmation_screen.dart';
 import 'package:dayliz_app/screens/product/product_listing_screen.dart';
 import 'package:dayliz_app/screens/product/product_details_screen.dart';
 import 'package:dayliz_app/screens/dev/database_seeder_screen.dart';
+import 'package:dayliz_app/screens/dev/settings_screen.dart';
+import 'package:dayliz_app/screens/debug/google_sign_in_debug_screen.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/providers/theme_provider.dart';
 import 'package:dayliz_app/providers/auth_provider.dart';
@@ -23,25 +26,18 @@ import 'package:dayliz_app/models/address.dart';
 import 'package:dayliz_app/models/product.dart';
 import 'package:dayliz_app/services/address_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:dayliz_app/screens/auth/reset_password_screen.dart';
-import 'package:dayliz_app/screens/auth/update_password_screen.dart';
-import 'package:dayliz_app/screens/auth/email_verification_screen.dart';
 import 'package:dayliz_app/screens/auth/verify_token_handler.dart';
 import 'package:dayliz_app/services/database_seeder.dart';
 import 'package:dayliz_app/services/database_migrations.dart';
 import 'package:dayliz_app/data/mock_products.dart';
-import 'package:dayliz_app/services/image_service.dart';
-import 'package:dayliz_app/services/image_preloader.dart';
-import 'package:dayliz_app/screens/wishlist/wishlist_screen.dart';
+// Clean up unused imports
 // Clean architecture screens
 import 'package:dayliz_app/presentation/screens/product/clean_product_listing_screen.dart';
 import 'package:dayliz_app/presentation/screens/product/clean_product_details_screen.dart';
 import 'package:dayliz_app/presentation/screens/product/product_feature_testing_screen.dart';
 import 'package:dayliz_app/presentation/screens/wishlist/clean_wishlist_screen.dart';
 // Import for clean architecture initialization
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'di/dependency_injection.dart' as di;
-import 'presentation/screens/demo_screen.dart';
 import 'navigation/routes.dart';
 import 'presentation/screens/auth/clean_login_screen.dart';
 import 'presentation/screens/auth/clean_register_screen.dart';
@@ -57,32 +53,42 @@ typedef AppAuthState = auth_service.AuthState;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Load environment variables
   await dotenv.load(fileName: '.env');
-  
+
+  // Initialize app configuration
+  await AppConfig.init();
+
   // Initialize services
-  await auth_service.AuthService.instance.initialize();
-  
+  try {
+    debugPrint('Initializing AuthService with URL: ${dotenv.env['SUPABASE_URL']}');
+    await auth_service.AuthService.instance.initialize();
+    debugPrint('AuthService initialized successfully');
+    debugPrint('Supabase client initialized successfully');
+  } catch (e) {
+    debugPrint('Error initializing AuthService: $e');
+  }
+
   // Gracefully initialize clean architecture components
   try {
     await di.initCleanArchitecture();
-    print('Clean architecture initialization successful');
+    debugPrint('Clean architecture initialization successful');
   } catch (e) {
-    print('Clean architecture initialization failed: $e');
+    debugPrint('Clean architecture initialization failed: $e');
     // Continue with the app even if clean architecture init fails
   }
-  
+
   // Test database connections
   await _testDatabaseConnections();
-  
+
   // Run database migrations
   if (auth_service.AuthService.instance.isInitialized) {
     await DatabaseMigrations.instance.runMigrations();
   } else {
     debugPrint('Skipping database migrations: Auth service not initialized');
   }
-  
+
   // Seed database with test data
   if (kDebugMode) {
     try {
@@ -97,13 +103,13 @@ Future<void> main() async {
       // Continue with app startup even if seeding fails
     }
   }
-  
+
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
+
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -112,7 +118,7 @@ Future<void> main() async {
       statusBarBrightness: Brightness.light,
     ),
   );
-  
+
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -132,16 +138,16 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   void initState() {
     super.initState();
-    
+
     // No need to manually register navigator key since it's now static mutable
     // NavigationService.navigatorKey is accessible from anywhere
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
-    
+
     // Force authNotifierProvider to initialize
     ref.watch(authNotifierProvider);
 
@@ -161,7 +167,7 @@ Future<void> _testDatabaseConnections() async {
     // Test address database connection
     debugPrint('Testing database connections...');
     final addressTableExists = await AddressService.instance.testDatabaseConnection();
-    
+
     if (addressTableExists) {
       debugPrint('✅ Address table connection successful');
     } else {
@@ -175,67 +181,75 @@ Future<void> _testDatabaseConnections() async {
 /// Router provider for navigation
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
-  
+
   // Create a navigator observer to handle index updates
   final indexObserver = IndexObserver(ref);
-  
+
   return GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
       // Get the current auth state
       final authData = authState.valueOrNull;
-      
-      final isAuthenticated = authData == AppAuthState.authenticated;
+
+      // Also check clean architecture auth state
+      final cleanAuthData = ref.read(clean_auth.authNotifierProvider);
+      final isCleanAuthenticated = cleanAuthData.isAuthenticated && cleanAuthData.user != null;
+
+      final isAuthenticated = authData == AppAuthState.authenticated || isCleanAuthenticated;
       final needsEmailVerification = authData == AppAuthState.emailVerificationRequired;
-      
+
       // Check if the user is on the splash screen
       final isSplashScreen = state.uri.path == '/';
-      
+
       // Check if the user is on an auth screen or verification screen
-      final isAuthScreen = 
-          state.uri.path == '/login' || 
+      final isAuthScreen =
+          state.uri.path == '/login' ||
           state.uri.path == '/signup' ||
           state.uri.path == '/reset-password' ||
-          state.uri.path.startsWith('/update-password');
-          
-      final isVerificationScreen = 
+          state.uri.path.startsWith('/update-password') ||
+          state.uri.path == '/clean/login' ||
+          state.uri.path == '/clean/register' ||
+          state.uri.path == '/clean/forgot-password';
+
+      final isVerificationScreen =
           state.uri.path == '/verify-email' ||
           state.uri.path == '/auth/verify';
-      
+
       // Don't redirect if handling a verification token
       if (state.uri.path == '/auth/verify') {
         return null;
       }
-      
+
       // If the user needs email verification and not on verification screen, redirect
       if (needsEmailVerification && !isVerificationScreen && !isSplashScreen) {
         return '/verify-email';
       }
-      
+
       // If the user is authenticated but on an auth screen, redirect to home
       if (isAuthenticated && isAuthScreen) {
+        debugPrint('User is authenticated and on auth screen, redirecting to home');
         return '/home';
       }
-      
+
       // If the user is not authenticated and not on an auth screen or splash screen,
-      // redirect to login
+      // redirect to the login screen
       if (!isAuthenticated && !isVerificationScreen && !isAuthScreen && !isSplashScreen) {
         return '/login';
       }
-      
+
       // No redirect needed
       return null;
     },
-    
+
     // Setup observers for deep linking and index tracking
     observers: [
       NavigatorObserver(),
       indexObserver,
     ],
-    
+
     // Enable deep link debugging
     debugLogDiagnostics: true,
-    
+
     routes: [
       GoRoute(
         path: '/',
@@ -247,11 +261,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
+      // Login route now uses clean architecture implementation
       GoRoute(
         path: '/login',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
-          child: const LoginScreen(),
+          child: const CleanLoginScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return SlideTransition(
               position: Tween<Offset>(
@@ -263,11 +278,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
+      // Signup route now uses clean architecture implementation
       GoRoute(
         path: '/signup',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
-          child: const SignupScreen(),
+          child: const CleanRegisterScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return SlideTransition(
               position: Tween<Offset>(
@@ -279,31 +295,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
+      // TODO: Implement clean architecture version of email verification screen
       GoRoute(
         path: '/verify-email',
-        pageBuilder: (context, state) {
-          final email = state.uri.queryParameters['email'] ?? auth_service.AuthService.instance.currentUser?.email ?? '';
-          return CustomTransitionPage<void>(
-            key: state.pageKey,
-            child: EmailVerificationScreen(email: email),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1, 0),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              );
-            },
-          );
-        },
+        redirect: (_, __) => '/login',
       ),
       GoRoute(
         path: '/auth/verify',
         pageBuilder: (context, state) {
           final token = state.uri.queryParameters['token'] ?? '';
           final type = state.uri.queryParameters['type'] ?? 'verify_email';
-          
+
           return CustomTransitionPage<void>(
             key: state.pageKey,
             child: VerifyTokenHandler(token: token, type: type),
@@ -317,7 +319,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/reset-password',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
-          child: const ResetPasswordScreen(),
+          child: const CleanForgotPasswordScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return SlideTransition(
               position: Tween<Offset>(
@@ -329,24 +331,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
+      // TODO: Implement clean architecture version of update password screen
       GoRoute(
         path: '/update-password',
-        pageBuilder: (context, state) {
-          final accessToken = state.uri.queryParameters['accessToken'];
-          return CustomTransitionPage<void>(
-            key: state.pageKey,
-            child: UpdatePasswordScreen(accessToken: accessToken),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1, 0),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              );
-            },
-          );
-        },
+        redirect: (_, __) => '/reset-password',
       ),
       GoRoute(
         path: '/home',
@@ -481,13 +469,26 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
+      // Debug screen for Google Sign-In
+      GoRoute(
+        path: '/debug/google-sign-in',
+        pageBuilder: (context, state) {
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const GoogleSignInDebugScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
+      ),
       GoRoute(
         path: '/address/edit/:id',
         pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
           // Try to get the address from extra data first
           final address = state.extra as Address?;
-          
+
           // The component will use the ID to fetch the address if not provided
           return CustomTransitionPage<void>(
             key: state.pageKey,
@@ -509,7 +510,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final categoryId = state.pathParameters['id']!;
           final extraData = state.extra as Map<String, dynamic>?;
-          
+
           return CustomTransitionPage<void>(
             key: state.pageKey,
             child: ProductListingScreen(
@@ -533,7 +534,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final productId = state.pathParameters['id']!;
           final Product? productFromExtra = state.extra as Product?;
-          
+
           // First try to use the product passed as extra data (from navigation)
           if (productFromExtra != null) {
             return CustomTransitionPage<void>(
@@ -550,7 +551,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               },
             );
           }
-          
+
           // If no extra data, try to find product in mock data
           try {
             final product = mockProducts.firstWhere((p) => p.id == productId);
@@ -605,7 +606,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/clean/category/:id',
         pageBuilder: (context, state) {
           final categoryId = state.pathParameters['id']!;
-          
+
           return CustomTransitionPage<void>(
             key: state.pageKey,
             child: CleanProductListingScreen(
@@ -627,7 +628,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/clean/product/:id',
         pageBuilder: (context, state) {
           final productId = state.pathParameters['id']!;
-          
+
           return CustomTransitionPage<void>(
             key: state.pageKey,
             child: CleanProductDetailsScreen(productId: productId),
@@ -657,12 +658,25 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
-      // Development tools route
+      // Development tools routes
       GoRoute(
         path: '/dev/database-seeder',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
           child: const DatabaseSeederScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/dev/settings',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const SettingsScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(
               opacity: animation,
@@ -735,54 +749,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      // Clean Architecture Auth Routes
+      // Redirect old clean architecture routes to new standard routes
       GoRoute(
         path: '/clean/login',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanLoginScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-        ),
+        redirect: (_, __) => '/login',
       ),
       GoRoute(
         path: '/clean/register',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanRegisterScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-        ),
+        redirect: (_, __) => '/signup',
       ),
       GoRoute(
         path: '/clean/forgot-password',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanForgotPasswordScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-        ),
+        redirect: (_, __) => '/reset-password',
       ),
       // Clean Cart Route
       GoRoute(
@@ -915,7 +893,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
     ],
-    
+
     // Add error handling for routes
     errorBuilder: (context, state) => Scaffold(
       body: Center(
@@ -930,16 +908,16 @@ final routerProvider = Provider<GoRouter>((ref) {
 
 /// Navigator observer to update the current index based on routes
 class IndexObserver extends NavigatorObserver {
-  final ProviderRef ref;
-  
+  final Ref ref;
+
   IndexObserver(this.ref);
-  
+
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
     _updateIndexFromRoute(route);
   }
-  
+
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);

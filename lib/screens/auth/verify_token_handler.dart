@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dayliz_app/providers/auth_provider.dart';
+// Auth provider will be needed when implementing verification
 import 'package:dayliz_app/services/auth_service.dart' show AuthException;
 
 /// A screen that processes verification tokens from email links
@@ -9,7 +9,7 @@ import 'package:dayliz_app/services/auth_service.dart' show AuthException;
 class VerifyTokenHandler extends ConsumerStatefulWidget {
   final String token;
   final String type;
-  
+
   const VerifyTokenHandler({
     Key? key,
     required this.token,
@@ -23,33 +23,31 @@ class VerifyTokenHandler extends ConsumerStatefulWidget {
 class VerifyTokenHandlerState extends ConsumerState<VerifyTokenHandler> {
   bool _isLoading = true;
   String? _error;
-  
+
   @override
   void initState() {
     super.initState();
     _processToken();
   }
-  
+
   Future<void> _processToken() async {
     try {
       if (widget.type == 'verify_email') {
-        final success = await ref.read(authNotifierProvider.notifier).verifyEmail(
-          token: widget.token,
-        );
-        
-        if (success && mounted) {
-          // Verification successful, navigate to home
-          GoRouter.of(context).go('/home');
+        // TODO: Implement email verification in clean architecture
+        // For now, just redirect to login
+        if (mounted) {
+          GoRouter.of(context).go('/login');
           return;
         }
       } else if (widget.type == 'reset_password') {
         // For reset password links, just redirect to reset password screen with token
         if (mounted) {
-          GoRouter.of(context).go('/update-password?token=${widget.token}');
+          // TODO: Implement password reset in clean architecture
+          GoRouter.of(context).go('/reset-password');
           return;
         }
       }
-      
+
       // If we get here, something went wrong
       if (mounted) {
         setState(() {
@@ -59,24 +57,24 @@ class VerifyTokenHandlerState extends ConsumerState<VerifyTokenHandler> {
       }
     } catch (e) {
       if (!mounted) return;
-      
+
       setState(() {
         _isLoading = false;
-        _error = e is AuthException 
-            ? e.message 
+        _error = e is AuthException
+            ? e.message
             : 'Failed to verify token';
       });
     }
   }
-  
+
   void _goToLogin() {
     GoRouter.of(context).go('/login');
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Verifying'),
@@ -117,4 +115,4 @@ class VerifyTokenHandlerState extends ConsumerState<VerifyTokenHandler> {
       ),
     );
   }
-} 
+}

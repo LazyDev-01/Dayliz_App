@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../providers/auth_providers.dart';
 import '../../../core/validators/validators.dart';
@@ -20,10 +21,45 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _registerError;
+
+  @override
+  void initState() {
+    super.initState();
+    // Add post-frame callback to listen for auth state changes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.listenManual(
+        authNotifierProvider,
+        (previous, next) {
+          debugPrint('Auth state changed: isAuthenticated=${next.isAuthenticated}, user=${next.user != null}');
+
+          // Check for errors
+          if (next.errorMessage != null && next.errorMessage!.isNotEmpty) {
+            setState(() {
+              _registerError = next.errorMessage;
+            });
+          }
+
+          // Check for successful authentication
+          if (next.isAuthenticated && next.user != null) {
+            debugPrint('User authenticated, navigating to home');
+            if (mounted) {
+              // Use Future.microtask to avoid build phase navigation issues
+              final navigator = GoRouter.of(context);
+              Future.microtask(() {
+                if (mounted) {
+                  navigator.go('/home');
+                }
+              });
+            }
+          }
+        },
+      );
+    });
+  }
 
   @override
   void dispose() {
@@ -39,7 +75,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
   Widget build(BuildContext context) {
     // Watch auth state
     final authState = ref.watch(authNotifierProvider);
-    
+
     // Check authentication status
     if (authState.isAuthenticated) {
       // If authenticated, navigate to home page on next frame
@@ -47,7 +83,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
         context.go('/home');
       });
     }
-    
+
     // Update register error if there's an error message in the state
     if (authState.errorMessage != null && _registerError != authState.errorMessage) {
       _registerError = authState.errorMessage;
@@ -58,7 +94,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
         title: const Text('Create Account'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/clean/login'),
+          onPressed: () => context.go('/login'),
         ),
       ),
       body: SafeArea(
@@ -71,14 +107,14 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
               children: [
                 // App logo
                 _buildLogo(),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Registration form
                 _buildRegistrationForm(),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Error message
                 if (_registerError != null)
                   Text(
@@ -89,14 +125,33 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Register button
                 _buildRegisterButton(),
-                
+
+                const SizedBox(height: 16),
+
+                // Or divider
+                const Row(
+                  children: [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('OR'),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Google sign-in button
+                _buildGoogleSignInButton(),
+
                 const SizedBox(height: 24),
-                
+
                 // Login option
                 _buildLoginOption(),
               ],
@@ -150,9 +205,9 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
             ),
             validator: Validators.validateName,
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Email field
           TextFormField(
             controller: _emailController,
@@ -165,9 +220,9 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
             ),
             validator: Validators.validateEmail,
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Phone field
           TextFormField(
             controller: _phoneController,
@@ -185,9 +240,9 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
               return null; // Phone is optional
             },
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Password field
           TextFormField(
             controller: _passwordController,
@@ -207,12 +262,14 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
                 },
               ),
               border: const OutlineInputBorder(),
+              helperText: 'Password must contain lowercase, uppercase, number, and special character (e.g., Test@123)',
+              helperMaxLines: 2,
             ),
             validator: Validators.validatePassword,
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Confirm password field
           TextFormField(
             controller: _confirmPasswordController,
@@ -234,7 +291,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
               border: const OutlineInputBorder(),
             ),
             validator: (value) => Validators.validateConfirmPassword(
-              value, 
+              value,
               _passwordController.text,
             ),
           ),
@@ -245,30 +302,88 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
 
   Widget _buildRegisterButton() {
     final isLoading = ref.watch(authLoadingProvider);
-    
-    return ElevatedButton(
-      onPressed: isLoading ? null : _handleRegister,
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-      child: isLoading
-          ? const SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
-          : const Text(
-              'Create Account',
-              style: TextStyle(fontSize: 16),
+
+    return Column(
+      children: [
+        // Error message
+        if (_registerError != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text(
+              _registerError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              textAlign: TextAlign.center,
             ),
+          ),
+
+        // Register button
+        ElevatedButton(
+          onPressed: isLoading ? null : _handleRegister,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text(
+                  'Create Account',
+                  style: TextStyle(fontSize: 16),
+                ),
+        ),
+      ],
     );
   }
+
+  Widget _buildGoogleSignInButton() {
+    return Column(
+      children: [
+        ElevatedButton.icon(
+          onPressed: null, // Disabled for now
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black87,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          icon: SvgPicture.asset(
+            'assets/images/google_logo.svg',
+            height: 24,
+            width: 24,
+          ),
+          label: const Text('Sign up with Google'),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.amber.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.amber.shade200),
+          ),
+          child: const Text(
+            'Google Sign-In is temporarily unavailable. Please use email/password instead.',
+            style: TextStyle(color: Colors.amber, fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Google Sign-In method is temporarily disabled
+  // Will be implemented in a future update
 
   Widget _buildLoginOption() {
     return Row(
@@ -277,8 +392,15 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
         const Text('Already have an account?'),
         TextButton(
           onPressed: () {
-            // Navigate to login screen
-            context.go('/clean/login');
+            // Check if we're already authenticated
+            final authState = ref.read(authNotifierProvider);
+            if (authState.isAuthenticated && authState.user != null) {
+              // If authenticated, navigate to home
+              context.go('/home');
+            } else {
+              // Otherwise, navigate to login
+              context.go('/login');
+            }
           },
           child: const Text('Sign In'),
         ),
@@ -286,12 +408,26 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
     );
   }
 
+  /// Check if password meets Supabase requirements
+  bool _isPasswordValid(String password) {
+    // Check for lowercase letters
+    bool hasLowercase = RegExp(r'[a-z]').hasMatch(password);
+    // Check for uppercase letters
+    bool hasUppercase = RegExp(r'[A-Z]').hasMatch(password);
+    // Check for numbers
+    bool hasNumber = RegExp(r'[0-9]').hasMatch(password);
+    // Check for special characters
+    bool hasSpecial = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+
+    return hasLowercase && hasUppercase && hasNumber && hasSpecial && password.length >= 8;
+  }
+
   Future<void> _handleRegister() async {
     // Clear any previous errors
     setState(() {
       _registerError = null;
     });
-    
+
     // Validate form
     if (_formKey.currentState?.validate() == true) {
       // Get form values
@@ -299,14 +435,55 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
       final email = _emailController.text.trim();
       final phone = _phoneController.text.trim();
       final password = _passwordController.text;
-      
-      // Attempt registration
-      await ref.read(authNotifierProvider.notifier).register(
-        email,
-        password,
-        name,
-        phone: phone.isEmpty ? null : phone,
-      );
+
+      // Double-check password requirements
+      if (!_isPasswordValid(password)) {
+        setState(() {
+          _registerError = 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character.';
+        });
+        return;
+      }
+
+      try {
+        debugPrint('CleanRegisterScreen: Starting registration process');
+        debugPrint('CleanRegisterScreen: email = $email');
+        debugPrint('CleanRegisterScreen: name = $name');
+        debugPrint('CleanRegisterScreen: phone = ${phone.isEmpty ? "null" : phone}');
+
+        // Attempt registration
+        debugPrint('CleanRegisterScreen: Calling authNotifierProvider.register');
+        await ref.read(authNotifierProvider.notifier).register(
+          email,
+          password,
+          name,
+          phone: phone.isEmpty ? null : phone,
+        );
+        debugPrint('CleanRegisterScreen: register call completed');
+
+        // Check if we're authenticated after registration
+        final authState = ref.read(authNotifierProvider);
+        debugPrint('Registration complete. Auth state: isAuthenticated=${authState.isAuthenticated}, user=${authState.user != null}');
+
+        if (authState.isAuthenticated && authState.user != null) {
+          debugPrint('User authenticated in _handleRegister, navigating to home');
+          // If authenticated, navigate to home
+          if (mounted) {
+            final navigator = GoRouter.of(context);
+            // Use a slight delay to ensure the state is fully updated
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted) {
+                navigator.go('/home');
+              }
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint('Registration error: $e');
+        // Show error in UI
+        setState(() {
+          _registerError = 'Registration failed: ${e.toString()}';
+        });
+      }
     }
   }
-} 
+}

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../providers/auth_providers.dart';
 import '../../../core/validators/validators.dart';
@@ -18,6 +20,7 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _rememberMe = true; // Default to true
   String? _loginError;
 
   @override
@@ -31,7 +34,7 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
   Widget build(BuildContext context) {
     // Watch auth state
     final authState = ref.watch(authNotifierProvider);
-    
+
     // Check authentication status
     if (authState.isAuthenticated) {
       // If authenticated, navigate to home page on next frame
@@ -39,7 +42,7 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
         context.go('/home');
       });
     }
-    
+
     // Update login error if there's an error message in the state
     if (authState.errorMessage != null && _loginError != authState.errorMessage) {
       _loginError = authState.errorMessage;
@@ -56,14 +59,14 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
               children: [
                 // App logo
                 _buildLogo(),
-                
+
                 const SizedBox(height: 48),
-                
+
                 // Login form
                 _buildLoginForm(),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Error message
                 if (_loginError != null)
                   Text(
@@ -74,19 +77,38 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Forgot password button
                 _buildForgotPasswordButton(),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Login button
                 _buildLoginButton(),
-                
+
+                const SizedBox(height: 16),
+
+                // Or divider
+                Row(
+                  children: [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('OR'),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Google sign-in button
+                _buildGoogleSignInButton(),
+
                 const SizedBox(height: 24),
-                
+
                 // Register option
                 _buildRegisterOption(),
               ],
@@ -147,9 +169,9 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
               return null;
             },
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Password field
           TextFormField(
             controller: _passwordController,
@@ -186,21 +208,46 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
   }
 
   Widget _buildForgotPasswordButton() {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: TextButton(
-        onPressed: () {
-          // Navigate to forgot password screen
-          context.go('/clean/forgot-password');
-        },
-        child: const Text('Forgot Password?'),
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Remember Me checkbox
+        Row(
+          children: [
+            Checkbox(
+              value: _rememberMe,
+              onChanged: (value) {
+                setState(() {
+                  _rememberMe = value ?? true;
+                });
+              },
+            ),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _rememberMe = !_rememberMe;
+                });
+              },
+              child: const Text('Remember Me'),
+            ),
+          ],
+        ),
+
+        // Forgot Password button
+        TextButton(
+          onPressed: () {
+            // Navigate to forgot password screen
+            context.go('/reset-password');
+          },
+          child: const Text('Forgot Password?'),
+        ),
+      ],
     );
   }
 
   Widget _buildLoginButton() {
     final isLoading = ref.watch(authLoadingProvider);
-    
+
     return ElevatedButton(
       onPressed: isLoading ? null : _login,
       style: ElevatedButton.styleFrom(
@@ -225,6 +272,48 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
     );
   }
 
+  Widget _buildGoogleSignInButton() {
+    return Column(
+      children: [
+        ElevatedButton.icon(
+          onPressed: null, // Disabled for now
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black87,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          icon: SvgPicture.asset(
+            'assets/images/google_logo.svg',
+            height: 24,
+            width: 24,
+          ),
+          label: const Text('Sign in with Google'),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.amber.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.amber.shade200),
+          ),
+          child: const Text(
+            'Google Sign-In is temporarily unavailable. Please use email/password instead.',
+            style: TextStyle(color: Colors.amber, fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Google Sign-In method is temporarily disabled
+  // Will be implemented in a future update
+
   Widget _buildRegisterOption() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -233,7 +322,7 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
         TextButton(
           onPressed: () {
             // Navigate to register screen
-            context.go('/clean/register');
+            context.go('/signup');
           },
           child: const Text('Sign Up'),
         ),
@@ -247,12 +336,33 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
       // Get form values
       final email = _emailController.text.trim();
       final password = _passwordController.text;
-      
+
+      debugPrint('Starting login process for $email');
+
       // Attempt login
       await ref.read(authNotifierProvider.notifier).login(
         email,
         password,
+        rememberMe: _rememberMe,
       );
+
+      // Check if we're authenticated after login
+      final authState = ref.read(authNotifierProvider);
+      debugPrint('Login complete. Auth state: isAuthenticated=${authState.isAuthenticated}, user=${authState.user != null}');
+
+      if (authState.isAuthenticated && authState.user != null) {
+        debugPrint('User authenticated in _login, navigating to home');
+        // If authenticated, navigate to home
+        if (mounted) {
+          final navigator = GoRouter.of(context);
+          // Use a slight delay to ensure the state is fully updated
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              navigator.go('/home');
+            }
+          });
+        }
+      }
     }
   }
 }
@@ -260,4 +370,4 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
 /// Email validation helper function
 bool isValidEmail(String email) {
   return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-} 
+}

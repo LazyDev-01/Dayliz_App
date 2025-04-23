@@ -1,242 +1,139 @@
-# Database Schema Alignment with Clean Architecture Entities
+# Database Schema Alignment for Clean Architecture
 
-This document outlines the alignment between the Supabase database schema and the clean architecture entities in the Dayliz App. It serves as a reference for implementing data sources that connect to the Supabase backend.
+This document outlines the alignment between the clean architecture domain entities and the Supabase database schema. The goal is to ensure that database tables properly map to domain entities while maintaining backward compatibility with existing code.
 
-## Table of Contents
+## Entity-Table Mapping
 
-1. [Address](#address)
-2. [Product](#product)
-3. [Category and SubCategory](#category-and-subcategory)
-4. [User and UserProfile](#user-and-userprofile)
-5. [Order and OrderItem](#order-and-orderitem)
-6. [CartItem](#cartitem)
-7. [Wishlist](#wishlist)
-8. [Review](#review)
+| Domain Entity | Database Table | Notes |
+|---------------|----------------|-------|
+| `User` | `public.users` and `auth.users` | Auth information in `auth.users`, profile in `public.users` |
+| `UserProfile` | `public.user_profiles` | Extended user information |
+| `Address` | `public.addresses` | User addresses |
+| `Product` | `public.products` | Product information |
+| `Category` | `public.categories` | Product categories |
+| `SubCategory` | `public.subcategories` | Product subcategories (consider hierarchical categories) |
+| `Order` | `public.orders` | Order information |
+| `OrderItem` | `public.order_items` | Order line items |
+| `CartItem` | `public.cart_items` | Shopping cart items |
+| `WishlistItem` | `public.wishlists` | User wishlist items |
+| `PaymentMethod` | `public.payment_methods` | User payment methods |
 
-## Address
+## Schema Alignment Changes
 
-### Database Table: `addresses`
+The following changes were made to align the database schema with the domain entities:
 
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | id                 | UUID           | Primary key                            |
-| user_id              | userId             | UUID           | Foreign key to users table             |
-| address_line1        | addressLine1       | TEXT           | Required                               |
-| address_line2        | addressLine2       | TEXT           | Optional                               |
-| city                 | city               | TEXT           | Required                               |
-| state                | state              | TEXT           | Required                               |
-| postal_code          | postalCode         | TEXT           | Required                               |
-| country              | country            | TEXT           | Required                               |
-| is_default           | isDefault          | BOOLEAN        | Default: false                         |
-| address_type         | addressType        | TEXT           | Optional (e.g., "Home", "Work")        |
-| recipient_name       | recipientName      | TEXT           | Optional                               |
-| recipient_phone      | recipientPhone     | TEXT           | Optional                               |
-| landmark             | landmark           | TEXT           | Optional                               |
-| latitude             | latitude           | NUMERIC(10, 6) | Optional                               |
-| longitude            | longitude          | NUMERIC(10, 6) | Optional                               |
-| zone_id              | zoneId             | UUID           | Foreign key to zones table             |
-| created_at           | createdAt          | TIMESTAMP      | Default: now()                         |
-| updated_at           | updatedAt          | TIMESTAMP      | Default: now()                         |
+### User & UserProfile
+- Added `bio` and `is_public` fields to `user_profiles`
+- Ensured `preferences` is available as `jsonb` type
 
-## Product
+### Address
+- Added `label`, `additional_info`, and `coordinates` fields
+- Renamed `recipient_phone` to `phone_number` for consistency
 
-### Database Table: `products`
+### Product
+- Added `main_image_url` field to directly store primary image URL
+- Added `additional_images` array to store secondary image URLs
+- Modified `discount_percentage` to use correct data type
 
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | id                 | UUID           | Primary key                            |
-| name                 | name               | TEXT           | Required                               |
-| description          | description        | TEXT           | Optional                               |
-| price                | price              | NUMERIC(10, 2) | Required                               |
-| discounted_price     | discountedPrice    | NUMERIC(10, 2) | Optional                               |
-| subcategory_id       | subcategoryId      | UUID           | Foreign key to subcategories table     |
-| category_id          | categoryId         | UUID           | Foreign key to categories table        |
-| vendor_id            | vendorId           | UUID           | Foreign key to vendors table           |
-| is_featured          | isFeatured         | BOOLEAN        | Default: false                         |
-| is_on_sale           | isOnSale           | BOOLEAN        | Default: false                         |
-| sale_end_date        | saleEndDate        | TIMESTAMP      | Optional                               |
-| stock_quantity       | stockQuantity      | INTEGER        | Default: 0                             |
-| ratings_avg          | ratingsAvg         | NUMERIC(3, 2)  | Default: 0                             |
-| ratings_count        | ratingsCount       | INTEGER        | Default: 0                             |
-| sku                  | sku                | TEXT           | Optional                               |
-| weight               | weight             | NUMERIC(8, 2)  | Optional                               |
-| dimensions           | dimensions         | TEXT           | Optional                               |
-| is_active            | isActive           | BOOLEAN        | Default: true                          |
-| created_at           | createdAt          | TIMESTAMP      | Default: now()                         |
-| updated_at           | updatedAt          | TIMESTAMP      | Default: now()                         |
-| (derived)            | mainImageUrl       | -              | Derived from product_images table      |
-| (derived)            | inStock            | -              | Derived (stockQuantity > 0 && isActive) |
+### Order
+- Added `billing_address_id` to support separate billing address
+- Added `tracking_number` for order tracking
+- Added `coupon_code` to complement `coupon_id` reference
 
-### Database Table: `product_images`
+### Payment Method
+- Created new `payment_methods` table to store payment information
+- Added appropriate security policies
 
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | -                  | UUID           | Primary key                            |
-| product_id           | -                  | UUID           | Foreign key to products table          |
-| image_url            | -                  | TEXT           | Required                               |
-| is_primary           | -                  | BOOLEAN        | Default: false                         |
-| display_order        | -                  | INTEGER        | Default: 0                             |
-| created_at           | -                  | TIMESTAMP      | Default: now()                         |
-| updated_at           | -                  | TIMESTAMP      | Default: now()                         |
+### Wishlist & Cart Items
+- Added `added_at` timestamp to track when items were added
+- For cart items, added `selected` and `saved_for_later` flags
 
-## Category and SubCategory
+### Categories
+- Added `slug` field for SEO-friendly URLs
+- Added `parent_id` for hierarchical category structure
 
-### Database Table: `categories`
+## Version Tracking
 
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | id                 | UUID           | Primary key                            |
-| name                 | name               | TEXT           | Required                               |
-| icon_name            | iconName           | TEXT           | Optional                               |
-| theme_color          | themeColor         | TEXT           | Optional (hex color code)              |
-| image_url            | imageUrl           | TEXT           | Optional                               |
-| display_order        | displayOrder       | INTEGER        | Default: 0                             |
-| is_active            | isActive           | BOOLEAN        | Default: true                          |
-| created_at           | createdAt          | TIMESTAMP      | Default: now()                         |
-| updated_at           | updatedAt          | TIMESTAMP      | Default: now()                         |
-| (derived)            | icon               | -              | Derived from icon_name                 |
-| (derived)            | subCategories      | -              | Derived from subcategories table       |
+A new table `clean_architecture_versions` tracks schema changes related to clean architecture. Current version is 1.0.0.
 
-### Database Table: `subcategories`
+## Database Views
 
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | id                 | UUID           | Primary key                            |
-| name                 | name               | TEXT           | Required                               |
-| category_id          | categoryId         | UUID           | Foreign key to categories table        |
-| image_url            | imageUrl           | TEXT           | Optional                               |
-| icon_name            | iconName           | TEXT           | Optional                               |
-| display_order        | displayOrder       | INTEGER        | Default: 0                             |
-| is_active            | isActive           | BOOLEAN        | Default: true                          |
-| created_at           | createdAt          | TIMESTAMP      | Default: now()                         |
-| updated_at           | updatedAt          | TIMESTAMP      | Default: now()                         |
-| (derived)            | productCount       | -              | Derived from products table            |
+Consider creating the following views to facilitate easier data access:
 
-## User and UserProfile
+1. `product_details_view` - Complete product information with categories and images
+2. `user_profile_view` - Combined user and profile information
+3. `order_details_view` - Complete order information with items and addresses
 
-### Database Table: `users`
+## Next Steps
 
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | id                 | UUID           | Primary key                            |
-| email                | email              | TEXT           | Required, unique                       |
-| phone                | phone              | TEXT           | Optional, unique                       |
-| created_at           | createdAt          | TIMESTAMP      | Default: now()                         |
-| updated_at           | updatedAt          | TIMESTAMP      | Default: now()                         |
+1. Create database triggers to maintain consistency between related tables
+2. Consider optimizing indexes for common query patterns
+3. Implement data validation at the database level where appropriate
+4. Review and update RLS policies to ensure proper data security
 
-### Database Table: `user_profiles`
+## Migration Strategy
 
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | -                  | UUID           | Primary key                            |
-| user_id              | -                  | UUID           | Foreign key to users table             |
-| full_name            | name               | TEXT           | Optional                               |
-| avatar_url           | profileImageUrl    | TEXT           | Optional                               |
-| date_of_birth        | dateOfBirth        | DATE           | Optional                               |
-| gender               | gender             | TEXT           | Optional                               |
-| created_at           | -                  | TIMESTAMP      | Default: now()                         |
-| updated_at           | -                  | TIMESTAMP      | Default: now()                         |
+When making changes to the schema:
 
-## Order and OrderItem
+1. Always use migrations to track changes
+2. Update the `clean_architecture_versions` table
+3. Document changes in this file
+4. Test with both legacy and clean architecture code paths
 
-### Database Table: `orders`
+---
 
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | id                 | UUID           | Primary key                            |
-| user_id              | userId             | UUID           | Foreign key to users table             |
-| order_number         | orderNumber        | TEXT           | Required, unique                       |
-| status               | status             | TEXT           | Default: 'pending'                     |
-| total_amount         | totalAmount        | NUMERIC(10, 2) | Required                               |
-| discount_amount      | discountAmount     | NUMERIC(10, 2) | Default: 0                             |
-| delivery_fee         | deliveryFee        | NUMERIC(10, 2) | Default: 0                             |
-| tax_amount           | taxAmount          | NUMERIC(10, 2) | Default: 0                             |
-| final_amount         | finalAmount        | NUMERIC(10, 2) | Required                               |
-| payment_method       | paymentMethod      | TEXT           | Optional                               |
-| payment_status       | paymentStatus      | TEXT           | Default: 'pending'                     |
-| coupon_id            | couponId           | UUID           | Foreign key to coupons table           |
-| delivery_address_id  | deliveryAddressId  | UUID           | Foreign key to addresses table         |
-| delivery_agent_id    | deliveryAgentId    | UUID           | Foreign key to delivery_agents table   |
-| notes                | notes              | TEXT           | Optional                               |
-| estimated_delivery_date | estimatedDeliveryDate | TIMESTAMP | Optional                               |
-| delivered_at         | deliveredAt        | TIMESTAMP      | Optional                               |
-| created_at           | createdAt          | TIMESTAMP      | Default: now()                         |
-| updated_at           | updatedAt          | TIMESTAMP      | Default: now()                         |
+**Note**: This alignment is part of the Phase 9 (Backend Integration and Live Data) of the clean architecture migration plan. Future updates may introduce further refinements as more features are migrated to the clean architecture pattern.
 
-### Database Table: `order_items`
+## Implementing Supabase Data Sources
 
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | id                 | UUID           | Primary key                            |
-| order_id             | orderId            | UUID           | Foreign key to orders table            |
-| product_id           | productId          | UUID           | Foreign key to products table          |
-| product_name         | productName        | TEXT           | Required                               |
-| product_price        | unitPrice          | NUMERIC(10, 2) | Required                               |
-| quantity             | quantity           | INTEGER        | Required                               |
-| total_price          | totalPrice         | NUMERIC(10, 2) | Required                               |
-| created_at           | createdAt          | TIMESTAMP      | Default: now()                         |
-| updated_at           | updatedAt          | TIMESTAMP      | Default: now()                         |
+To interact with the aligned schema, we've implemented clean architecture data sources that use Supabase. Here's an example for the CartItem entity:
 
-## CartItem
+```dart
+/// Implementation of [CartRemoteDataSource] for Supabase backend
+class CartSupabaseDataSource implements CartRemoteDataSource {
+  final SupabaseClient _supabaseClient;
 
-### Database Table: `cart_items`
+  CartSupabaseDataSource({required SupabaseClient supabaseClient})
+      : _supabaseClient = supabaseClient;
 
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | id                 | UUID           | Primary key                            |
-| user_id              | userId             | UUID           | Foreign key to users table             |
-| product_id           | productId          | UUID           | Foreign key to products table          |
-| quantity             | quantity           | INTEGER        | Default: 1                             |
-| created_at           | createdAt          | TIMESTAMP      | Default: now()                         |
-| updated_at           | updatedAt          | TIMESTAMP      | Default: now()                         |
-| (derived)            | product            | -              | Derived from products table            |
+  @override
+  Future<List<CartItemModel>> getCartItems() async {
+    try {
+      final user = _supabaseClient.auth.currentUser;
+      if (user == null) {
+        throw ServerException(message: 'User is not authenticated');
+      }
 
-## Wishlist
+      // Using the fields aligned in the database schema
+      final response = await _supabaseClient
+          .from('cart_items')
+          .select('''
+            id,
+            product_id,
+            quantity,
+            added_at,  // New field from schema alignment
+            selected,  // New field from schema alignment
+            saved_for_later,  // New field from schema alignment
+            products (*)
+          ''')
+          .eq('user_id', user.id)
+          .order('added_at', ascending: false);
 
-### Database Table: `wishlists`
+      return (response as List<dynamic>).map((item) {
+        final product = ProductModel.fromJson(item['products']);
+        
+        return CartItemModel(
+          id: item['id'],
+          product: product,
+          quantity: item['quantity'],
+          addedAt: DateTime.parse(item['added_at']),  // Using the new field
+        );
+      }).toList();
+    } catch (e) {
+      throw ServerException(message: 'Failed to get cart items: ${e.toString()}');
+    }
+  }
 
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | id                 | UUID           | Primary key                            |
-| user_id              | userId             | UUID           | Foreign key to users table             |
-| product_id           | productId          | UUID           | Foreign key to products table          |
-| created_at           | createdAt          | TIMESTAMP      | Default: now()                         |
-| updated_at           | updatedAt          | TIMESTAMP      | Default: now()                         |
-| (derived)            | product            | -              | Derived from products table            |
-
-## Review
-
-### Database Table: `reviews`
-
-| Database Column      | Entity Property     | Data Type      | Notes                                   |
-|----------------------|--------------------|----------------|----------------------------------------|
-| id                   | id                 | UUID           | Primary key                            |
-| product_id           | productId          | UUID           | Foreign key to products table          |
-| user_id              | userId             | UUID           | Foreign key to users table             |
-| rating               | rating             | INTEGER        | Required (1-5)                         |
-| comment              | comment            | TEXT           | Optional                               |
-| is_verified          | isVerified         | BOOLEAN        | Default: false                         |
-| created_at           | createdAt          | TIMESTAMP      | Default: now()                         |
-| updated_at           | updatedAt          | TIMESTAMP      | Default: now()                         |
-
-## Implementation Notes
-
-1. **Naming Conventions**:
-   - Database uses snake_case for column names
-   - Entity properties use camelCase
-   - Data sources should handle the conversion between these naming conventions
-
-2. **Derived Properties**:
-   - Some entity properties are derived from related tables or computed values
-   - Data sources should handle these derivations when mapping database records to entities
-
-3. **Timestamps**:
-   - Most tables include created_at and updated_at columns
-   - These should be mapped to DateTime objects in the entities
-
-4. **Foreign Keys**:
-   - Foreign key relationships in the database should be reflected in the entity relationships
-   - Data sources should handle joining related tables when necessary
-
-5. **Default Values**:
-   - Default values in the database should be reflected in the entity constructors
+  // Additional methods for managing cart items...
+}
+```

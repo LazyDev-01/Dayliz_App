@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "897976702780",
+    "project_id": "dayliz-app-456806",
+    "storage_bucket": "dayliz-app-456806.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:897976702780:android:abcdef1234567890",
+        "android_client_info": {
+          "package_name": "com.dayliz.dayliz_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "897976702780-n8uvora9fv89jqrrvbc80hui2ngs6ehf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dayliz.dayliz_app",
+            "certificate_hash": "8E:C5:58:DD:C3:58:FB:43:32:53:39:E7:F8:74:D8:A6:E4:AE:C6:18"
+          }
+        },
+        {
+          "client_id": "897976702780-n8uvora9fv89jqrrvbc80hui2ngs6ehf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": ""
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "897976702780-n8uvora9fv89jqrrvbc80hui2ngs6ehf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

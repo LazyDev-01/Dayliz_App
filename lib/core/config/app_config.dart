@@ -13,7 +13,7 @@ enum BackendType {
 class AppConfig {
   static late SharedPreferences _prefs;
   static const String _useFastAPIKey = 'use_fastapi';
-  
+
   // Default configuration
   static bool _useFastAPI = false;
   static String _fastApiBaseUrl = '';
@@ -24,37 +24,39 @@ class AppConfig {
   static Future<void> init() async {
     // Load environment variables
     await dotenv.load();
-    
+
     // Initialize shared preferences
     _prefs = await SharedPreferences.getInstance();
-    
+
     // Load configuration from environment
     _fastApiBaseUrl = dotenv.env['FASTAPI_BASE_URL'] ?? 'http://localhost:8000';
     _supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
     _supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
-    
+
     // Load feature flags from shared preferences
     _useFastAPI = _prefs.getBool(_useFastAPIKey) ?? false;
   }
 
   /// Whether to use FastAPI backend instead of Supabase
   static bool get useFastAPI => _useFastAPI;
-  
+
   /// Set whether to use FastAPI backend
   static Future<void> setUseFastAPI(bool value) async {
     _useFastAPI = value;
     await _prefs.setBool(_useFastAPIKey, value);
   }
 
+  // Clean Architecture auth screens are now the default
+
   /// The base URL for FastAPI backend
   static String get fastApiBaseUrl => _fastApiBaseUrl;
-  
+
   /// The Supabase URL
   static String get supabaseUrl => _supabaseUrl;
-  
+
   /// The Supabase anonymous key
   static String get supabaseAnonKey => _supabaseAnonKey;
-  
+
   /// Check if the app is in development mode
   static bool get isDevelopment {
     // Check if we're running in debug mode
@@ -77,4 +79,4 @@ class AppConfig {
   static Future<void> setBackend(BackendType backendType) async {
     // Implementation needed
   }
-} 
+}

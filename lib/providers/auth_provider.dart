@@ -15,7 +15,7 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 /// Provider for the current user
 final currentUserProvider = Provider<User?>((ref) {
   final authState = ref.watch(authStateProvider);
-  
+
   return authState.when(
     data: (state) {
       if (state == AuthState.authenticated) {
@@ -34,7 +34,7 @@ final authErrorProvider = StateProvider<AuthException?>((ref) => null);
 /// Auth notifier to handle authentication operations
 class AuthNotifier extends StateNotifier<AuthState> {
   final StateNotifierProviderRef ref;
-  
+
   AuthNotifier(this.ref) : super(AuthState.loading) {
     // Initialize auth service if not already initialized
     try {
@@ -43,7 +43,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState.unauthenticated;
       _setError(e);
     }
-    
+
     // Listen to auth state changes from service
     AuthService.instance.authStateStream.listen((newState) {
       if (newState == AuthState.sessionExpired) {
@@ -52,9 +52,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } else if (state != newState) {
         // Update state if it has changed
         state = newState;
-        
+
         // Clear error when state changes successfully
-        if (newState == AuthState.authenticated || 
+        if (newState == AuthState.authenticated ||
             newState == AuthState.unauthenticated) {
           ref.read(authErrorProvider.notifier).state = null;
         }
@@ -77,18 +77,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _initialize() async {
     state = AuthState.loading;
-    
+
     try {
       await AuthService.instance.initialize();
       final isSignedIn = await AuthService.instance.restoreSession();
-      
+
       state = isSignedIn ? AuthState.authenticated : AuthState.unauthenticated;
     } catch (e) {
       state = AuthState.unauthenticated;
       _setError(e);
     }
   }
-  
+
   /// Handle session expiry by attempting to refresh
   Future<void> _handleSessionExpiry() async {
     // We don't set state to loading to avoid UI flicker
@@ -99,16 +99,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<User?> signInWithEmail({
     required String email,
     required String password,
+    bool rememberMe = true,
   }) async {
     state = AuthState.loading;
     ref.read(authErrorProvider.notifier).state = null;
-    
+
     try {
       final response = await AuthService.instance.signInWithEmail(
         email: email,
         password: password,
+        rememberMe: rememberMe,
       );
-      
+
       state = AuthState.authenticated;
       return response.user;
     } catch (e) {
@@ -122,7 +124,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> signInWithGoogle() async {
     state = AuthState.loading;
     ref.read(authErrorProvider.notifier).state = null;
-    
+
     try {
       await AuthService.instance.signInWithGoogle();
       // The auth state will be updated via the auth state change listener
@@ -143,7 +145,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     state = AuthState.loading;
     ref.read(authErrorProvider.notifier).state = null;
-    
+
     try {
       final response = await AuthService.instance.signUpWithEmail(
         email: email,
@@ -151,30 +153,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
         userData: userData,
         requireEmailVerification: requireEmailVerification,
       );
-      
+
       // Create user profile in new schema
       if (response.user != null) {
         try {
           final supabase = Supabase.instance.client;
-          
+
           // Create user profile
           await supabase.from('user_profiles').insert({
             'id': response.user!.id,
             // Any other default profile data
           });
-          
+
           print('User profile created for new user: ${response.user!.id}');
         } catch (profileError) {
           print('Warning: Could not create user profile: $profileError');
         }
       }
-      
+
       if (requireEmailVerification) {
         state = AuthState.emailVerificationRequired;
       } else {
         state = AuthState.authenticated;
       }
-      
+
       return response.user;
     } catch (e) {
       state = AuthState.unauthenticated;
@@ -182,13 +184,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       rethrow;
     }
   }
-  
+
   /// Send email verification
   Future<void> sendEmailVerification({
     required String email,
   }) async {
     ref.read(authErrorProvider.notifier).state = null;
-    
+
     try {
       await AuthService.instance.sendEmailVerification(
         email: email,
@@ -198,22 +200,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
       rethrow;
     }
   }
-  
+
   /// Verify email with token
   Future<bool> verifyEmail({
     required String token,
   }) async {
     ref.read(authErrorProvider.notifier).state = null;
-    
+
     try {
       final success = await AuthService.instance.verifyEmail(
         token: token,
       );
-      
+
       if (success) {
         state = AuthState.authenticated;
       }
-      
+
       return success;
     } catch (e) {
       _setError(e);
@@ -226,7 +228,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String email,
   }) async {
     ref.read(authErrorProvider.notifier).state = null;
-    
+
     try {
       await AuthService.instance.resetPassword(
         email: email,
@@ -243,7 +245,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     String? accessToken,
   }) async {
     ref.read(authErrorProvider.notifier).state = null;
-    
+
     try {
       await AuthService.instance.updatePassword(
         password: password,
@@ -259,14 +261,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> signOut() async {
     state = AuthState.loading;
     ref.read(authErrorProvider.notifier).state = null;
-    
+
     try {
       await AuthService.instance.signOut();
       state = AuthState.unauthenticated;
     } catch (e) {
       // If sign out fails, check if we're still authenticated
-      state = AuthService.instance.isSignedIn 
-        ? AuthState.authenticated 
+      state = AuthService.instance.isSignedIn
+        ? AuthState.authenticated
         : AuthState.unauthenticated;
       _setError(e);
       rethrow;
@@ -276,7 +278,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Update user profile
   Future<User?> updateProfile(Map<String, dynamic> userData) async {
     ref.read(authErrorProvider.notifier).state = null;
-    
+
     try {
       return await AuthService.instance.updateProfile(userData);
     } catch (e) {
@@ -289,4 +291,4 @@ class AuthNotifier extends StateNotifier<AuthState> {
 /// Provider for auth notifier
 final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(ref);
-}); 
+});

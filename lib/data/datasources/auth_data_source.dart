@@ -5,8 +5,11 @@ abstract class AuthDataSource {
   /// Login a user with email and password
   Future<User> login(String email, String password);
 
+  /// Sign in with Google
+  Future<User> signInWithGoogle();
+
   /// Register a new user
-  Future<User> register(String email, String password, String name);
+  Future<User> register(String email, String password, String name, {String? phone});
 
   /// Logout the current user
   Future<void> logout();
@@ -40,4 +43,4 @@ abstract class AuthDataSource {
 
   /// Cache the user locally
   Future<void> cacheUser(User user);
-} 
+}

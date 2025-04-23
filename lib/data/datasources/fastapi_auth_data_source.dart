@@ -40,7 +40,7 @@ class FastAPIAuthDataSource implements AuthDataSource {
   }) async {
     // TODO: Implement FastAPI login after post-launch
     throw UnimplementedError('FastAPI integration not yet implemented');
-    
+
     /* IMPLEMENTATION GUIDE
     try {
       final response = await _client.post(
@@ -55,7 +55,7 @@ class FastAPIAuthDataSource implements AuthDataSource {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         _token = responseData['access_token'];
-        
+
         return UserModel.fromJson(responseData['user']);
       } else {
         throw AuthException('Login failed: ${response.body}');
@@ -67,15 +67,10 @@ class FastAPIAuthDataSource implements AuthDataSource {
   }
 
   @override
-  Future<domain.User> register({
-    required String name,
-    required String email,
-    required String password,
-    String? phone,
-  }) async {
+  Future<domain.User> register(String email, String password, String name, {String? phone}) async {
     // TODO: Implement FastAPI registration after post-launch
     throw UnimplementedError('FastAPI integration not yet implemented');
-    
+
     /* IMPLEMENTATION GUIDE
     try {
       final response = await _client.post(
@@ -92,7 +87,7 @@ class FastAPIAuthDataSource implements AuthDataSource {
       if (response.statusCode == 201) {
         final responseData = json.decode(response.body);
         _token = responseData['access_token'];
-        
+
         return UserModel.fromJson(responseData['user']);
       } else {
         throw AuthException('Registration failed: ${response.body}');
@@ -107,7 +102,7 @@ class FastAPIAuthDataSource implements AuthDataSource {
   Future<bool> logout() async {
     // TODO: Implement FastAPI logout after post-launch
     throw UnimplementedError('FastAPI integration not yet implemented');
-    
+
     /* IMPLEMENTATION GUIDE
     try {
       final response = await _client.post(
@@ -131,7 +126,7 @@ class FastAPIAuthDataSource implements AuthDataSource {
   Future<domain.User> getCurrentUser() async {
     // TODO: Implement FastAPI getCurrentUser after post-launch
     throw UnimplementedError('FastAPI integration not yet implemented');
-    
+
     /* IMPLEMENTATION GUIDE
     try {
       final response = await _client.get(
@@ -158,7 +153,7 @@ class FastAPIAuthDataSource implements AuthDataSource {
   }
 
   @override
-  Future<bool> forgotPassword({required String email}) async {
+  Future<void> forgotPassword(String email) async {
     // TODO: Implement FastAPI forgotPassword after post-launch
     throw UnimplementedError('FastAPI integration not yet implemented');
   }
@@ -186,4 +181,4 @@ class FastAPIAuthDataSource implements AuthDataSource {
     // TODO: Implement FastAPI refreshToken after post-launch
     throw UnimplementedError('FastAPI integration not yet implemented');
   }
-} 
+}

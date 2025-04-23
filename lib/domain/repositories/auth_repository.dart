@@ -9,7 +9,12 @@ abstract class AuthRepository {
   Future<Either<Failure, domain.User>> login({
     required String email,
     required String password,
+    bool rememberMe = true,
   });
+
+  /// Sign in with Google
+  /// Returns a [Either] with a [Failure] or a [User] entity
+  Future<Either<Failure, domain.User>> signInWithGoogle();
 
   /// Register a new user
   /// Returns a [Either] with a [Failure] or a [User] entity
@@ -55,4 +60,4 @@ abstract class AuthRepository {
   /// Refresh authentication token
   /// Returns a [Either] with a [Failure] or a [String] containing the new token
   Future<Either<Failure, String>> refreshToken();
-} 
+}

@@ -34,7 +34,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.6
-  
+
   # Architecture
   dartz: ^0.10.1              # Functional programming
   fpdart: ^1.1.0              # Additional functional programming utilities
@@ -48,7 +48,7 @@ dependencies:
   dio: ^5.3.2                 # Alternative HTTP client with more features
   internet_connection_checker: ^1.0.0+1 # Network connectivity
   cached_network_image: ^3.2.3 # Image caching
-  
+
   # Local storage
   shared_preferences: ^2.2.1  # Simple key-value storage
   hive: ^2.2.3                # NoSQL database
@@ -58,7 +58,7 @@ dependencies:
   # Supabase (restored)
   supabase_flutter: ^2.0.1
   decimal: ^2.3.3
-  
+
   # UI
   flutter_svg: ^2.0.7         # SVG rendering
   shimmer: ^3.0.0             # Loading effects
@@ -83,20 +83,21 @@ dependencies:
   flutter_dotenv: ^5.1.0      # Environment variables
   uuid: ^3.0.7                # UUID generation
   connectivity_plus: ^4.0.2   # Network connectivity
-  
+
   # Temporarily comment out problematic location dependencies until we need them
   # geolocator: ^10.0.1         # Geolocation
   # geocoding: ^2.1.0           # Geocoding
-  
+
   flutter_secure_storage: ^8.0.0 # Secure storage
   url_launcher: ^6.1.14       # URL launcher
   share_plus: ^7.1.0          # Sharing content
   flutter_slidable: ^4.0.0
   image_picker: ^1.1.2
-  
+  google_sign_in: ^6.1.5      # Google Sign-In
+
   # Temporarily comment out permission handler until we need it
   # permission_handler: ^10.4.5 # Permission handling
-  
+
   # Maps and Location
   # Temporarily comment out Google Maps until we need it
   # google_maps_flutter: ^2.5.3

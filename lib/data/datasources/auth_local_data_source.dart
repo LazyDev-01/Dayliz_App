@@ -99,7 +99,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   }
 
   @override
-  Future<User> register(String email, String password, String name) async {
+  Future<User> register(String email, String password, String name, {String? phone}) async {
     // Not implemented in local data source
     throw UnimplementedError('Register not implemented in local data source');
   }
@@ -145,4 +145,10 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     // Not implemented in local data source
     throw UnimplementedError('Refresh token not implemented in local data source');
   }
-} 
+
+  @override
+  Future<User> signInWithGoogle() async {
+    // Not implemented in local data source
+    throw UnimplementedError('Sign in with Google not implemented in local data source');
+  }
+}

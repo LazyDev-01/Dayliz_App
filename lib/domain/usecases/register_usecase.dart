@@ -12,13 +12,25 @@ class RegisterUseCase {
 
   /// Execute the use case with the given parameters
   /// Returns a [Either] with a [Failure] or a [User] entity
-  Future<Either<Failure, User>> call(RegisterParams params) {
-    return repository.register(
-      name: params.name,
-      email: params.email,
-      password: params.password,
-      phone: params.phone,
-    );
+  Future<Either<Failure, User>> call(RegisterParams params) async {
+    print('RegisterUseCase: Executing with params: ${params.email}, ${params.name}');
+    print('RegisterUseCase: repository instance: $repository');
+
+    try {
+      print('RegisterUseCase: Calling repository.register');
+      final result = await repository.register(
+        name: params.name,
+        email: params.email,
+        password: params.password,
+        phone: params.phone,
+      );
+      print('RegisterUseCase: repository.register completed');
+      print('RegisterUseCase: result is ${result.isRight() ? "Right" : "Left"}');
+      return result;
+    } catch (e) {
+      print('RegisterUseCase: Error in repository.register: $e');
+      rethrow;
+    }
   }
 }
 
@@ -38,4 +50,4 @@ class RegisterParams extends Equatable {
 
   @override
   List<Object?> get props => [name, email, password, phone];
-} 
+}

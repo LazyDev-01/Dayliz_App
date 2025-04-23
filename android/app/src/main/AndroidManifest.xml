@@ -25,27 +25,27 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            
+
             <!-- Deep Link Configuration -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                
+
                 <!-- HTTPS scheme for App Links (more secure) -->
                 <data
-                    android:scheme="https" 
+                    android:scheme="https"
                     android:host="dayliz.app" />
             </intent-filter>
-            
+
             <!-- Custom URI scheme -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                
-                <data 
-                    android:scheme="dayliz" 
+
+                <data
+                    android:scheme="dayliz"
                     android:host="app" />
             </intent-filter>
         </activity>
@@ -54,6 +54,39 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Google Sign-In Activity -->
+        <activity
+            android:name="io.flutter.plugins.googlesignin.GoogleSignInActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:exported="true">
+        </activity>
+
+        <!-- Deep Link Handler for OAuth Redirects -->
+        <activity
+            android:name="com.linusu.flutter_web_auth_2.CallbackActivity"
+            android:exported="true">
+            <!-- Custom scheme for app redirects -->
+            <intent-filter android:label="flutter_web_auth_2">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="com.dayliz.dayliz_app"
+                    android:host="login" />
+            </intent-filter>
+
+            <!-- Supabase callback URL -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="zdezerezpbeuebnompyj.supabase.co"
+                    android:pathPrefix="/auth/v1/callback" />
+            </intent-filter>
+        </activity>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -66,7 +99,7 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
-    
+
     <!-- Required permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Location permissions -->

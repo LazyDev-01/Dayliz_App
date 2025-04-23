@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 enum DaylizButtonType {
   primary,
@@ -25,6 +26,8 @@ class DaylizButton extends StatelessWidget {
   final bool isLoading;
   final IconData? leadingIcon;
   final IconData? trailingIcon;
+  final String? leadingSvgAsset;
+  final String? trailingSvgAsset;
   final bool enableHapticFeedback;
 
   const DaylizButton({
@@ -37,6 +40,8 @@ class DaylizButton extends StatelessWidget {
     this.isLoading = false,
     this.leadingIcon,
     this.trailingIcon,
+    this.leadingSvgAsset,
+    this.trailingSvgAsset,
     this.enableHapticFeedback = true,
   }) : super(key: key);
 
@@ -44,12 +49,12 @@ class DaylizButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final daylizTheme = theme.extension<DaylizThemeExtension>();
-    
+
     // Determine padding based on size
     EdgeInsetsGeometry buttonPadding;
     double fontSize;
     double iconSize;
-    
+
     switch (size) {
       case DaylizButtonSize.small:
         buttonPadding = const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
@@ -87,6 +92,14 @@ class DaylizButton extends StatelessWidget {
           Icon(leadingIcon, size: iconSize),
           const SizedBox(width: 8),
         ],
+        if (leadingSvgAsset != null && !isLoading) ...[
+          SvgPicture.asset(
+            leadingSvgAsset!,
+            height: iconSize,
+            width: iconSize,
+          ),
+          const SizedBox(width: 8),
+        ],
         if (isLoading)
           SizedBox(
             width: iconSize,
@@ -112,6 +125,14 @@ class DaylizButton extends StatelessWidget {
           const SizedBox(width: 8),
           Icon(trailingIcon, size: iconSize),
         ],
+        if (trailingSvgAsset != null && !isLoading) ...[
+          const SizedBox(width: 8),
+          SvgPicture.asset(
+            trailingSvgAsset!,
+            height: iconSize,
+            width: iconSize,
+          ),
+        ],
       ],
     );
 
@@ -133,7 +154,7 @@ class DaylizButton extends StatelessWidget {
           ),
           child: buttonContent,
         );
-        
+
       case DaylizButtonType.secondary:
         return OutlinedButton(
           onPressed: isLoading ? null : handleTap,
@@ -151,7 +172,7 @@ class DaylizButton extends StatelessWidget {
           ),
           child: buttonContent,
         );
-        
+
       case DaylizButtonType.tertiary:
         return OutlinedButton(
           onPressed: isLoading ? null : handleTap,
@@ -170,7 +191,7 @@ class DaylizButton extends StatelessWidget {
           ),
           child: buttonContent,
         );
-        
+
       case DaylizButtonType.danger:
         return ElevatedButton(
           onPressed: isLoading ? null : handleTap,
@@ -187,7 +208,7 @@ class DaylizButton extends StatelessWidget {
           ),
           child: buttonContent,
         );
-        
+
       case DaylizButtonType.text:
         return TextButton(
           onPressed: isLoading ? null : handleTap,
@@ -203,4 +224,4 @@ class DaylizButton extends StatelessWidget {
         );
     }
   }
-} 
+}

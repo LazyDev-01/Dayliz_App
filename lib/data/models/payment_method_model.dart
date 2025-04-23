@@ -26,7 +26,9 @@ class PaymentMethodModel extends PaymentMethod {
       type: json['type'],
       name: json['name'],
       isDefault: json['is_default'] ?? false,
-      details: json['details'] as Map<String, dynamic>,
+      details: json['details'] != null
+          ? Map<String, dynamic>.from(json['details'])
+          : {},
     );
   }
 
@@ -43,8 +45,7 @@ class PaymentMethodModel extends PaymentMethod {
   }
 
   /// Create a copy of this PaymentMethodModel with the given fields replaced with the new values
-  @override
-  PaymentMethodModel copyWith({
+  PaymentMethodModel copyWithModel({
     String? id,
     String? userId,
     String? type,
@@ -61,4 +62,20 @@ class PaymentMethodModel extends PaymentMethod {
       details: details ?? this.details,
     );
   }
+
+  // Convert domain entity to model
+  factory PaymentMethodModel.fromEntity(PaymentMethod entity) {
+    return PaymentMethodModel(
+      id: entity.id,
+      userId: entity.userId,
+      type: entity.type,
+      name: entity.name,
+      isDefault: entity.isDefault,
+      details: entity.details,
+    );
+  }
+
+  // For backward compatibility with code using the pattern method.fromMap/toMap
+  factory PaymentMethodModel.fromMap(Map<String, dynamic> map) => PaymentMethodModel.fromJson(map);
+  Map<String, dynamic> toMap() => toJson();
 } 

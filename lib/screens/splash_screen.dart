@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 import 'package:dayliz_app/services/image_preloader.dart';
+// Removed unused import
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -34,18 +35,19 @@ class SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPro
     WidgetsBinding.instance.addPostFrameCallback((_) {
       imagePreloader.preloadKeyImages(context);
     });
-    
+
     // Start app initialization
     _initializeApp();
   }
 
   void _checkAuthAndNavigate() {
     // TODO: Replace with actual auth state check
-    final bool isLoggedIn = false;
+    const bool isLoggedIn = false;
 
     if (isLoggedIn) {
       context.go('/home');
     } else {
+      // Redirect to the appropriate login screen based on feature flag
       context.go('/login');
     }
   }
@@ -114,4 +116,4 @@ class SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPro
       ),
     );
   }
-} 
+}

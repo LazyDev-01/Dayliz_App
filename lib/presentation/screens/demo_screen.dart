@@ -35,7 +35,7 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Authentication section
             _buildSectionTitle('Authentication'),
             const SizedBox(height: 8),
@@ -52,7 +52,7 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
               title: 'Register',
               description: 'User registration with validation and error handling.',
               icon: Icons.person_add,
-              onTap: () => context.go('/clean/register'),
+              onTap: () => context.go('/signup'),
             ),
             const SizedBox(height: 12),
             _buildFeatureCard(
@@ -60,11 +60,11 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
               title: 'Forgot Password',
               description: 'Password recovery flow with email verification.',
               icon: Icons.lock_reset,
-              onTap: () => context.go('/clean/forgot-password'),
+              onTap: () => context.go('/reset-password'),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Backend Configuration (developer-only)
             if (AppConfig.isDevelopment) ...[
               _buildSectionTitle('Developer Tools'),
@@ -110,7 +110,7 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
             ],
-            
+
             // Products section
             _buildSectionTitle('Products'),
             const SizedBox(height: 8),
@@ -129,13 +129,13 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
               icon: Icons.view_list,
               onTap: () => context.go('/clean/products'),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Categories section
             _buildSectionTitle('Categories'),
             const SizedBox(height: 8),
-            
+
             _buildFeatureCard(
               context: context,
               title: 'Browse All Categories',
@@ -143,26 +143,26 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
               icon: Icons.category,
               onTap: () => context.go('/clean/categories'),
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Categories list with clean_category_providers
             Consumer(
               builder: (context, ref, child) {
                 final categoryState = ref.watch(clean_category_providers.categoriesNotifierProvider);
-                
+
                 // Initialize categories if not already loaded
                 if (categoryState.categories.isEmpty && !categoryState.isLoading) {
                   Future.microtask(() => ref.read(clean_category_providers.categoriesNotifierProvider.notifier).loadCategories());
                 }
-                
+
                 if (categoryState.isLoading) {
                   return const Padding(
                     padding: EdgeInsets.all(16.0),
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-                
+
                 if (categoryState.errorMessage != null) {
                   return Padding(
                     padding: const EdgeInsets.all(8.0),
@@ -172,14 +172,14 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
                     ),
                   );
                 }
-                
+
                 if (categoryState.categories.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.all(8.0),
                     child: Text('No categories available'),
                   );
                 }
-                
+
                 // Show max 5 categories
                 final categories = categoryState.categories.take(5).toList();
                 return ListView.builder(
@@ -198,7 +198,7 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
                         ref.read(clean_category_providers.categoriesNotifierProvider.notifier).selectCategory(category.id);
                         // Navigate to subcategory screen
                         Navigator.pushNamed(
-                          context, 
+                          context,
                           '/clean/category',
                           arguments: category.id,
                         );
@@ -208,9 +208,9 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
                 );
               },
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Profile section
             _buildSectionTitle('User Profile'),
             const SizedBox(height: 8),
@@ -234,7 +234,7 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
       ),
     );
   }
-  
+
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
@@ -245,7 +245,7 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
       ),
     );
   }
-  
+
   Widget _buildFeatureCard({
     required BuildContext context,
     required String title,
@@ -301,4 +301,4 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
       ),
     );
   }
-} 
+}

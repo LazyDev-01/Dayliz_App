@@ -36,12 +36,7 @@ class SupabaseAuthDataSource implements AuthDataSource {
   }
 
   @override
-  Future<domain.User> register({
-    required String name,
-    required String email,
-    required String password,
-    String? phone,
-  }) async {
+  Future<domain.User> register(String email, String password, String name, {String? phone}) async {
     try {
       // Register the user
       final response = await _client.auth.signUp(
@@ -107,12 +102,12 @@ class SupabaseAuthDataSource implements AuthDataSource {
         name: userData['name'] ?? user.userMetadata?['name'] ?? '',
         email: user.email ?? '',
         phone: userData['phone'] ?? user.userMetadata?['phone'],
-        createdAt: userData['created_at'] != null 
-            ? DateTime.parse(userData['created_at']) 
-            : (user.createdAt != null ? DateTime.parse(user.createdAt!) : null),
+        profileImageUrl: userData['profile_image_url'] ?? userData['avatar_url'],
+        isEmailVerified: user.emailConfirmedAt != null,
+        metadata: user.userMetadata,
       );
     } on app_exceptions.AuthException {
-      rethrow; 
+      rethrow;
     } catch (e) {
       throw app_exceptions.ServerException(message: 'Failed to get current user: ${e.toString()}');
     }
@@ -123,7 +118,7 @@ class SupabaseAuthDataSource implements AuthDataSource {
     try {
       final user = _client.auth.currentUser;
       final session = _client.auth.currentSession;
-      
+
       return user != null && session != null;
     } catch (e) {
       return false;
@@ -131,10 +126,9 @@ class SupabaseAuthDataSource implements AuthDataSource {
   }
 
   @override
-  Future<bool> forgotPassword({required String email}) async {
+  Future<void> forgotPassword(String email) async {
     try {
       await _client.auth.resetPasswordForEmail(email);
-      return true;
     } catch (e) {
       throw app_exceptions.ServerException(message: 'Failed to send password reset email: ${e.toString()}');
     }
@@ -163,22 +157,22 @@ class SupabaseAuthDataSource implements AuthDataSource {
     try {
       // First, validate the current password by signing in again
       final email = _client.auth.currentUser?.email;
-      
+
       if (email == null) {
         throw app_exceptions.AuthException(message: 'No user is logged in');
       }
-      
+
       // Try to sign in with current password
       await _client.auth.signInWithPassword(
         email: email,
         password: currentPassword,
       );
-      
+
       // If sign-in succeeded, update the password
       await _client.auth.updateUser(
         UserAttributes(password: newPassword),
       );
-      
+
       return true;
     } catch (e) {
       throw app_exceptions.ServerException(message: 'Failed to change password: ${e.toString()}');
@@ -189,19 +183,19 @@ class SupabaseAuthDataSource implements AuthDataSource {
   Future<String> refreshToken() async {
     try {
       final session = _client.auth.currentSession;
-      
+
       if (session == null) {
         throw app_exceptions.AuthException(message: 'No active session');
       }
-      
+
       await _client.auth.refreshSession();
-      
+
       final newSession = _client.auth.currentSession;
-      
+
       if (newSession == null) {
         throw app_exceptions.AuthException(message: 'Failed to refresh session');
       }
-      
+
       return newSession.accessToken;
     } catch (e) {
       throw app_exceptions.ServerException(message: 'Failed to refresh token: ${e.toString()}');
@@ -215,9 +209,8 @@ class SupabaseAuthDataSource implements AuthDataSource {
       name: supabaseUser.userMetadata?['name'] ?? '',
       email: supabaseUser.email ?? '',
       phone: supabaseUser.userMetadata?['phone'],
-      createdAt: supabaseUser.createdAt != null 
-          ? DateTime.parse(supabaseUser.createdAt!) 
-          : null,
+      isEmailVerified: supabaseUser.emailConfirmedAt != null,
+      metadata: supabaseUser.userMetadata,
     );
   }
-} 
+}

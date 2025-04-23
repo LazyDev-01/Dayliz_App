@@ -29,7 +29,7 @@ class CleanRoutes {
     final uri = Uri.parse(settings.name ?? '/');
     final path = uri.path;
     final args = settings.arguments;
-    
+
     // Parse the path to get the clean-specific route
     final cleanPath = path.replaceFirst('/clean/', '');
 
@@ -41,42 +41,42 @@ class CleanRoutes {
           builder: (_) => const CleanLoginScreen(),
           settings: settings,
         );
-        
+
       case 'register':
         // Clean register screen
         return MaterialPageRoute(
           builder: (_) => const CleanRegisterScreen(),
           settings: settings,
         );
-        
+
       case 'forgot-password':
         // Clean forgot password screen
         return MaterialPageRoute(
           builder: (_) => const CleanForgotPasswordScreen(),
           settings: settings,
         );
-        
+
       case 'products':
         // Clean product listing screen
         return MaterialPageRoute(
           builder: (_) => const CleanProductListingScreen(),
           settings: settings,
         );
-      
+
       case 'categories':
         // Clean categories screen with Riverpod implementation
         return MaterialPageRoute(
           builder: (_) => const CleanCategoriesScreen(),
           settings: settings,
         );
-      
+
       case 'categories-old':
         // Legacy clean categories screen (keeping for backward compatibility)
         return MaterialPageRoute(
           builder: (_) => const CleanCategoryScreen(),
           settings: settings,
         );
-      
+
       case 'category':
         // Category subcategories screen
         if (args is String) {
@@ -89,7 +89,7 @@ class CleanRoutes {
           );
         }
         return _errorRoute(settings);
-      
+
       case 'subcategory':
         // Subcategory product listing (legacy version)
         if (args is Map<String, dynamic>) {
@@ -102,7 +102,7 @@ class CleanRoutes {
           );
         }
         return _errorRoute(settings);
-      
+
       case 'subcategory-products':
         // Clean subcategory product listing with Riverpod implementation
         if (args is Map<String, dynamic>) {
@@ -115,7 +115,7 @@ class CleanRoutes {
           );
         }
         return _errorRoute(settings);
-      
+
       case 'product':
         // Product details
         if (args is String) {
@@ -125,21 +125,21 @@ class CleanRoutes {
           );
         }
         return _errorRoute(settings);
-      
+
       case 'cart':
         // Clean cart screen
         return MaterialPageRoute(
           builder: (_) => const CleanCartScreen(),
           settings: settings,
         );
-      
+
       case 'checkout':
         // Clean checkout screen
         return MaterialPageRoute(
           builder: (_) => const CleanCheckoutScreen(),
           settings: settings,
         );
-      
+
       case 'payment-methods':
         // Payment methods screen
         bool isCheckout = false;
@@ -148,40 +148,40 @@ class CleanRoutes {
         } else if (args is Map<String, dynamic> && args.containsKey('isCheckout')) {
           isCheckout = args['isCheckout'] as bool;
         }
-        
+
         return MaterialPageRoute(
           builder: (_) => PaymentMethodsScreen(isCheckout: isCheckout),
           settings: settings,
         );
-      
+
       case 'profile':
         // User profile screen
         return MaterialPageRoute(
           builder: (_) => const CleanUserProfileScreen(),
           settings: settings,
         );
-        
+
       case 'addresses':
         // User addresses list screen
         return MaterialPageRoute(
           builder: (_) => const CleanAddressListScreen(),
           settings: settings,
         );
-      
+
       case 'preferences':
         // User preferences screen
         return MaterialPageRoute(
           builder: (_) => const CleanPreferencesScreen(),
           settings: settings,
         );
-      
+
       case 'address/add':
         // Add new address screen
         return MaterialPageRoute(
           builder: (_) => const CleanAddressListScreen(),
           settings: settings,
         );
-        
+
       case 'address/edit':
         // Edit existing address - this would typically include an ID parameter
         // For now, we'll route to the address list until we implement an address form
@@ -192,14 +192,14 @@ class CleanRoutes {
           );
         }
         return _errorRoute(settings);
-        
+
       case 'orders':
         // Order list screen
         return MaterialPageRoute(
           builder: (_) => const CleanOrderListScreen(),
           settings: settings,
         );
-        
+
       case 'orders/detail':
         // Order detail screen
         if (args is String) {
@@ -209,7 +209,7 @@ class CleanRoutes {
           );
         }
         return _errorRoute(settings);
-        
+
       default:
         // Check if the path is like 'address/edit/{id}'
         if (cleanPath.startsWith('address/edit/')) {
@@ -221,24 +221,24 @@ class CleanRoutes {
             settings: settings,
           );
         }
-        
+
         return _errorRoute(settings);
     }
   }
 
-  // Demo navigation method for clean login
+  // Navigation method for login
   static void navigateToCleanLogin(BuildContext context) {
-    GoRouter.of(context).push('/clean/login');
+    GoRouter.of(context).push('/login');
   }
-  
-  // Demo navigation method for clean register
+
+  // Navigation method for register
   static void navigateToCleanRegister(BuildContext context) {
-    GoRouter.of(context).push('/clean/register');
+    GoRouter.of(context).push('/signup');
   }
-  
-  // Demo navigation method for clean forgot password
+
+  // Navigation method for forgot password
   static void navigateToCleanForgotPassword(BuildContext context) {
-    GoRouter.of(context).push('/clean/forgot-password');
+    GoRouter.of(context).push('/reset-password');
   }
 
   // Demo navigation method for categories
@@ -268,12 +268,12 @@ class CleanRoutes {
   static void navigateToCart(BuildContext context) {
     GoRouter.of(context).push('/clean/cart');
   }
-  
+
   // Demo navigation method for checkout
   static void navigateToCheckout(BuildContext context) {
     GoRouter.of(context).push('/clean/checkout');
   }
-  
+
   // Demo navigation method for payment methods
   static void navigateToPaymentMethods(BuildContext context, {bool isCheckout = false}) {
     GoRouter.of(context).push(
@@ -281,17 +281,17 @@ class CleanRoutes {
       extra: {'isCheckout': isCheckout},
     );
   }
-  
+
   // Demo navigation method for user profile
   static void navigateToUserProfile(BuildContext context) {
     GoRouter.of(context).push('/clean/profile');
   }
-  
+
   // Demo navigation method for addresses
   static void navigateToAddresses(BuildContext context) {
     GoRouter.of(context).push('/clean/addresses');
   }
-  
+
   // Demo navigation method for preferences
   static void navigateToPreferences(BuildContext context) {
     GoRouter.of(context).push('/clean/preferences');
@@ -313,4 +313,4 @@ class CleanRoutes {
       settings: settings,
     );
   }
-} 
+}

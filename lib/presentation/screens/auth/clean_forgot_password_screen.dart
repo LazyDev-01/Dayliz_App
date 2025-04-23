@@ -33,14 +33,14 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
         title: const Text('Forgot Password'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/clean/login'),
+          onPressed: () => context.go('/login'),
         ),
       ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
-            child: _emailSent 
+            child: _emailSent
                 ? _buildSuccessView()
                 : _buildForgotPasswordForm(),
           ),
@@ -60,9 +60,9 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
           size: 70,
           color: Theme.of(context).primaryColor,
         ),
-        
+
         const SizedBox(height: 24),
-        
+
         // Title
         Text(
           'Forgot Password',
@@ -71,18 +71,18 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
               ),
           textAlign: TextAlign.center,
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Description
         Text(
           'Enter your email address and we\'ll send you a link to reset your password.',
           style: Theme.of(context).textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
-        
+
         const SizedBox(height: 32),
-        
+
         // Form
         Form(
           key: _formKey,
@@ -104,9 +104,9 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
             ],
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Error message
         if (_errorMessage != null)
           Text(
@@ -117,9 +117,9 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
             ),
             textAlign: TextAlign.center,
           ),
-        
+
         const SizedBox(height: 24),
-        
+
         // Submit button
         ElevatedButton(
           onPressed: _isSubmitting ? null : _handleResetPassword,
@@ -143,12 +143,12 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
                   style: TextStyle(fontSize: 16),
                 ),
         ),
-        
+
         const SizedBox(height: 24),
-        
+
         // Back to login
         TextButton(
-          onPressed: () => context.go('/clean/login'),
+          onPressed: () => context.go('/login'),
           child: const Text('Back to Login'),
         ),
       ],
@@ -166,9 +166,9 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
           size: 80,
           color: Colors.green,
         ),
-        
+
         const SizedBox(height: 24),
-        
+
         // Success title
         Text(
           'Email Sent',
@@ -177,21 +177,21 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
               ),
           textAlign: TextAlign.center,
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Success message
         Text(
           'We\'ve sent a password reset link to ${_emailController.text}. Please check your email inbox.',
           style: Theme.of(context).textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
-        
+
         const SizedBox(height: 32),
-        
+
         // Back to login button
         ElevatedButton(
-          onPressed: () => context.go('/clean/login'),
+          onPressed: () => context.go('/login'),
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
@@ -203,9 +203,9 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
             style: TextStyle(fontSize: 16),
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Didn't receive email
         TextButton(
           onPressed: () {
@@ -224,21 +224,21 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
     setState(() {
       _errorMessage = null;
     });
-    
+
     // Validate form
     if (_formKey.currentState?.validate() == true) {
       // Show loading indicator
       setState(() {
         _isSubmitting = true;
       });
-      
+
       // Get form value
       final email = _emailController.text.trim();
-      
+
       try {
         // Attempt to reset password
         final success = await ref.read(authNotifierProvider.notifier).forgotPassword(email);
-        
+
         // If successful, show success view
         if (success) {
           setState(() {
@@ -261,4 +261,4 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
       }
     }
   }
-} 
+}
