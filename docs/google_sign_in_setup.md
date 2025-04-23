@@ -6,40 +6,40 @@ This document provides detailed instructions for setting up Google Sign-In with 
 
 The app is currently configured with the following Google client IDs:
 
-- **Web Client ID**: `897976702780-qdgua0j0nj5jm98kl6nuvu2s0b7gg24i.apps.googleusercontent.com`
-- **Android Client ID**: `897976702780-n8uvora9fv89jqrrvbc80hui2ngs6ehf.apps.googleusercontent.com`
-- **Project ID**: `dayliz-app-456806`
+- **Web Client ID**: `your_web_client_id`
+- **Android Client ID**: `your_android_client_id`
+- **Project ID**: `your_project_id`
 
 ## Setup Steps
 
 ### 1. Supabase Configuration
 
-1. Go to your Supabase project dashboard at https://zdezerezpbeuebnompyj.supabase.co
+1. Go to your Supabase project dashboard
 2. Navigate to Authentication > Providers
 3. Enable the Google provider
 4. Enter the following credentials:
-   - **Client ID**: `897976702780-qdgua0j0nj5jm98kl6nuvu2s0b7gg24i.apps.googleusercontent.com` (Web client ID)
-   - **Client Secret**: `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`
+   - **Client ID**: `your_web_client_id` (Web client ID)
+   - **Client Secret**: `your_client_secret`
 5. Add the following Authorized Redirect URIs:
-   - `https://zdezerezpbeuebnompyj.supabase.co/auth/v1/callback`
+   - `https://your-supabase-project.supabase.co/auth/v1/callback`
    - `com.dayliz.dayliz_app://login`
 6. Save changes
 
 ### 2. Google Cloud Platform Configuration
 
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
-2. Select the project `dayliz-app-456806`
+2. Select your project
 3. Navigate to "APIs & Services" > "Credentials"
 4. Find the Android OAuth client ID and edit it
 5. Make sure the package name is set to `com.dayliz.dayliz_app`
 6. Use the following SHA-1 certificate fingerprint for your development environment:
    ```
-   SHA-1: 8E:C5:58:DD:C3:58:FB:43:32:53:39:E7:F8:74:D8:A6:E4:AE:C6:18
+   SHA-1: YOUR_SHA1_FINGERPRINT
    ```
 7. Add this SHA-1 fingerprint to the Android OAuth client
 8. Find the Web OAuth client ID and edit it
 9. Add the following authorized redirect URIs:
-   - `https://zdezerezpbeuebnompyj.supabase.co/auth/v1/callback`
+   - `https://your-supabase-project.supabase.co/auth/v1/callback`
    - `com.dayliz.dayliz_app://login`
 10. Save changes
 
@@ -52,7 +52,7 @@ The app has been configured with the following files:
 3. **AndroidManifest.xml**: Contains the proper intent filters for handling OAuth redirects
 4. **GoogleRedirectActivity.kt**: Handles OAuth redirects from Supabase
 
-> **Important**: The SHA-1 certificate fingerprint `8E:C5:58:DD:C3:58:FB:43:32:53:39:E7:F8:74:D8:A6:E4:AE:C6:18` has been added to the google-services.json file. Make sure this same fingerprint is added to your Google Cloud Console project.
+> **Important**: Make sure your SHA-1 certificate fingerprint is added to both the google-services.json file and your Google Cloud Console project.
 
 ## Troubleshooting
 
