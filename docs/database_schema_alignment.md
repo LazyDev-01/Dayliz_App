@@ -1,139 +1,144 @@
 # Database Schema Alignment for Clean Architecture
 
-This document outlines the alignment between the clean architecture domain entities and the Supabase database schema. The goal is to ensure that database tables properly map to domain entities while maintaining backward compatibility with existing code.
+## Overview
 
-## Entity-Table Mapping
+This document tracks the progress of aligning the Supabase database schema with the clean architecture entity models in the Dayliz App. The goal is to ensure that the database structure properly supports the domain entities while maintaining data integrity and performance.
 
-| Domain Entity | Database Table | Notes |
-|---------------|----------------|-------|
-| `User` | `public.users` and `auth.users` | Auth information in `auth.users`, profile in `public.users` |
-| `UserProfile` | `public.user_profiles` | Extended user information |
-| `Address` | `public.addresses` | User addresses |
-| `Product` | `public.products` | Product information |
-| `Category` | `public.categories` | Product categories |
-| `SubCategory` | `public.subcategories` | Product subcategories (consider hierarchical categories) |
-| `Order` | `public.orders` | Order information |
-| `OrderItem` | `public.order_items` | Order line items |
-| `CartItem` | `public.cart_items` | Shopping cart items |
-| `WishlistItem` | `public.wishlists` | User wishlist items |
-| `PaymentMethod` | `public.payment_methods` | User payment methods |
+## Current Status
 
-## Schema Alignment Changes
+| Entity | Database Table | Alignment Status | Notes |
+|--------|---------------|-----------------|-------|
+| User | `public.users` | 🔄 In Progress | Missing some fields from UserProfile entity |
+| UserProfile | `public.user_profiles` | 🔄 In Progress | Needs to be created or extended |
+| Product | `public.products` | 🔄 In Progress | Missing some fields, needs normalization |
+| Category | `public.categories` | 🔄 In Progress | Structure mostly aligned, needs subcategories relation |
+| SubCategory | `public.subcategories` | 🔄 In Progress | Needs to be created or aligned |
+| Cart | `public.cart_items` | 🔄 In Progress | Needs user relation and product relation |
+| Order | `public.orders` | 🔄 In Progress | Missing some fields from Order entity |
+| OrderItem | `public.order_items` | 🔄 In Progress | Needs proper relations to orders and products |
+| Address | `public.addresses` | 🔄 In Progress | Missing some fields from Address entity |
+| Wishlist | `public.wishlist_items` | 🔄 In Progress | Needs user relation and product relation |
+| PaymentMethod | `public.payment_methods` | 🔄 In Progress | Needs to be created or aligned |
 
-The following changes were made to align the database schema with the domain entities:
+## Required Schema Changes
 
 ### User & UserProfile
-- Added `bio` and `is_public` fields to `user_profiles`
-- Ensured `preferences` is available as `jsonb` type
 
-### Address
-- Added `label`, `additional_info`, and `coordinates` fields
-- Renamed `recipient_phone` to `phone_number` for consistency
+```sql
+-- Extend users table with additional fields
+ALTER TABLE public.users
+ADD COLUMN IF NOT EXISTS is_email_verified BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS metadata JSONB;
+
+-- Create user_profiles table if it doesn't exist
+CREATE TABLE IF NOT EXISTS public.user_profiles (
+    id UUID PRIMARY KEY REFERENCES public.users(id),
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    phone TEXT,
+    profile_image_url TEXT,
+    preferences JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
 
 ### Product
-- Added `main_image_url` field to directly store primary image URL
-- Added `additional_images` array to store secondary image URLs
-- Modified `discount_percentage` to use correct data type
 
-### Order
-- Added `billing_address_id` to support separate billing address
-- Added `tracking_number` for order tracking
-- Added `coupon_code` to complement `coupon_id` reference
+```sql
+-- Extend products table with additional fields
+ALTER TABLE public.products
+ADD COLUMN IF NOT EXISTS main_image_url TEXT,
+ADD COLUMN IF NOT EXISTS additional_images TEXT[],
+ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS is_new_arrival BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS is_on_sale BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS average_rating DECIMAL(3,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS review_count INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+```
 
-### Payment Method
-- Created new `payment_methods` table to store payment information
-- Added appropriate security policies
+### Category & SubCategory
 
-### Wishlist & Cart Items
-- Added `added_at` timestamp to track when items were added
-- For cart items, added `selected` and `saved_for_later` flags
+```sql
+-- Ensure categories table has required fields
+ALTER TABLE public.categories
+ADD COLUMN IF NOT EXISTS name TEXT NOT NULL,
+ADD COLUMN IF NOT EXISTS image_url TEXT,
+ADD COLUMN IF NOT EXISTS icon TEXT,
+ADD COLUMN IF NOT EXISTS theme_color TEXT,
+ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0;
 
-### Categories
-- Added `slug` field for SEO-friendly URLs
-- Added `parent_id` for hierarchical category structure
+-- Create subcategories table if it doesn't exist
+CREATE TABLE IF NOT EXISTS public.subcategories (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    category_id UUID REFERENCES public.categories(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    image_url TEXT,
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
 
-## Version Tracking
+### Address
 
-A new table `clean_architecture_versions` tracks schema changes related to clean architecture. Current version is 1.0.0.
-
-## Database Views
-
-Consider creating the following views to facilitate easier data access:
-
-1. `product_details_view` - Complete product information with categories and images
-2. `user_profile_view` - Combined user and profile information
-3. `order_details_view` - Complete order information with items and addresses
+```sql
+-- Extend addresses table with additional fields
+ALTER TABLE public.addresses
+ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+ADD COLUMN IF NOT EXISTS recipient_name TEXT NOT NULL,
+ADD COLUMN IF NOT EXISTS phone_number TEXT NOT NULL,
+ADD COLUMN IF NOT EXISTS address_type TEXT NOT NULL,
+ADD COLUMN IF NOT EXISTS street TEXT NOT NULL,
+ADD COLUMN IF NOT EXISTS building TEXT,
+ADD COLUMN IF NOT EXISTS floor TEXT,
+ADD COLUMN IF NOT EXISTS apartment TEXT,
+ADD COLUMN IF NOT EXISTS landmark TEXT,
+ADD COLUMN IF NOT EXISTS is_default BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,6),
+ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,6),
+ADD COLUMN IF NOT EXISTS zone TEXT;
+```
 
 ## Next Steps
 
-1. Create database triggers to maintain consistency between related tables
-2. Consider optimizing indexes for common query patterns
-3. Implement data validation at the database level where appropriate
-4. Review and update RLS policies to ensure proper data security
+1. **Schema Analysis**
+   - Complete detailed analysis of all entity fields vs. database columns
+   - Document required changes for each entity
+   - Identify potential data migration issues
 
-## Migration Strategy
+2. **Migration Scripts**
+   - Create SQL migration scripts for each table
+   - Test migrations on development database
+   - Document rollback procedures
 
-When making changes to the schema:
+3. **Data Mapping**
+   - Update repository implementations to map between entities and database schema
+   - Handle any data type conversions or transformations
+   - Implement proper error handling for data inconsistencies
 
-1. Always use migrations to track changes
-2. Update the `clean_architecture_versions` table
-3. Document changes in this file
-4. Test with both legacy and clean architecture code paths
+4. **Testing**
+   - Test all CRUD operations with the updated schema
+   - Verify data integrity across related tables
+   - Ensure backward compatibility with existing code
 
----
+## Progress Tracking
 
-**Note**: This alignment is part of the Phase 9 (Backend Integration and Live Data) of the clean architecture migration plan. Future updates may introduce further refinements as more features are migrated to the clean architecture pattern.
+### Completed Tasks
+- ✅ Initial schema analysis for User entity
+- ✅ Initial schema analysis for Product entity
+- ✅ Initial schema analysis for Category entity
+- ✅ Initial schema analysis for Address entity
 
-## Implementing Supabase Data Sources
+### In Progress
+- 🔄 Detailed field mapping for all entities
+- 🔄 Creating SQL migration scripts
+- 🔄 Testing schema changes on development database
 
-To interact with the aligned schema, we've implemented clean architecture data sources that use Supabase. Here's an example for the CartItem entity:
-
-```dart
-/// Implementation of [CartRemoteDataSource] for Supabase backend
-class CartSupabaseDataSource implements CartRemoteDataSource {
-  final SupabaseClient _supabaseClient;
-
-  CartSupabaseDataSource({required SupabaseClient supabaseClient})
-      : _supabaseClient = supabaseClient;
-
-  @override
-  Future<List<CartItemModel>> getCartItems() async {
-    try {
-      final user = _supabaseClient.auth.currentUser;
-      if (user == null) {
-        throw ServerException(message: 'User is not authenticated');
-      }
-
-      // Using the fields aligned in the database schema
-      final response = await _supabaseClient
-          .from('cart_items')
-          .select('''
-            id,
-            product_id,
-            quantity,
-            added_at,  // New field from schema alignment
-            selected,  // New field from schema alignment
-            saved_for_later,  // New field from schema alignment
-            products (*)
-          ''')
-          .eq('user_id', user.id)
-          .order('added_at', ascending: false);
-
-      return (response as List<dynamic>).map((item) {
-        final product = ProductModel.fromJson(item['products']);
-        
-        return CartItemModel(
-          id: item['id'],
-          product: product,
-          quantity: item['quantity'],
-          addedAt: DateTime.parse(item['added_at']),  // Using the new field
-        );
-      }).toList();
-    } catch (e) {
-      throw ServerException(message: 'Failed to get cart items: ${e.toString()}');
-    }
-  }
-
-  // Additional methods for managing cart items...
-}
-```
+### Planned
+- 🔲 Update repository implementations to work with new schema
+- 🔲 Implement data migration utilities
+- 🔲 Test all CRUD operations with updated schema
+- 🔲 Document final schema design

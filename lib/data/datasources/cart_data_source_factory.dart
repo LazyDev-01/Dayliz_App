@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cart_remote_data_source.dart';
@@ -35,8 +36,20 @@ class CartDataSourceFactory {
 
   /// Get the Supabase data source
   static CartRemoteDataSource getSupabaseDataSource() {
+    // Get the Supabase client from GetIt if available, otherwise from Supabase.instance
+    SupabaseClient supabaseClient;
+    try {
+      // Try to get from GetIt first
+      supabaseClient = di.sl<SupabaseClient>();
+      debugPrint('CartDataSourceFactory: Got SupabaseClient from GetIt');
+    } catch (e) {
+      // Fallback to direct access
+      supabaseClient = Supabase.instance.client;
+      debugPrint('CartDataSourceFactory: Got SupabaseClient from Supabase.instance');
+    }
+
     return CartSupabaseDataSource(
-      supabaseClient: di.sl<SupabaseClient>(),
+      supabaseClient: supabaseClient,
     );
   }
 
@@ -47,4 +60,4 @@ class CartDataSourceFactory {
       client: di.sl<http.Client>(),
     );
   }
-} 
+}

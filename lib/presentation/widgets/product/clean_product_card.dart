@@ -1,0 +1,816 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:uuid/uuid.dart';
+
+import '../../../domain/entities/product.dart';
+import '../../providers/cart_providers.dart';
+
+/// A clean architecture implementation of a product card for q-commerce applications
+/// following industry standards like Blinkit and Zepto.
+class CleanProductCard extends ConsumerStatefulWidget {
+  final Product product;
+  final VoidCallback? onTap;
+  final double? width;
+  final double? height;
+
+  const CleanProductCard({
+    Key? key,
+    required this.product,
+    this.onTap,
+    this.width,
+    this.height,
+  }) : super(key: key);
+
+  @override
+  ConsumerState<CleanProductCard> createState() => _CleanProductCardState();
+}
+
+class _CleanProductCardState extends ConsumerState<CleanProductCard> {
+  bool _isInCart = false;
+  int _quantity = 0;
+  final _uuid = const Uuid();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfInCart();
+  }
+
+  Future<void> _checkIfInCart() async {
+    try {
+      // First try to get from the clean architecture cart
+      final cartItems = await ref.read(cartNotifierProvider.notifier).isInCart(productId: widget.product.id);
+      if (cartItems) {
+        // Get the quantity
+        final items = ref.read(cartItemsProvider);
+        for (var item in items) {
+          if (item.product.id == widget.product.id) {
+            if (mounted) {
+              setState(() {
+                _isInCart = true;
+                _quantity = item.quantity;
+              });
+            }
+            return;
+          }
+        }
+      }
+
+      // Fallback to direct SharedPreferences check
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString('CACHED_CART');
+
+      if (jsonString != null) {
+        final List<dynamic> jsonList = json.decode(jsonString);
+
+        for (final item in jsonList) {
+          try {
+            final productData = item['product'] as Map<String, dynamic>;
+
+            if (productData['id'] == widget.product.id) {
+              if (mounted) {
+                setState(() {
+                  _isInCart = true;
+                  _quantity = item['quantity'] as int;
+                });
+              }
+              break;
+            }
+          } catch (e) {
+            print('Error parsing cart item: $e');
+          }
+        }
+      }
+    } catch (e) {
+      print('Error checking if in cart: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Debug print to track rebuilds
+    print('Building CleanProductCard for ${widget.product.name}');
+    print('Is in cart: $_isInCart, Quantity: $_quantity');
+
+    // Calculate sizes based on screen width if not explicitly provided
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = widget.width ?? (screenWidth / 2) - 16;
+    final cardHeight = widget.height ?? cardWidth * 1.8; // 1:1.8 aspect ratio
+    final imageSize = cardWidth;
+
+    return Container(
+      width: cardWidth,
+      height: cardHeight,
+      margin: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: widget.onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image section (square)
+              _buildImageSection(imageSize),
+
+              // Info section
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Weight/Quantity
+                      Text(
+                        _getQuantityText(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // Product name
+                      Text(
+                        widget.product.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black,
+                        ),
+                      ),
+
+                      const Spacer(),
+
+                      // Price and Add button row
+                      _buildPriceAndActionRow(context),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds the image section with discount badge
+  Widget _buildImageSection(double size) {
+    return Stack(
+      children: [
+        // Product image
+        SizedBox(
+          width: size,
+          height: size,
+          child: CachedNetworkImage(
+            imageUrl: widget.product.mainImageUrl,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => Container(
+              color: Colors.grey[200],
+              child: const Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+            ),
+            errorWidget: (context, url, error) => Container(
+              color: Colors.grey[200],
+              child: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+            ),
+          ),
+        ),
+
+        // Discount badge
+        if (widget.product.discountPercentage != null && widget.product.discountPercentage! > 0)
+          Positioned(
+            top: 8,
+            left: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '-${widget.product.discountPercentage!.round()}%',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+        // Out of stock overlay
+        if (!widget.product.inStock)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withAlpha(153), // 0.6 opacity (153/255)
+              child: const Center(
+                child: Text(
+                  'OUT OF STOCK',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Builds the price and action row (Add button or quantity selector)
+  Widget _buildPriceAndActionRow(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Price section
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Discounted price
+              Text(
+                '₹${widget.product.discountedPrice.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+
+              // Original price (if discounted)
+              if (widget.product.discountPercentage != null && widget.product.discountPercentage! > 0)
+                Text(
+                  '₹${widget.product.price.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    decoration: TextDecoration.lineThrough,
+                    color: Colors.grey[600],
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        // Add button or quantity selector
+        _isInCart
+            ? _buildQuantitySelector(context)
+            : _buildAddButton(context),
+      ],
+    );
+  }
+
+  /// Builds the ADD button
+  Widget _buildAddButton(BuildContext context) {
+    return SizedBox(
+      height: 32,
+      width: 70, // Increased width from default to 70
+      child: ElevatedButton(
+        onPressed: widget.product.inStock ? () => _addToCart(context) : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).primaryColor, // Using theme primary color
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16), // Increased horizontal padding
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(4),
+          ),
+          elevation: 0,
+        ),
+        child: const Text(
+          'ADD',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds the quantity selector for items already in cart
+  Widget _buildQuantitySelector(BuildContext context) {
+    print('Building quantity selector, quantity: $_quantity');
+
+    // If product is not in cart, show the add button instead
+    if (_quantity <= 0) {
+      print('Quantity is 0, showing add button');
+      return _buildAddButton(context);
+    }
+
+    print('Showing quantity selector with quantity: $_quantity');
+
+    // Use GestureDetector to stop tap events from propagating to the parent card
+    return GestureDetector(
+      // This prevents the tap from propagating to the parent card
+      onTap: (){
+        // Stop propagation by handling the tap here
+      },
+      // This ensures the gesture detector doesn't interfere with other gestures
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 32,
+        width: 70, // Same width as the ADD button
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).primaryColor),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Decrease button
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  // Update state immediately for better UX
+                  if (mounted) {
+                    setState(() {
+                      _quantity = _quantity - 1;
+                      if (_quantity <= 0) {
+                        _isInCart = false;
+                      }
+                    });
+                  }
+                  _updateQuantity(context, _quantity);
+                },
+                child: Container(
+                  width: 22,
+                  height: 32,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.remove,
+                    size: 16,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ),
+            ),
+
+            // Quantity display
+            Container(
+              width: 22,
+              alignment: Alignment.center,
+              child: Text(
+                '$_quantity',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+
+            // Increase button
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  // Update state immediately for better UX
+                  if (mounted) {
+                    setState(() {
+                      _quantity = _quantity + 1;
+                    });
+                  }
+                  _updateQuantity(context, _quantity);
+                },
+                child: Container(
+                  width: 22,
+                  height: 32,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.add,
+                    size: 16,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Add product to cart
+  Future<void> _addToCart(BuildContext context) async {
+    // Debug print
+    print('Adding product to cart: ${widget.product.id} - ${widget.product.name}');
+
+    // Update state immediately for better UX
+    if (mounted) {
+      setState(() {
+        _isInCart = true;
+        _quantity = _quantity + 1;
+      });
+    }
+
+    // Show loading indicator
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text('Adding ${widget.product.name} to cart...'),
+            ],
+          ),
+          duration: const Duration(milliseconds: 500),
+          behavior: SnackBarBehavior.floating,
+          width: MediaQuery.of(context).size.width * 0.9,
+        ),
+      );
+    }
+
+    try {
+      // Try to use the clean architecture cart first
+      bool success = false;
+      try {
+        success = await ref.read(cartNotifierProvider.notifier).addToCart(
+          product: widget.product,
+          quantity: 1,
+        );
+      } catch (e) {
+        print('Error adding to cart with provider: $e');
+        success = false;
+      }
+
+      if (!success) {
+        // Fallback to direct SharedPreferences approach
+        final prefs = await SharedPreferences.getInstance();
+
+        // Get existing cart items
+        final jsonString = prefs.getString('CACHED_CART');
+        List<Map<String, dynamic>> cartItems = [];
+
+        if (jsonString != null) {
+          final List<dynamic> jsonList = json.decode(jsonString);
+          cartItems = jsonList.cast<Map<String, dynamic>>();
+        }
+
+        // Check if product already exists
+        bool productExists = false;
+
+        for (var i = 0; i < cartItems.length; i++) {
+          final productData = cartItems[i]['product'] as Map<String, dynamic>;
+          if (productData['id'] == widget.product.id) {
+            // Update quantity
+            cartItems[i]['quantity'] = (cartItems[i]['quantity'] as int) + 1;
+            productExists = true;
+            break;
+          }
+        }
+
+        if (!productExists) {
+          // Create a new cart item
+          final newItemId = _uuid.v4();
+
+          // Convert product to JSON
+          final productJson = {
+            'id': widget.product.id,
+            'name': widget.product.name,
+            'description': widget.product.description,
+            'price': widget.product.price,
+            'discount_percentage': widget.product.discountPercentage,
+            'rating': widget.product.rating,
+            'review_count': widget.product.reviewCount,
+            'main_image_url': widget.product.mainImageUrl,
+            'additional_images': widget.product.additionalImages,
+            'in_stock': widget.product.inStock,
+            'stock_quantity': widget.product.stockQuantity,
+            'category_id': widget.product.categoryId,
+            'subcategory_id': widget.product.subcategoryId,
+            'brand': widget.product.brand,
+            'attributes': widget.product.attributes,
+            'tags': widget.product.tags,
+            'created_at': widget.product.createdAt?.toIso8601String(),
+            'updated_at': widget.product.updatedAt?.toIso8601String(),
+          };
+
+          // Add new item
+          cartItems.add({
+            'id': newItemId,
+            'product': productJson,
+            'quantity': 1,
+            'added_at': DateTime.now().toIso8601String(),
+          });
+        }
+
+        // Save updated cart items
+        await prefs.setString(
+          'CACHED_CART',
+          json.encode(cartItems),
+        );
+      }
+
+      // We already updated the state at the beginning for better UX
+      // Just make sure it's still correct
+      if (mounted) {
+        setState(() {
+          _isInCart = true;
+          _quantity = _quantity > 0 ? _quantity : 1; // Ensure at least 1
+        });
+      }
+
+      // Force refresh the cart state
+      try {
+        await ref.read(cartNotifierProvider.notifier).refreshCart();
+      } catch (e) {
+        print('Error refreshing cart provider: $e');
+      }
+
+      // Show success message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${widget.product.name} added to cart'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            width: MediaQuery.of(context).size.width * 0.9,
+            action: SnackBarAction(
+              label: 'VIEW CART',
+              onPressed: () {
+                Navigator.of(context).pushNamed('/cart');
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Debug print for error
+      print('Error adding to cart: $e');
+
+      // Show error message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add ${widget.product.name} to cart: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            width: MediaQuery.of(context).size.width * 0.9,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Update quantity of product in cart
+  Future<void> _updateQuantity(BuildContext context, int newQuantity) async {
+    // Don't proceed if the quantity is the same
+    if (newQuantity == _quantity && newQuantity > 0) {
+      return;
+    }
+
+    try {
+      // Try to use the clean architecture cart first
+      if (newQuantity <= 0) {
+        // Find the cart item ID
+        final cartItems = ref.read(cartItemsProvider);
+        String? cartItemId;
+
+        for (var item in cartItems) {
+          if (item.product.id == widget.product.id) {
+            cartItemId = item.id;
+            break;
+          }
+        }
+
+        if (cartItemId != null) {
+          try {
+            // Remove from cart
+            final success = await ref.read(cartNotifierProvider.notifier).removeFromCart(
+              cartItemId: cartItemId,
+            );
+
+            if (success) {
+              // Update state
+              if (mounted) {
+                setState(() {
+                  _isInCart = false;
+                  _quantity = 0;
+                });
+              }
+
+              // Show feedback
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${widget.product.name} removed from cart'),
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                    width: MediaQuery.of(context).size.width * 0.9,
+                  ),
+                );
+              }
+
+              return;
+            }
+          } catch (e) {
+            print('Error removing from cart: $e');
+            // Continue to fallback approach
+          }
+        }
+
+        // Fallback to direct SharedPreferences approach
+        final prefs = await SharedPreferences.getInstance();
+
+        // Get existing cart items
+        final jsonString = prefs.getString('CACHED_CART');
+        if (jsonString != null) {
+          final List<dynamic> jsonList = json.decode(jsonString);
+          final cartItems = jsonList.cast<Map<String, dynamic>>();
+
+          // Find the cart item for this product
+          int cartItemIndex = -1;
+
+          for (var i = 0; i < cartItems.length; i++) {
+            final productData = cartItems[i]['product'] as Map<String, dynamic>;
+            if (productData['id'] == widget.product.id) {
+              cartItemIndex = i;
+              break;
+            }
+          }
+
+          if (cartItemIndex >= 0) {
+            // Remove from cart
+            cartItems.removeAt(cartItemIndex);
+
+            // Save updated cart items
+            await prefs.setString(
+              'CACHED_CART',
+              json.encode(cartItems),
+            );
+
+            // Update state
+            if (mounted) {
+              setState(() {
+                _isInCart = false;
+                _quantity = 0;
+              });
+            }
+
+            // Show feedback
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${widget.product.name} removed from cart'),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                  width: MediaQuery.of(context).size.width * 0.9,
+                ),
+              );
+            }
+          }
+        }
+      } else {
+        // Try to update quantity using the clean architecture cart
+        final cartItems = ref.read(cartItemsProvider);
+        String? cartItemId;
+
+        for (var item in cartItems) {
+          if (item.product.id == widget.product.id) {
+            cartItemId = item.id;
+            break;
+          }
+        }
+
+        if (cartItemId != null) {
+          try {
+            // Update quantity
+            final success = await ref.read(cartNotifierProvider.notifier).updateQuantity(
+              cartItemId: cartItemId,
+              quantity: newQuantity,
+            );
+
+            if (success) {
+              // Update state
+              if (mounted) {
+                setState(() {
+                  _quantity = newQuantity;
+                });
+              }
+
+              return;
+            }
+          } catch (e) {
+            print('Error updating quantity: $e');
+            // Continue to fallback approach
+          }
+        }
+
+        // Fallback to direct SharedPreferences approach
+        final prefs = await SharedPreferences.getInstance();
+
+        // Get existing cart items
+        final jsonString = prefs.getString('CACHED_CART');
+        if (jsonString != null) {
+          final List<dynamic> jsonList = json.decode(jsonString);
+          final cartItems = jsonList.cast<Map<String, dynamic>>();
+
+          // Find the cart item for this product
+          int cartItemIndex = -1;
+
+          for (var i = 0; i < cartItems.length; i++) {
+            final productData = cartItems[i]['product'] as Map<String, dynamic>;
+            if (productData['id'] == widget.product.id) {
+              cartItemIndex = i;
+              break;
+            }
+          }
+
+          if (cartItemIndex >= 0) {
+            // Update quantity
+            cartItems[cartItemIndex]['quantity'] = newQuantity;
+
+            // Save updated cart items
+            await prefs.setString(
+              'CACHED_CART',
+              json.encode(cartItems),
+            );
+
+            // Update state
+            if (mounted) {
+              setState(() {
+                _quantity = newQuantity;
+              });
+            }
+          }
+        }
+      }
+
+      // Force refresh the cart state
+      try {
+        await ref.read(cartNotifierProvider.notifier).refreshCart();
+      } catch (e) {
+        print('Error refreshing cart provider: $e');
+      }
+    } catch (e) {
+      // Debug print for error
+      print('Error updating quantity: $e');
+
+      // Show error message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update quantity: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            width: MediaQuery.of(context).size.width * 0.9,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Get the quantity text (e.g., 500g, 1L, etc.)
+  String _getQuantityText() {
+    // Try to get from attributes first
+    if (widget.product.attributes != null) {
+      final weight = widget.product.attributes!['weight'] as String?;
+      final volume = widget.product.attributes!['volume'] as String?;
+      final quantity = widget.product.attributes!['quantity'] as String?;
+
+      if (weight != null) return weight;
+      if (volume != null) return volume;
+      if (quantity != null) return quantity;
+    }
+
+    // Default fallbacks based on product name or category
+    if (widget.product.name.toLowerCase().contains('milk')) return '500ml';
+    if (widget.product.name.toLowerCase().contains('bread')) return '400g';
+    if (widget.product.name.toLowerCase().contains('egg')) return '6 pcs';
+    if (widget.product.name.toLowerCase().contains('rice')) return '1kg';
+    if (widget.product.name.toLowerCase().contains('oil')) return '1L';
+
+    // Default
+    return '1 pc';
+  }
+}

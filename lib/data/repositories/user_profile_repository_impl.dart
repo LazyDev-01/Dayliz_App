@@ -172,23 +172,19 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
     if (await networkInfo.isConnected) {
       try {
         // Convert UserProfile to UserProfileModel if needed
-        final profileModel = profile is UserProfileModel 
-            ? profile 
+        final profileModel = profile is UserProfileModel
+            ? profile
             : UserProfileModel(
                 id: profile.id,
                 userId: profile.userId,
                 fullName: profile.fullName,
-                displayName: profile.displayName,
-                bio: profile.bio,
                 profileImageUrl: profile.profileImageUrl,
                 dateOfBirth: profile.dateOfBirth,
                 gender: profile.gender,
-                isPublic: profile.isPublic,
                 lastUpdated: profile.lastUpdated,
                 preferences: profile.preferences,
-                addresses: profile.addresses,
               );
-              
+
         final updatedProfile = await remoteDataSource.updateUserProfile(profileModel);
         // Update local cache
         await localDataSource.updateUserProfile(updatedProfile);
@@ -199,23 +195,19 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
     } else {
       try {
         // Convert UserProfile to UserProfileModel if needed
-        final profileModel = profile is UserProfileModel 
-            ? profile 
+        final profileModel = profile is UserProfileModel
+            ? profile
             : UserProfileModel(
                 id: profile.id,
                 userId: profile.userId,
                 fullName: profile.fullName,
-                displayName: profile.displayName,
-                bio: profile.bio,
                 profileImageUrl: profile.profileImageUrl,
                 dateOfBirth: profile.dateOfBirth,
                 gender: profile.gender,
-                isPublic: profile.isPublic,
                 lastUpdated: profile.lastUpdated,
                 preferences: profile.preferences,
-                addresses: profile.addresses,
               );
-                
+
         // Update locally and queue for remote update when connection is restored
         final updatedProfile = await localDataSource.updateUserProfile(profileModel);
         return Right(updatedProfile);
@@ -237,7 +229,7 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
         return Left(ServerFailure(message: e.message));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -253,7 +245,7 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
         return Left(ServerFailure(message: e.message));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -281,4 +273,4 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
       }
     }
   }
-} 
+}

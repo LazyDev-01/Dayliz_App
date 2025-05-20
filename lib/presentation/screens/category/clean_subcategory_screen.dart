@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/entities/category.dart';
 import '../../providers/clean_category_providers.dart';
-import '../product/clean_subcategory_product_screen.dart';
+import '../product/clean_product_listing_screen.dart';
 
 class CleanSubcategoryScreen extends ConsumerStatefulWidget {
   final String categoryId;
@@ -29,7 +29,7 @@ class _CleanSubcategoryScreenState extends ConsumerState<CleanSubcategoryScreen>
   void initState() {
     super.initState();
     _displayName = widget.categoryName.isNotEmpty ? widget.categoryName : 'Category';
-    
+
     // Load category data
     Future.microtask(() => _loadCategory());
   }
@@ -43,14 +43,14 @@ class _CleanSubcategoryScreenState extends ConsumerState<CleanSubcategoryScreen>
     try {
       // Load the category
       await ref.read(categoriesNotifierProvider.notifier).loadCategoryById(widget.categoryId);
-      
+
       // Get the current state
       final state = ref.read(categoriesNotifierProvider);
-      
+
       setState(() {
         _isLoading = false;
         _category = state.selectedCategory;
-        
+
         // Update display name if needed
         if (_category != null && widget.categoryName.isEmpty) {
           _displayName = _category!.name;
@@ -68,9 +68,9 @@ class _CleanSubcategoryScreenState extends ConsumerState<CleanSubcategoryScreen>
   Widget build(BuildContext context) {
     // Watch the selected category for updates
     final categoriesState = ref.watch(categoriesNotifierProvider);
-    
+
     // If we get a new selected category from the provider, update our local state
-    if (categoriesState.selectedCategory != null && 
+    if (categoriesState.selectedCategory != null &&
         categoriesState.selectedCategory?.id == widget.categoryId &&
         _category?.id != categoriesState.selectedCategory?.id) {
       _category = categoriesState.selectedCategory;
@@ -78,7 +78,7 @@ class _CleanSubcategoryScreenState extends ConsumerState<CleanSubcategoryScreen>
         _displayName = _category!.name;
       }
     }
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_displayName),
@@ -102,12 +102,12 @@ class _CleanSubcategoryScreenState extends ConsumerState<CleanSubcategoryScreen>
     if (_category == null) {
       return _buildErrorState(context, 'Category not found');
     }
-    
+
     // No subcategories
     if (_category!.subCategories == null || _category!.subCategories!.isEmpty) {
       return _buildEmptyState(context, 'No subcategories found for this category');
     }
-    
+
     // Show subcategories list
     return _buildSubcategoriesList(context, _category!);
   }
@@ -157,7 +157,7 @@ class _CleanSubcategoryScreenState extends ConsumerState<CleanSubcategoryScreen>
 
   Widget _buildSubcategoriesList(BuildContext context, Category category) {
     final subcategories = category.subCategories!;
-    
+
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
       itemCount: subcategories.length,
@@ -169,8 +169,8 @@ class _CleanSubcategoryScreenState extends ConsumerState<CleanSubcategoryScreen>
   }
 
   Widget _buildSubcategoryItem(
-    BuildContext context, 
-    Category parentCategory, 
+    BuildContext context,
+    Category parentCategory,
     SubCategory subcategory
   ) {
     return Card(
@@ -181,13 +181,18 @@ class _CleanSubcategoryScreenState extends ConsumerState<CleanSubcategoryScreen>
       elevation: 2,
       child: InkWell(
         onTap: () {
-          // Navigate to subcategory products screen
+          // Navigate to subcategory products screen using the consolidated screen
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => CleanSubcategoryProductScreen(
+              builder: (context) => CleanProductListingScreen(
                 subcategoryId: subcategory.id,
-                subcategoryName: subcategory.name,
+              ),
+              // Pass the subcategory name as an argument to be used in the title
+              settings: RouteSettings(
+                arguments: {
+                  'subcategoryName': subcategory.name,
+                },
               ),
             ),
           );
@@ -265,11 +270,11 @@ class _CleanSubcategoryScreenState extends ConsumerState<CleanSubcategoryScreen>
       ),
     );
   }
-  
+
   // Helper method to convert subcategory icon names to IconData
   IconData _getIconFromName(String? iconName) {
     if (iconName == null) return Icons.category;
-    
+
     switch (iconName) {
       case 'kitchen': return Icons.kitchen;
       case 'fastfood': return Icons.fastfood;
@@ -284,4 +289,4 @@ class _CleanSubcategoryScreenState extends ConsumerState<CleanSubcategoryScreen>
       default: return Icons.category;
     }
   }
-} 
+}

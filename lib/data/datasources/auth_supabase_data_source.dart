@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../core/error/exceptions.dart';
 import '../../domain/entities/user.dart';
 import '../models/user_model.dart';
@@ -54,41 +53,13 @@ class AuthSupabaseDataSource implements AuthDataSource {
   @override
   Future<User> register(String email, String password, String name, {String? phone}) async {
     try {
-      debugPrint('AuthSupabaseDataSource: Registering user with email: $email, name: $name, phone: $phone');
-      debugPrint('AuthSupabaseDataSource: Supabase client: $_supabaseClient');
-      debugPrint('AuthSupabaseDataSource: Supabase auth: ${_supabaseClient.auth}');
-
-      // IMPORTANT: For Supabase, we need to handle the registration differently
-      // First, check if the user already exists
-      try {
-        final existingUser = await _supabaseClient.auth.signInWithPassword(
-          email: email,
-          password: password,
+      // Check if email already exists before attempting registration
+      bool emailExists = await _checkIfEmailExists(email);
+      if (emailExists) {
+        throw ServerException(
+          message: 'This email is already registered. Please use a different email or try logging in.'
         );
-
-        if (existingUser.user != null) {
-          debugPrint('User already exists, returning existing user');
-          return UserModel(
-            id: existingUser.user!.id,
-            email: email,
-            name: existingUser.user!.userMetadata?['name'] ?? name,
-            phone: existingUser.user!.userMetadata?['phone'] ?? phone,
-            isEmailVerified: existingUser.user!.emailConfirmedAt != null,
-          );
-        }
-      } catch (e) {
-        // User doesn't exist, which is what we want for registration
-        debugPrint('User does not exist, proceeding with registration');
       }
-
-      debugPrint('About to call Supabase auth.signUp');
-      debugPrint('Supabase client initialized: true');
-      debugPrint('Supabase URL: ${dotenv.env['SUPABASE_URL']}');
-      debugPrint('Password length: ${password.length}');
-      debugPrint('Password has lowercase: ${RegExp(r'[a-z]').hasMatch(password)}');
-      debugPrint('Password has uppercase: ${RegExp(r'[A-Z]').hasMatch(password)}');
-      debugPrint('Password has number: ${RegExp(r'[0-9]').hasMatch(password)}');
-      debugPrint('Password has special: ${RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)}');
 
       // Register the user with Supabase Auth
       final response = await _supabaseClient.auth.signUp(
@@ -99,12 +70,6 @@ class AuthSupabaseDataSource implements AuthDataSource {
           'phone': phone,
         },
       );
-
-      debugPrint('Supabase auth.signUp complete');
-      debugPrint('Response details: Session=${response.session != null}, User=${response.user != null}');
-      if (response.user != null) {
-        debugPrint('User ID: ${response.user!.id}');
-      }
 
       if (response.user == null) {
         throw ServerException(message: 'Registration failed: No user returned');
@@ -127,14 +92,47 @@ class AuthSupabaseDataSource implements AuthDataSource {
       debugPrint('Error code: ${e.statusCode}');
       debugPrint('Stack trace: $stackTrace');
 
-      // Check for specific error messages
-      if (e.message.contains('User already registered') || e.message.contains('already exists')) {
+      // CRITICAL FIX: Always check for duplicate email first
+      // This is the most common error during registration
+
+      // Convert message to lowercase for case-insensitive comparison
+      String lowerCaseMsg = e.message.toLowerCase();
+
+      // Comprehensive check for ANY indication of duplicate email
+      if (lowerCaseMsg.contains('user already registered') ||
+          lowerCaseMsg.contains('already exists') ||
+          lowerCaseMsg.contains('email already') ||
+          lowerCaseMsg.contains('duplicate') ||
+          lowerCaseMsg.contains('unique constraint') ||
+          lowerCaseMsg.contains('email is already') ||
+          lowerCaseMsg.contains('account already') ||
+          lowerCaseMsg.contains('already registered') ||
+          lowerCaseMsg.contains('already taken') ||
+          lowerCaseMsg.contains('already in use') ||
+          lowerCaseMsg.contains('already signed up') ||
+          lowerCaseMsg.contains('already has an account') ||
+          lowerCaseMsg.contains('exists') ||
+          lowerCaseMsg.contains('conflict') ||
+          lowerCaseMsg.contains('violation')) {
+
+        debugPrint('Detected duplicate email error: ${e.message}');
         throw ServerException(message: 'This email is already registered. Please use a different email or try logging in.');
-      } else if (e.message.contains('Password should')) {
+      }
+      // Check for password format issues
+      else if (lowerCaseMsg.contains('password should') ||
+               lowerCaseMsg.contains('password requirements') ||
+               lowerCaseMsg.contains('password must')) {
         throw ServerException(message: 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character.');
-      } else if (e.message.contains('invalid email')) {
+      }
+      // Check for invalid email format
+      else if (lowerCaseMsg.contains('invalid email') ||
+               lowerCaseMsg.contains('email format')) {
         throw ServerException(message: 'Please enter a valid email address.');
-      } else if (e.message.contains('unexpected_failure') || e.message.contains('Database error saving new user')) {
+      }
+      // Check for database errors that might indicate a duplicate
+      else if (lowerCaseMsg.contains('unexpected_failure') ||
+               lowerCaseMsg.contains('database error saving new user') ||
+               lowerCaseMsg.contains('conflict')) {
         // This is the specific error we're seeing
         // Wait a moment to ensure auth is complete
         await Future.delayed(const Duration(seconds: 1));
@@ -163,7 +161,24 @@ class AuthSupabaseDataSource implements AuthDataSource {
       debugPrint('Error code: ${e.code}');
       debugPrint('Stack trace: $stackTrace');
 
-      // For any PostgrestException, check if we have a user in auth
+      // Convert message to lowercase for case-insensitive comparison
+      String lowerCaseMsg = e.message.toLowerCase();
+
+      // Check for duplicate key violations (email uniqueness constraint)
+      if (e.code == '23505' || // PostgreSQL unique violation code
+          lowerCaseMsg.contains('duplicate') ||
+          lowerCaseMsg.contains('unique constraint') ||
+          lowerCaseMsg.contains('already exists') ||
+          lowerCaseMsg.contains('violates unique') ||
+          lowerCaseMsg.contains('duplicate key') ||
+          lowerCaseMsg.contains('conflict') ||
+          lowerCaseMsg.contains('already registered') ||
+          lowerCaseMsg.contains('email already')) {
+        debugPrint('Detected duplicate email error in database: ${e.message}');
+        throw ServerException(message: 'This email is already registered. Please use a different email or try logging in.');
+      }
+
+      // For any other PostgrestException, check if we have a user in auth
       // Wait a moment to ensure auth is complete
       await Future.delayed(const Duration(seconds: 1));
       // If we do, return that user and ignore the database error
@@ -189,7 +204,19 @@ class AuthSupabaseDataSource implements AuthDataSource {
       debugPrint('Unexpected Error: ${e.toString()}');
       debugPrint('Stack trace: $stackTrace');
 
-      // For any error, check if we have a user in auth
+      // Check if the error message indicates a duplicate email
+      String errorMsg = e.toString().toLowerCase();
+      if (errorMsg.contains('duplicate') ||
+          errorMsg.contains('already exists') ||
+          errorMsg.contains('already registered') ||
+          errorMsg.contains('email already') ||
+          errorMsg.contains('unique constraint') ||
+          errorMsg.contains('conflict')) {
+        debugPrint('Detected duplicate email error in generic catch: $errorMsg');
+        throw ServerException(message: 'This email is already registered. Please use a different email or try logging in.');
+      }
+
+      // For any other error, check if we have a user in auth
       // Wait a moment to ensure auth is complete
       await Future.delayed(const Duration(seconds: 1));
       // If we do, return that user and ignore the error
@@ -412,10 +439,78 @@ class AuthSupabaseDataSource implements AuthDataSource {
     }
   }
 
+  /// Helper method to check if an email already exists in the system
+  /// This uses multiple approaches to ensure we catch all cases
+  Future<bool> _checkIfEmailExists(String email) async {
+    try {
+      // Method 1: Check in public.users table
+      try {
+        final existingUserQuery = await _supabaseClient
+            .from('users')
+            .select('email')
+            .eq('email', email)
+            .maybeSingle();
+
+        if (existingUserQuery != null) {
+          return true;
+        }
+      } catch (e) {
+        // Continue to next method
+      }
+
+      // Method 2: Try to sign in with a dummy password
+      try {
+        await _supabaseClient.auth.signInWithPassword(
+          email: email,
+          password: 'Dummy_Password_123!',
+        );
+        return true;
+      } catch (e) {
+        String errorMsg = e.toString().toLowerCase();
+
+        // If the error indicates the email exists but password is wrong
+        if (errorMsg.contains('invalid login') ||
+            errorMsg.contains('invalid email') ||
+            errorMsg.contains('wrong password') ||
+            errorMsg.contains('invalid credentials')) {
+          return true;
+        }
+
+        // If the error indicates the email doesn't exist
+        if (errorMsg.contains('user not found') ||
+            errorMsg.contains('no user found') ||
+            errorMsg.contains('no account')) {
+          return false;
+        }
+      }
+
+      // Method 3: Try to reset password for the email
+      try {
+        await _supabaseClient.auth.resetPasswordForEmail(email);
+        return true;
+      } catch (e) {
+        String errorMsg = e.toString().toLowerCase();
+        if (errorMsg.contains('user not found') ||
+            errorMsg.contains('no user found') ||
+            errorMsg.contains('no account')) {
+          return false;
+        }
+      }
+
+      // Default to assuming it doesn't exist
+      return false;
+    } catch (e) {
+      // For any unexpected errors, default to false
+      return false;
+    }
+  }
+
+  // The _checkIfEmailExists method is defined above
+
   /// Helper method to create user profile in public.users and user_profiles tables
   Future<void> _createUserProfile(String userId, String email, String name, String? phone) async {
     try {
-      debugPrint('Creating user profile in public.users table');
+      // Create user in public.users table
       await _supabaseClient.from('users').upsert({
         'id': userId,
         'email': email,
@@ -424,10 +519,8 @@ class AuthSupabaseDataSource implements AuthDataSource {
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       });
-      debugPrint('User profile created successfully');
 
       // Also create a user_profile entry
-      debugPrint('Creating user_profile entry');
       await _supabaseClient.from('user_profiles').upsert({
         'id': userId,
         'user_id': userId,
@@ -437,7 +530,6 @@ class AuthSupabaseDataSource implements AuthDataSource {
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       });
-      debugPrint('User profile entry created successfully');
     } catch (e) {
       // Log the error but don't throw since we want to continue even if profile creation fails
       debugPrint('Error creating user profile: $e');

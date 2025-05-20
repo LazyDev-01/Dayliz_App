@@ -6,42 +6,62 @@ import 'package:flutter/material.dart';
 class Address extends Equatable {
   /// Unique identifier for this address
   final String id;
-  
+
   /// The user ID this address belongs to
   final String userId;
-  
+
   /// First line of the address
   final String addressLine1;
-  
+
   /// Second line of the address (optional)
   final String addressLine2;
-  
+
   /// City name
   final String city;
-  
+
   /// State or province
   final String state;
-  
+
   /// Postal or ZIP code
   final String postalCode;
-  
+
   /// Country name
   final String country;
-  
+
   /// Phone number associated with this address
   final String? phoneNumber;
-  
+
   /// Whether this is the default address
   final bool isDefault;
-  
-  /// A label for this address (e.g., "Home", "Work")
-  final String label;
-  
+
+  // Label field removed
+
+  /// Type of address (e.g., "home", "work", "other")
+  final String? addressType;
+
   /// Additional information about the address
   final String? additionalInfo;
-  
-  /// Geographic coordinates for this address
-  final Map<String, double>? coordinates;
+
+  /// Latitude coordinate for this address
+  final double? latitude;
+
+  /// Longitude coordinate for this address
+  final double? longitude;
+
+  /// Landmark for easier location identification (critical for Tura)
+  final String? landmark;
+
+  /// ID of the zone this address belongs to
+  final String? zoneId;
+
+  /// Name of the recipient at this address
+  final String? recipientName;
+
+  /// When this address was created
+  final DateTime? createdAt;
+
+  /// When this address was last updated
+  final DateTime? updatedAt;
 
   /// Creates a new Address instance
   const Address({
@@ -55,9 +75,15 @@ class Address extends Equatable {
     required this.country,
     this.phoneNumber,
     this.isDefault = false,
-    this.label = 'Home',
+    this.addressType,
     this.additionalInfo,
-    this.coordinates,
+    this.latitude,
+    this.longitude,
+    this.landmark,
+    this.zoneId,
+    this.recipientName,
+    this.createdAt,
+    this.updatedAt,
   });
 
   /// Creates a copy of this address with the given fields replaced with new values
@@ -72,9 +98,15 @@ class Address extends Equatable {
     String? country,
     String? phoneNumber,
     bool? isDefault,
-    String? label,
+    String? addressType,
     String? additionalInfo,
-    Map<String, double>? coordinates,
+    double? latitude,
+    double? longitude,
+    String? landmark,
+    String? zoneId,
+    String? recipientName,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return Address(
       id: id ?? this.id,
@@ -87,9 +119,15 @@ class Address extends Equatable {
       country: country ?? this.country,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       isDefault: isDefault ?? this.isDefault,
-      label: label ?? this.label,
+      addressType: addressType ?? this.addressType,
       additionalInfo: additionalInfo ?? this.additionalInfo,
-      coordinates: coordinates ?? this.coordinates,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      landmark: landmark ?? this.landmark,
+      zoneId: zoneId ?? this.zoneId,
+      recipientName: recipientName ?? this.recipientName,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -105,8 +143,15 @@ class Address extends Equatable {
         country,
         phoneNumber,
         isDefault,
-        label,
+
+        addressType,
         additionalInfo,
-        coordinates,
+        latitude,
+        longitude,
+        landmark,
+        zoneId,
+        recipientName,
+        createdAt,
+        updatedAt,
       ];
-} 
+}

@@ -6,6 +6,7 @@ import '../../../domain/usecases/user_profile/get_user_addresses_usecase.dart';
 import '../../../domain/usecases/user_profile/delete_address_usecase.dart';
 import '../../../domain/usecases/user_profile/set_default_address_usecase.dart';
 import '../../providers/user_providers.dart';
+import '../../widgets/common/common_app_bar.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/empty_state.dart';
@@ -72,8 +73,10 @@ class _CleanAddressListScreenState extends ConsumerState<CleanAddressListScreen>
     final addressesState = ref.watch(addressesNotifierProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Addresses'),
+      appBar: CommonAppBars.withBackButton(
+        title: 'My Addresses',
+        fallbackRoute: '/profile',
+        backButtonTooltip: 'Back to Profile',
       ),
       body: addressesState.when(
         loading: () => const LoadingIndicator(),
@@ -149,7 +152,7 @@ class AddressCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  address.label,
+                  address.addressType?.toUpperCase() ?? 'ADDRESS',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -162,7 +165,7 @@ class AddressCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      color: Theme.of(context).colorScheme.primary.withAlpha(26),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -223,4 +226,4 @@ class AddressCard extends StatelessWidget {
       ),
     );
   }
-} 
+}

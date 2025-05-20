@@ -66,4 +66,17 @@ class UserModel extends User {
       metadata: metadata ?? this.metadata,
     );
   }
-} 
+
+  /// Create a UserModel from a User entity
+  factory UserModel.fromEntity(User user) {
+    return UserModel(
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      profileImageUrl: user.profileImageUrl,
+      isEmailVerified: user.isEmailVerified,
+      metadata: user.metadata,
+    );
+  }
+}

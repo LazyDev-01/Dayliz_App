@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../domain/entities/product.dart';
+import '../../../data/test/test_subcategories.dart';
 import '../../providers/product_providers.dart';
+import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/error_state.dart';
+import '../../widgets/product/clean_product_grid.dart';
+import '../../widgets/product/category_filter_sidebar.dart';
 
-class CleanProductListingScreen extends ConsumerWidget {
+class CleanProductListingScreen extends ConsumerStatefulWidget {
   final String? categoryId;
   final String? subcategoryId;
   final String? searchQuery;
@@ -17,16 +24,214 @@ class CleanProductListingScreen extends ConsumerWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Set up filters based on parameters
-    _initFilters(ref);
+  ConsumerState<CleanProductListingScreen> createState() => _CleanProductListingScreenState();
+}
 
-    // Watch the products state
-    final productsState = ref.watch(productsNotifierProvider);
+class _CleanProductListingScreenState extends ConsumerState<CleanProductListingScreen> {
+  List<Product> _products = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  String? _selectedSubcategory;
+  List<String> _subcategories = [];
+  String _categoryTitle = 'Products';
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize filters in initState instead of build
+    Future.microtask(() {
+      if (mounted) {
+        _initFilters();
+        _fetchProducts();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(CleanProductListingScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-initialize filters if the widget parameters change
+    if (oldWidget.categoryId != widget.categoryId ||
+        oldWidget.subcategoryId != widget.subcategoryId ||
+        oldWidget.searchQuery != widget.searchQuery) {
+      // Use a microtask to ensure the context is available
+      Future.microtask(() {
+        if (mounted) {
+          _initFilters();
+          _fetchProducts();
+        }
+      });
+    }
+  }
+
+  Future<void> _fetchProducts() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      // Fetch products from Supabase
+      final response = await Supabase.instance.client
+          .from('products')
+          .select('*, categories(*), subcategories(*)')
+          .limit(20);
+
+      // Debug the response
+      if (response.isEmpty) {
+        throw Exception('No products returned from Supabase');
+      }
+
+      // Convert to Product entities
+      final products = response.map((data) {
+        try {
+          return _mapToProduct(data);
+        } catch (e) {
+          // Log the error with the specific product data that caused it
+          final productId = data['id'] ?? 'unknown';
+          final productName = data['name'] ?? 'unknown';
+          throw Exception('Error mapping product $productName ($productId): $e');
+        }
+      }).toList();
+
+      // Extract unique subcategories and main category title
+      final subcategories = <String>{};
+      String categoryTitle = 'Products';
+
+      for (final product in products) {
+        if (product.subcategoryName != null && product.subcategoryName!.isNotEmpty) {
+          subcategories.add(product.subcategoryName!);
+        }
+
+        // Use the first product's category name as the title
+        if (product.categoryName != null && product.categoryName!.isNotEmpty && categoryTitle == 'Products') {
+          categoryTitle = product.categoryName!;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _products = List<Product>.from(products);
+
+          // Use subcategories from API if available, otherwise use test data
+          if (subcategories.isNotEmpty) {
+            _subcategories = subcategories.toList()..sort();
+          } else {
+            // Use test data based on category name
+            _subcategories = TestSubcategories.getSubcategoriesByCategory(categoryTitle);
+          }
+
+          _categoryTitle = categoryTitle;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        // Create a user-friendly error message
+        String userMessage = 'Failed to load products';
+
+        setState(() {
+          // For debugging purposes, we'll show the actual error in the UI
+          _errorMessage = '$userMessage: ${e.toString()}';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Map Supabase data to Product entity
+  Product _mapToProduct(Map<String, dynamic> data) {
+    // Extract category and subcategory names if available
+    final categoryName = data['categories'] != null ? data['categories']['name'] : '';
+    final subcategoryName = data['subcategories'] != null ? data['subcategories']['name'] : '';
+
+    // Safely convert numeric values to double
+    double safeToDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    // Calculate discount percentage if not provided
+    double? discountPercentage;
+    if (data['discount_percentage'] != null) {
+      discountPercentage = safeToDouble(data['discount_percentage']);
+    } else if (data['price'] != null && data['discounted_price'] != null) {
+      final price = safeToDouble(data['price']);
+      final discountedPrice = safeToDouble(data['discounted_price']);
+      if (price > 0) {
+        discountPercentage = ((price - discountedPrice) / price) * 100;
+      }
+    }
+
+    // Handle additional images safely
+    List<String> additionalImages = [];
+    if (data['additional_images'] != null) {
+      try {
+        additionalImages = List<String>.from(data['additional_images']);
+      } catch (e) {
+        // Silently handle the error and continue with empty list
+      }
+    }
+
+    // Handle tags safely
+    List<String> tags = [];
+    if (data['tags'] != null) {
+      try {
+        tags = List<String>.from(data['tags']);
+      } catch (e) {
+        // Silently handle the error and continue with empty list
+      }
+    }
+
+    return Product(
+      id: data['id'] ?? '',
+      name: data['name'] ?? '',
+      description: data['description'] ?? '',
+      price: safeToDouble(data['price']),
+      discountPercentage: discountPercentage,
+      rating: safeToDouble(data['ratings_avg']),
+      reviewCount: data['ratings_count'] ?? 0,
+      mainImageUrl: data['main_image_url'] ?? '',
+      additionalImages: additionalImages,
+      inStock: data['in_stock'] ?? true,
+      stockQuantity: data['stock_quantity'] ?? 0,
+      categoryId: data['category_id'] ?? '',
+      subcategoryId: data['subcategory_id'] ?? '',
+      brand: data['brand'] ?? '',
+      attributes: data['attributes'] ?? {},
+      tags: tags,
+      createdAt: data['created_at'] != null ? DateTime.parse(data['created_at'].toString()) : DateTime.now(),
+      updatedAt: data['updated_at'] != null ? DateTime.parse(data['updated_at'].toString()) : DateTime.now(),
+      onSale: data['is_on_sale'] ?? false,
+      categoryName: categoryName,
+      subcategoryName: subcategoryName,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Determine the title based on parameters
+    String title = _categoryTitle;
+
+    if (widget.subcategoryId != null && widget.searchQuery == null) {
+      // If we have a subcategory ID but no search query, use the subcategory name if available
+      if (_selectedSubcategory != null && _selectedSubcategory!.isNotEmpty) {
+        title = _selectedSubcategory!;
+      }
+    } else if (widget.searchQuery != null) {
+      // If we have a search query, show "Search Results"
+      title = 'Search Results';
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Products'),
+      appBar: CommonAppBars.withBackButton(
+        title: title,
+        centerTitle: true,
+        showShadow: false,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
@@ -34,204 +239,115 @@ class CleanProductListingScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: _buildBody(context, ref, productsState),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Product grid (sidebar temporarily disabled)
+          Expanded(
+            child: _buildContent(),
+          ),
+
+          // Commented out sidebar implementation for future use
+          /*
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Category filter sidebar
+                if (_subcategories.isNotEmpty)
+                  CategoryFilterSidebar(
+                    subcategories: _subcategories,
+                    selectedSubcategory: _selectedSubcategory,
+                    onSubcategorySelected: _filterBySubcategory,
+                    categoryTitle: _categoryTitle,
+                    showAllOption: true,
+                    width: 80,
+                  ),
+
+                // Product grid
+                Expanded(
+                  child: _buildContent(),
+                ),
+              ],
+            ),
+          ),
+          */
+        ],
+      ),
     );
   }
 
-  void _initFilters(WidgetRef ref) {
+  void _initFilters() {
     // Only set filters if they're not already set or if they've changed
     final currentFilters = ref.read(productFiltersProvider);
-    
-    if (categoryId != null && currentFilters['categoryId'] != categoryId) {
+
+    if (widget.categoryId != null && currentFilters['categoryId'] != widget.categoryId) {
       ref.read(productFiltersProvider.notifier).update((state) => {
         ...state,
-        'categoryId': categoryId,
+        'categoryId': widget.categoryId,
       });
     }
-    
-    if (subcategoryId != null && currentFilters['subcategoryId'] != subcategoryId) {
+
+    if (widget.subcategoryId != null && currentFilters['subcategoryId'] != widget.subcategoryId) {
+      // Get the subcategory name from the constructor parameter or route arguments
+      final routeArgs = ModalRoute.of(context)?.settings.arguments;
+      final subcategoryName = (routeArgs as Map<String, dynamic>?)?['subcategoryName'] as String?;
+
+      // Update the filters with the subcategory information
       ref.read(productFiltersProvider.notifier).update((state) => {
         ...state,
-        'subcategoryId': subcategoryId,
+        'subcategoryId': widget.subcategoryId,
+        'subcategoryName': subcategoryName ?? state['subcategoryName'] ?? 'Products',
       });
     }
-    
-    if (searchQuery != null && currentFilters['searchQuery'] != searchQuery) {
+
+    if (widget.searchQuery != null && currentFilters['searchQuery'] != widget.searchQuery) {
       ref.read(productFiltersProvider.notifier).update((state) => {
         ...state,
-        'searchQuery': searchQuery,
+        'searchQuery': widget.searchQuery,
       });
     }
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref, ProductsState state) {
-    // Show loading indicator if products are loading
-    if (state.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
+  /// Filter products by subcategory
+  void _filterBySubcategory(String? subcategory) {
+    setState(() {
+      _selectedSubcategory = subcategory;
+    });
+  }
+
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const LoadingIndicator(message: 'Loading products...');
+    }
+
+    if (_errorMessage != null) {
+      return ErrorState(
+        message: _errorMessage!,
+        onRetry: _fetchProducts,
       );
     }
 
-    // Show error message if there is an error
-    if (state.errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              state.errorMessage!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                // Retry loading products with current filters
-                final filters = ref.read(productFiltersProvider);
-                ref.read(productsNotifierProvider.notifier).updateFilters(filters);
-              },
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Show products if available
-    if (state.products.isEmpty) {
+    if (_products.isEmpty) {
       return const Center(
         child: Text('No products found'),
       );
     }
 
-    // Display products in a grid
-    return GridView.builder(
+    // Filter products by selected subcategory
+    final filteredProducts = _selectedSubcategory == null
+        ? _products
+        : _products.where((p) => p.subcategoryName == _selectedSubcategory).toList();
+
+    if (filteredProducts.isEmpty) {
+      return Center(
+        child: Text('No products found in $_selectedSubcategory'),
+      );
+    }
+
+    return CleanProductGrid(
+      products: filteredProducts,
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: state.products.length,
-      itemBuilder: (context, index) {
-        final product = state.products[index];
-        return _buildProductCard(context, product);
-      },
-    );
-  }
-
-  Widget _buildProductCard(BuildContext context, Product product) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: InkWell(
-        onTap: () => _navigateToProductDetails(context, product),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Product image
-            Expanded(
-              flex: 3,
-              child: Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: NetworkImage(product.mainImageUrl),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  if (product.discountPercentage != null && product.discountPercentage! > 0)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          '${product.discountPercentage!.toInt()}% OFF',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            
-            // Product info
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Product name
-                    Text(
-                      product.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    
-                    // Prices
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Discounted price
-                        Text(
-                          '₹${product.discountedPrice.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            color: Theme.of(context).primaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        
-                        // Original price (if discounted)
-                        if (product.discountPercentage != null && product.discountPercentage! > 0)
-                          Text(
-                            '₹${product.price.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              decoration: TextDecoration.lineThrough,
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _navigateToProductDetails(BuildContext context, Product product) {
-    // Navigate to product details screen
-    Navigator.pushNamed(
-      context,
-      '/product-details',
-      arguments: {
-        'productId': product.id,
-      },
     );
   }
 
@@ -260,9 +376,9 @@ class CleanProductListingScreen extends ConsumerWidget {
               _buildSortOption(context, 'Popularity', 'popularity', selectedSortBy, (value) => selectedSortBy = value),
               _buildSortOption(context, 'Rating', 'rating', selectedSortBy, (value) => selectedSortBy = value),
               _buildSortOption(context, 'Newest', 'createdAt', selectedSortBy, (value) => selectedSortBy = value),
-              
+
               const SizedBox(height: 16),
-              
+
               // Ascending/descending options
               Row(
                 children: [
@@ -281,9 +397,9 @@ class CleanProductListingScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Price range
               const Text('Price range:', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
@@ -334,7 +450,7 @@ class CleanProductListingScreen extends ConsumerWidget {
                 // Reset page to 1 when applying new filters
                 'page': 1,
               });
-              
+
               // Close the dialog
               Navigator.pop(context);
             },
@@ -364,4 +480,4 @@ class CleanProductListingScreen extends ConsumerWidget {
       dense: true,
     );
   }
-} 
+}

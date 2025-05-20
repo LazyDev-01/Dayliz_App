@@ -2,13 +2,15 @@ import 'package:get_it/get_it.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../data/datasources/user_profile_supabase_adapter.dart';
 
 import '../core/network/network_info.dart';
 import '../domain/repositories/auth_repository.dart';
 import '../data/repositories/auth_repository_impl.dart';
-import '../data/datasources/auth_remote_data_source.dart';
-import '../data/datasources/auth_local_data_source.dart';
+
 import '../services/auth_service.dart';
 import '../domain/usecases/login_usecase.dart';
 import '../domain/usecases/register_usecase.dart';
@@ -17,13 +19,14 @@ import '../domain/usecases/get_current_user_usecase.dart';
 import '../domain/usecases/is_authenticated_usecase.dart';
 import '../domain/usecases/forgot_password_usecase.dart';
 import '../domain/usecases/sign_in_with_google_usecase.dart';
+import '../domain/usecases/reset_password_usecase.dart';
+import '../domain/usecases/change_password_usecase.dart';
 import '../domain/repositories/product_repository.dart';
-import '../data/repositories/product_repository_impl.dart';
-import '../data/datasources/product_remote_data_source.dart';
-import '../data/datasources/product_local_data_source.dart';
+import '../data/repositories/product_repository_mock_impl.dart';
 import '../domain/usecases/get_products_usecase.dart';
 import '../domain/usecases/get_product_by_id_usecase.dart';
 import '../domain/usecases/get_related_products_usecase.dart';
+import '../domain/usecases/search_products_usecase.dart';
 import '../services/product_service.dart';
 import '../domain/repositories/cart_repository.dart';
 import '../data/repositories/cart_repository_impl.dart';
@@ -41,17 +44,15 @@ import '../domain/usecases/is_in_cart_usecase.dart';
 import '../domain/repositories/category_repository.dart';
 import '../data/repositories/category_repository_impl.dart';
 import '../domain/usecases/get_categories_usecase.dart';
-import '../domain/usecases/get_categories_with_subcategories_usecase.dart';
-import '../domain/usecases/get_category_by_id_usecase.dart';
-import '../domain/usecases/get_subcategories_usecase.dart';
+
 import '../domain/usecases/get_products_by_subcategory_usecase.dart';
 import '../data/datasources/auth_data_source.dart';
-import '../data/datasources/auth_data_source_factory.dart';
+import '../data/datasources/auth_data_source_factory.dart' show AuthDataSourceFactory, BackendType;
 import '../core/config/app_config.dart' show AppConfig;
-import '../data/datasources/auth_data_source_factory.dart' show BackendType;
+
 import '../domain/repositories/user_profile_repository.dart';
 import '../data/repositories/user_profile_repository_impl.dart';
-import '../data/datasources/user_profile_remote_data_source.dart';
+
 import '../data/datasources/user_profile_local_data_source.dart';
 import '../domain/usecases/get_user_profile_usecase.dart';
 import '../domain/usecases/update_user_profile_usecase.dart';
@@ -65,7 +66,7 @@ import '../domain/usecases/update_preferences_usecase.dart';
 import '../data/datasources/user_profile_data_source.dart';
 import '../domain/usecases/user_profile/update_profile_image_usecase.dart';
 import '../domain/usecases/user_profile/update_user_preferences_usecase.dart';
-import '../data/apis/storage_file_api.dart';
+import '../data/apis/storage_file_api.dart' as app_storage;
 // Order imports
 import '../domain/repositories/order_repository.dart';
 import '../data/repositories/order_repository_impl.dart';
@@ -126,6 +127,15 @@ Future<void> initCleanArchitecture() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   sl.registerLazySingleton(() => sharedPreferences);
 
+  // Register Supabase client
+  try {
+    sl.registerLazySingleton<SupabaseClient>(() => Supabase.instance.client);
+    debugPrint('SupabaseClient registered in GetIt successfully');
+  } catch (e) {
+    debugPrint('Error registering SupabaseClient in GetIt: $e');
+    // If Supabase is not initialized yet, we'll handle this later
+  }
+
   // Services - Use existing instances for backward compatibility
   sl.registerLazySingleton(() => AuthService.instance);
   sl.registerLazySingleton(() => ProductService());
@@ -165,27 +175,18 @@ Future<void> initCleanArchitecture() async {
   sl.registerLazySingleton(() => IsAuthenticatedUseCase(sl()));
   sl.registerLazySingleton(() => ForgotPasswordUseCase(sl()));
   sl.registerLazySingleton(() => SignInWithGoogleUseCase(sl()));
+  sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
+  sl.registerLazySingleton(() => ChangePasswordUseCase(sl()));
 
   //-------------------------------------------------------------------------
   // Product
   //-------------------------------------------------------------------------
 
-  // Product Data Sources
-  sl.registerLazySingleton<ProductRemoteDataSource>(
-    () => ProductRemoteDataSourceImpl(client: sl()),
-  );
+  // Product Data Sources - Not needed with mock repository
 
-  sl.registerLazySingleton<ProductLocalDataSource>(
-    () => ProductLocalDataSourceImpl(sharedPreferences: sl()),
-  );
-
-  // Product Repository
+  // Product Repository - Using mock implementation for now
   sl.registerLazySingleton<ProductRepository>(
-    () => ProductRepositoryImpl(
-      remoteDataSource: sl(),
-      localDataSource: sl(),
-      networkInfo: sl(),
-    ),
+    () => ProductRepositoryMockImpl(),
   );
 
   // Product Use Cases
@@ -193,6 +194,7 @@ Future<void> initCleanArchitecture() async {
   sl.registerLazySingleton(() => GetProductByIdUseCase(sl()));
   sl.registerLazySingleton(() => GetProductsBySubcategoryUseCase(sl()));
   sl.registerLazySingleton(() => GetRelatedProductsUseCase(sl()));
+  sl.registerLazySingleton(() => SearchProductsUseCase(sl()));
 
   //-------------------------------------------------------------------------
   // Category
@@ -262,8 +264,8 @@ Future<void> initCleanArchitecture() async {
   sl.registerLazySingleton(() => UpdatePreferencesUseCase(sl()));
 
   // API clients
-  sl.registerLazySingleton<StorageFileApi>(
-    () => StorageFileApiImpl(),
+  sl.registerLazySingleton<app_storage.StorageFileApi>(
+    () => app_storage.StorageFileApiImpl(),
   );
 
   // Repository
@@ -277,10 +279,8 @@ Future<void> initCleanArchitecture() async {
 
   // Data sources
   sl.registerLazySingleton<UserProfileDataSource>(
-    () => UserProfileRemoteDataSource(
-      client: sl(),
-      storageFileApi: sl(),
-      baseUrl: 'https://api.dayliz.com/v1',
+    () => UserProfileSupabaseAdapter(
+      client: Supabase.instance.client,
     ),
     instanceName: 'remote',
   );
@@ -387,7 +387,167 @@ Future<void> initCleanArchitecture() async {
   sl.registerLazySingleton(() => AddPaymentMethodUseCase(sl()));
   sl.registerLazySingleton(() => SetDefaultPaymentMethodUseCase(sl()));
 
-  print('Clean architecture component registration complete');
+  debugPrint('Clean architecture component registration complete');
+}
+
+/// Initialize authentication components separately
+Future<void> initAuthentication() async {
+  debugPrint('Initializing authentication components...');
+
+  try {
+    // Initialize Supabase if not already initialized
+    try {
+      // Just access the client to see if it's initialized
+      Supabase.instance.client;
+      debugPrint('Supabase already initialized, using existing client');
+    } catch (e) {
+      // Supabase not initialized yet, initialize it
+      final supabaseUrl = AppConfig.supabaseUrl;
+      final supabaseAnonKey = AppConfig.supabaseAnonKey;
+
+      if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+        throw Exception('Supabase URL or Anon Key not found in configuration');
+      }
+
+      debugPrint('Supabase not initialized yet, initializing now');
+      await Supabase.initialize(
+        url: supabaseUrl,
+        anonKey: supabaseAnonKey,
+        debug: true,
+      );
+      debugPrint('Supabase.initialize completed successfully');
+    }
+
+    // Register Supabase client if not already registered
+    if (!sl.isRegistered<SupabaseClient>()) {
+      sl.registerLazySingleton<SupabaseClient>(() => Supabase.instance.client);
+      debugPrint('SupabaseClient registered in GetIt successfully');
+    }
+
+    // Initialize auth data sources and repository if not already registered
+    if (!sl.isRegistered<AuthDataSource>(instanceName: 'remote')) {
+      sl.registerLazySingleton<AuthDataSource>(
+        () => AuthDataSourceFactory.getActiveDataSource(),
+        instanceName: 'remote',
+      );
+    }
+
+    if (!sl.isRegistered<AuthDataSource>(instanceName: 'local')) {
+      sl.registerLazySingleton<AuthDataSource>(
+        () => AuthDataSourceFactory.getDataSource(BackendType.supabase),
+        instanceName: 'local',
+      );
+    }
+
+    if (!sl.isRegistered<AuthRepository>()) {
+      sl.registerLazySingleton<AuthRepository>(
+        () => AuthRepositoryImpl(
+          remoteDataSource: sl.get<AuthDataSource>(instanceName: 'remote'),
+          localDataSource: sl.get<AuthDataSource>(instanceName: 'local'),
+          networkInfo: sl(),
+        ),
+      );
+    }
+
+    // Register auth use cases if not already registered
+    if (!sl.isRegistered<LoginUseCase>()) {
+      sl.registerLazySingleton(() => LoginUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<RegisterUseCase>()) {
+      sl.registerLazySingleton(() => RegisterUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<LogoutUseCase>()) {
+      sl.registerLazySingleton(() => LogoutUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<GetCurrentUserUseCase>()) {
+      sl.registerLazySingleton(() => GetCurrentUserUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<IsAuthenticatedUseCase>()) {
+      sl.registerLazySingleton(() => IsAuthenticatedUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<ForgotPasswordUseCase>()) {
+      sl.registerLazySingleton(() => ForgotPasswordUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<SignInWithGoogleUseCase>()) {
+      sl.registerLazySingleton(() => SignInWithGoogleUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<ResetPasswordUseCase>()) {
+      sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<ChangePasswordUseCase>()) {
+      sl.registerLazySingleton(() => ChangePasswordUseCase(sl()));
+    }
+
+    // Initialize cart components if not already registered
+    if (!sl.isRegistered<CartRemoteDataSource>()) {
+      sl.registerLazySingleton<CartRemoteDataSource>(
+        () => CartDataSourceFactory.getActiveDataSource(),
+      );
+    }
+
+    if (!sl.isRegistered<CartLocalDataSource>()) {
+      sl.registerLazySingleton<CartLocalDataSource>(
+        () => CartLocalDataSourceImpl(sharedPreferences: sl()),
+      );
+    }
+
+    if (!sl.isRegistered<CartRepository>()) {
+      sl.registerLazySingleton<CartRepository>(
+        () => CartRepositoryImpl(
+          remoteDataSource: sl(),
+          localDataSource: sl(),
+          networkInfo: sl(),
+        ),
+      );
+    }
+
+    // Cart Use Cases
+    if (!sl.isRegistered<GetCartItemsUseCase>()) {
+      sl.registerLazySingleton(() => GetCartItemsUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<AddToCartUseCase>()) {
+      sl.registerLazySingleton(() => AddToCartUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<RemoveFromCartUseCase>()) {
+      sl.registerLazySingleton(() => RemoveFromCartUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<UpdateCartQuantityUseCase>()) {
+      sl.registerLazySingleton(() => UpdateCartQuantityUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<ClearCartUseCase>()) {
+      sl.registerLazySingleton(() => ClearCartUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<GetCartTotalPriceUseCase>()) {
+      sl.registerLazySingleton(() => GetCartTotalPriceUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<GetCartItemCountUseCase>()) {
+      sl.registerLazySingleton(() => GetCartItemCountUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<IsInCartUseCase>()) {
+      sl.registerLazySingleton(() => IsInCartUseCase(sl()));
+    }
+
+    debugPrint('Authentication and cart components initialized successfully');
+    return;
+  } catch (e) {
+    debugPrint('Error initializing authentication components: $e');
+    rethrow;
+  }
 }
 
 /// Reinitialize authentication dependencies when the backend is changed

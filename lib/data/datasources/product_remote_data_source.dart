@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/product_model.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/constants/api_constants.dart';
+import '../mock/mock_products.dart';
 
 /// Interface for the remote data source for product data
 abstract class ProductRemoteDataSource {
@@ -45,10 +47,10 @@ abstract class ProductRemoteDataSource {
     int? page,
     int? limit,
   });
-  
+
   /// Get products by category ID
   Future<List<ProductModel>> getProductsByCategory(String categoryId);
-  
+
   /// Get products by a list of IDs
   Future<List<ProductModel>> getProductsByIds(List<String> ids);
 }
@@ -90,7 +92,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   List<ProductModel> _handleProductListResponse(http.Response response) {
     if (response.statusCode == 200) {
       final jsonData = json.decode(response.body);
-      
+
       if (jsonData['data'] != null) {
         return (jsonData['data'] as List)
             .map((productJson) => ProductModel.fromJson(productJson))
@@ -154,39 +156,19 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   /// Get a single product by ID
   @override
   Future<ProductModel> getProductById(String id) async {
-    final uri = Uri.parse(
-      ApiConstants.baseApiUrl + ApiConstants.productDetailsEndpoint + id,
-    );
-
     try {
-      final response = await client.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      // For now, return a mock product
+      debugPrint('ProductRemoteDataSourceImpl: Returning mock product for ID: $id');
+      final mockProducts = MockProducts.getMockProducts();
+      final product = mockProducts.firstWhere(
+        (p) => p.id == id,
+        orElse: () => mockProducts.first, // Fallback to first product if ID not found
       );
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        
-        if (jsonData['data'] != null) {
-          return ProductModel.fromJson(jsonData['data']);
-        } else {
-          throw ServerException(
-            message: 'Product data not found',
-            statusCode: response.statusCode,
-          );
-        }
-      } else {
-        throw ServerException(
-          message: 'Failed to load product details',
-          statusCode: response.statusCode,
-          data: response.body,
-        );
-      }
-    } on Exception {
+      return ProductModel.fromProduct(product);
+    } catch (e) {
       throw ServerException(
-        message: 'Failed to connect to the server',
+        message: 'Failed to fetch product details: ${e.toString()}',
       );
     }
   }
@@ -252,24 +234,17 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     required String productId,
     int? limit,
   }) async {
-    final params = limit != null ? {'limit': limit.toString()} : null;
-
-    final uri = Uri.parse(
-      '${ApiConstants.baseApiUrl}/products/$productId/related',
-    ).replace(queryParameters: params);
-
     try {
-      final response = await client.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-
-      return _handleProductListResponse(response);
-    } on Exception {
+      // For now, return mock data
+      debugPrint('ProductRemoteDataSourceImpl: Returning mock related products for ID: $productId');
+      return MockProducts.getMockProducts()
+        .where((p) => p.id != productId) // Exclude the current product
+        .take(limit ?? 4)
+        .map((product) => ProductModel.fromProduct(product))
+        .toList();
+    } catch (e) {
       throw ServerException(
-        message: 'Failed to connect to the server',
+        message: 'Failed to fetch related products: ${e.toString()}',
       );
     }
   }
@@ -310,10 +285,10 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   @override
   Future<List<ProductModel>> getProductsByCategory(String categoryId) async {
     final params = {'category_id': categoryId};
-    
+
     final uri = Uri.parse(ApiConstants.baseApiUrl + ApiConstants.productsEndpoint)
         .replace(queryParameters: params);
-    
+
     try {
       final response = await client.get(
         uri,
@@ -321,7 +296,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
           'Content-Type': 'application/json',
         },
       );
-      
+
       return _handleProductListResponse(response);
     } on Exception {
       throw ServerException(
@@ -329,15 +304,15 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
       );
     }
   }
-  
+
   /// Get products by a list of IDs
   @override
   Future<List<ProductModel>> getProductsByIds(List<String> ids) async {
     final params = {'ids': ids.join(',')};
-    
+
     final uri = Uri.parse(ApiConstants.baseApiUrl + '/products/by-ids')
         .replace(queryParameters: params);
-    
+
     try {
       final response = await client.get(
         uri,
@@ -345,7 +320,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
           'Content-Type': 'application/json',
         },
       );
-      
+
       return _handleProductListResponse(response);
     } on Exception {
       throw ServerException(
@@ -353,4 +328,4 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
       );
     }
   }
-} 
+}

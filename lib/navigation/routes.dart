@@ -4,22 +4,27 @@ import '../domain/entities/user_profile.dart';
 import '../domain/entities/address.dart';
 import '../presentation/screens/product/clean_product_listing_screen.dart';
 import '../presentation/screens/product/clean_product_details_screen.dart';
-import '../presentation/screens/product/clean_subcategory_product_screen.dart';
 import '../presentation/screens/auth/clean_login_screen.dart';
 import '../presentation/screens/auth/clean_forgot_password_screen.dart';
 import '../presentation/screens/auth/clean_register_screen.dart';
 import '../presentation/screens/cart/clean_cart_screen.dart';
 import '../presentation/screens/checkout/clean_checkout_screen.dart';
+import '../presentation/screens/debug/debug_menu_screen.dart';
 import '../presentation/screens/checkout/payment_methods_screen.dart';
-import '../presentation/screens/category/clean_category_screen.dart';
-import '../presentation/screens/category/clean_subcategory_screen.dart';
+import '../presentation/screens/test/product_card_test_screen.dart';
 import '../presentation/screens/categories/clean_categories_screen.dart';
-import '../presentation/screens/categories/clean_subcategory_products_screen.dart';
+
 import '../presentation/screens/profile/clean_user_profile_screen.dart';
 import '../presentation/screens/profile/clean_address_list_screen.dart';
+import '../presentation/screens/profile/clean_address_form_screen.dart';
 import '../presentation/screens/profile/clean_preferences_screen.dart';
 import '../presentation/screens/orders/clean_order_list_screen.dart';
 import '../presentation/screens/orders/clean_order_detail_screen.dart';
+import '../presentation/screens/search/clean_search_screen.dart';
+import '../presentation/screens/search/search_test_screen.dart';
+import '../presentation/screens/wishlist/clean_wishlist_screen.dart';
+import '../presentation/screens/debug/supabase_connection_test_screen.dart';
+import '../presentation/screens/debug/supabase_auth_test_screen.dart';
 import 'package:go_router/go_router.dart';
 
 /// Handles navigation routes for the clean architecture implementation
@@ -70,48 +75,47 @@ class CleanRoutes {
           settings: settings,
         );
 
-      case 'categories-old':
-        // Legacy clean categories screen (keeping for backward compatibility)
+      // Removed 'categories-old' case as part of consolidation
+
+      case 'category':
+        // Redirect to categories screen
         return MaterialPageRoute(
-          builder: (_) => const CleanCategoryScreen(),
+          builder: (_) => const CleanCategoriesScreen(),
           settings: settings,
         );
 
-      case 'category':
-        // Category subcategories screen
-        if (args is String) {
-          return MaterialPageRoute(
-            builder: (_) => CleanSubcategoryScreen(
-              categoryId: args,
-              categoryName: '', // Will be loaded from the category data
-            ),
-            settings: settings,
-          );
-        }
-        return _errorRoute(settings);
-
       case 'subcategory':
-        // Subcategory product listing (legacy version)
+        // Redirect to the consolidated product listing screen
         if (args is Map<String, dynamic>) {
           return MaterialPageRoute(
-            builder: (_) => CleanSubcategoryProductScreen(
+            builder: (_) => CleanProductListingScreen(
               subcategoryId: args['subcategoryId'] as String,
-              subcategoryName: args['subcategoryName'] as String,
             ),
-            settings: settings,
+            // Pass the subcategory name as an argument to be used in the title
+            settings: RouteSettings(
+              name: settings.name,
+              arguments: {
+                'subcategoryName': args['subcategoryName'] as String,
+              },
+            ),
           );
         }
         return _errorRoute(settings);
 
       case 'subcategory-products':
-        // Clean subcategory product listing with Riverpod implementation
+        // Clean product listing with Riverpod implementation
         if (args is Map<String, dynamic>) {
           return MaterialPageRoute(
-            builder: (_) => CleanSubcategoryProductsScreen(
+            builder: (_) => CleanProductListingScreen(
               subcategoryId: args['subcategoryId'] as String,
-              subcategoryName: args['subcategoryName'] as String,
             ),
-            settings: settings,
+            // Pass the subcategory name as an argument to be used in the title
+            settings: RouteSettings(
+              name: settings.name,
+              arguments: {
+                'subcategoryName': args['subcategoryName'] as String,
+              },
+            ),
           );
         }
         return _errorRoute(settings);
@@ -178,16 +182,15 @@ class CleanRoutes {
       case 'address/add':
         // Add new address screen
         return MaterialPageRoute(
-          builder: (_) => const CleanAddressListScreen(),
+          builder: (_) => const CleanAddressFormScreen(),
           settings: settings,
         );
 
       case 'address/edit':
-        // Edit existing address - this would typically include an ID parameter
-        // For now, we'll route to the address list until we implement an address form
+        // Edit existing address
         if (args is Address) {
           return MaterialPageRoute(
-            builder: (_) => const CleanAddressListScreen(),
+            builder: (_) => CleanAddressFormScreen(address: args),
             settings: settings,
           );
         }
@@ -197,6 +200,13 @@ class CleanRoutes {
         // Order list screen
         return MaterialPageRoute(
           builder: (_) => const CleanOrderListScreen(),
+          settings: settings,
+        );
+
+      case 'debug':
+        // Debug menu screen
+        return MaterialPageRoute(
+          builder: (_) => const DebugMenuScreen(),
           settings: settings,
         );
 
@@ -210,14 +220,56 @@ class CleanRoutes {
         }
         return _errorRoute(settings);
 
+      case 'debug/supabase-test':
+        // Supabase connection test screen
+        return MaterialPageRoute(
+          builder: (_) => const SupabaseConnectionTestScreen(),
+          settings: settings,
+        );
+
+      case 'debug/supabase-auth-test':
+        // Supabase auth test screen
+        return MaterialPageRoute(
+          builder: (_) => const SupabaseAuthTestScreen(),
+          settings: settings,
+        );
+
+      case 'search':
+        // Clean search screen
+        return MaterialPageRoute(
+          builder: (_) => const CleanSearchScreen(),
+          settings: settings,
+        );
+
+      case 'search-test':
+        // Search test screen
+        return MaterialPageRoute(
+          builder: (_) => const SearchTestScreen(),
+          settings: settings,
+        );
+
+      case 'wishlist':
+        // Wishlist screen
+        return MaterialPageRoute(
+          builder: (_) => const CleanWishlistScreen(),
+          settings: settings,
+        );
+
+      case 'test/product-card':
+        // Product card test screen
+        return MaterialPageRoute(
+          builder: (_) => const ProductCardTestScreen(),
+          settings: settings,
+        );
+
       default:
         // Check if the path is like 'address/edit/{id}'
         if (cleanPath.startsWith('address/edit/')) {
+          // Extract the address ID
           final addressId = cleanPath.substring('address/edit/'.length);
-          // This would typically use the addressId to edit the specific address
-          // For now, we'll route to the address list until we implement an address form
+          // Use the addressId to edit the specific address
           return MaterialPageRoute(
-            builder: (_) => const CleanAddressListScreen(),
+            builder: (_) => CleanAddressFormScreen(addressId: addressId),
             settings: settings,
           );
         }
@@ -248,6 +300,7 @@ class CleanRoutes {
 
   // Demo navigation method for subcategory
   static void navigateToSubcategoryProducts(BuildContext context, SubCategory subcategory) {
+    // Navigate to the consolidated product listing screen
     GoRouter.of(context).push(
       '/clean/subcategory-products',
       extra: {
@@ -282,19 +335,44 @@ class CleanRoutes {
     );
   }
 
-  // Demo navigation method for user profile
+  // Navigation method for user profile
   static void navigateToUserProfile(BuildContext context) {
-    GoRouter.of(context).push('/clean/profile');
+    GoRouter.of(context).push('/profile');
   }
 
-  // Demo navigation method for addresses
+  // Navigation method for addresses
   static void navigateToAddresses(BuildContext context) {
-    GoRouter.of(context).push('/clean/addresses');
+    GoRouter.of(context).push('/addresses');
   }
 
-  // Demo navigation method for preferences
+  // Navigation method for preferences
   static void navigateToPreferences(BuildContext context) {
-    GoRouter.of(context).push('/clean/preferences');
+    GoRouter.of(context).push('/preferences');
+  }
+
+  // Navigation method for product card test
+  static void navigateToProductCardTest(BuildContext context) {
+    GoRouter.of(context).push('/clean/test/product-card');
+  }
+
+  // Navigation method for debug menu
+  static void navigateToDebugMenu(BuildContext context) {
+    GoRouter.of(context).push('/clean/debug');
+  }
+
+  // Navigation method for search
+  static void navigateToSearch(BuildContext context) {
+    GoRouter.of(context).push('/clean/search');
+  }
+
+  // Navigation method for search test
+  static void navigateToSearchTest(BuildContext context) {
+    GoRouter.of(context).push('/clean/search-test');
+  }
+
+  // Navigation method for wishlist
+  static void navigateToWishlist(BuildContext context) {
+    GoRouter.of(context).push('/wishlist');
   }
 
   // Error route for invalid routes

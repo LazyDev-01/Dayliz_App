@@ -1,7 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth_data_source.dart';
-import 'auth_supabase_data_source.dart';
+import 'auth_supabase_data_source_new.dart';
 import '../../core/config/app_config.dart';
 import '../../di/dependency_injection.dart' as di;
 import '../../services/auth_service.dart' as auth_service;
@@ -43,10 +44,19 @@ class AuthDataSourceFactory {
       authService.initialize();
     }
 
-    // Get the Supabase client
-    final supabaseClient = Supabase.instance.client;
+    // Get the Supabase client from GetIt if available, otherwise from Supabase.instance
+    SupabaseClient supabaseClient;
+    try {
+      // Try to get from GetIt first
+      supabaseClient = di.sl<SupabaseClient>();
+      debugPrint('AuthDataSourceFactory: Got SupabaseClient from GetIt');
+    } catch (e) {
+      // Fallback to direct access
+      supabaseClient = Supabase.instance.client;
+      debugPrint('AuthDataSourceFactory: Got SupabaseClient from Supabase.instance');
+    }
 
-    // Return the Supabase-specific implementation
+    // Return the Supabase-specific implementation with the fixed implementation
     return AuthSupabaseDataSource(supabaseClient: supabaseClient);
   }
 

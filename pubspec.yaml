@@ -73,6 +73,7 @@ dependencies:
   skeletons: ^0.0.3           # Skeleton loading
   visibility_detector: ^0.4.0+2
   timeline_tile: ^2.0.0       # Timeline visualization for order tracking
+  confetti: ^0.7.0            # Confetti animation for celebrations
 
   # Navigation
   go_router: ^10.1.2          # Router
@@ -84,9 +85,9 @@ dependencies:
   uuid: ^3.0.7                # UUID generation
   connectivity_plus: ^4.0.2   # Network connectivity
 
-  # Temporarily comment out problematic location dependencies until we need them
-  # geolocator: ^10.0.1         # Geolocation
-  # geocoding: ^2.1.0           # Geocoding
+  # Location dependencies - temporarily disabled
+  # geolocator: ^11.0.0         # Geolocation
+  # geocoding: ^3.0.0           # Geocoding
 
   flutter_secure_storage: ^8.0.0 # Secure storage
   url_launcher: ^6.1.14       # URL launcher
@@ -113,12 +114,13 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^2.0.3       # Linting
   json_serializable: ^6.7.1
-  build_runner: ^2.4.6        # Code generation
+  build_runner: ^2.4.15        # Code generation
   hive_generator: ^2.0.1      # Hive code generation
   riverpod_generator: ^2.3.1  # Riverpod code generation
   flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.3.9
   mocktail: ^1.0.2
+  mockito: ^5.4.5
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

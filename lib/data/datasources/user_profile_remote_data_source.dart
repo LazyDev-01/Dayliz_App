@@ -16,7 +16,7 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
   final http.Client client;
   final StorageFileApi storageFileApi;
   final String baseUrl;
-  
+
   UserProfileRemoteDataSource({
     required this.client,
     required this.storageFileApi,
@@ -84,14 +84,14 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
         'user_profiles/$userId/profile_image',
         imageFile,
       );
-      
+
       // Update the profile with the new image URL
       final response = await client.patch(
         Uri.parse('$baseUrl/users/$userId/profile'),
         headers: _headers(null),
         body: json.encode({'profileImageUrl': imagePath}),
       );
-      
+
       if (response.statusCode == 200) {
         return imagePath;
       } else {
@@ -111,14 +111,14 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
     try {
       // Delete file from storage
       await storageFileApi.deleteFile('user_profiles/$userId/profile_image');
-      
+
       // Update the profile to remove the image URL
       final response = await client.patch(
         Uri.parse('$baseUrl/users/$userId/profile'),
         headers: _headers(null),
         body: json.encode({'profileImageUrl': ''}),
       );
-      
+
       if (response.statusCode == 200) {
         return true;
       } else {
@@ -154,11 +154,18 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
           country: addressJson['country'],
           phoneNumber: addressJson['phone_number'],
           isDefault: addressJson['is_default'] ?? false,
-          label: addressJson['label'] ?? 'Home',
+          // Label field removed
           additionalInfo: addressJson['additional_info'],
-          coordinates: addressJson['coordinates'] != null 
-              ? Map<String, double>.from(addressJson['coordinates'])
-              : null,
+          latitude: addressJson['latitude'] != null ?
+              double.tryParse(addressJson['latitude'].toString()) : null,
+          longitude: addressJson['longitude'] != null ?
+              double.tryParse(addressJson['longitude'].toString()) : null,
+          landmark: addressJson['landmark'],
+          zoneId: addressJson['zone_id'],
+          addressType: addressJson['address_type'],
+          recipientName: addressJson['recipient_name'],
+          createdAt: addressJson['created_at'] != null ? DateTime.parse(addressJson['created_at'].toString()) : null,
+          updatedAt: addressJson['updated_at'] != null ? DateTime.parse(addressJson['updated_at'].toString()) : null,
         )).toList();
       } else {
         throw ServerException(
@@ -186,17 +193,22 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
         'country': address.country,
         'phone_number': address.phoneNumber,
         'is_default': address.isDefault,
-        'label': address.label,
+        // Label field removed
         'additional_info': address.additionalInfo,
-        'coordinates': address.coordinates,
+        'latitude': address.latitude,
+        'longitude': address.longitude,
+        'landmark': address.landmark,
+        'zone_id': address.zoneId,
+        'address_type': address.addressType,
+        'recipient_name': address.recipientName,
       };
-      
+
       final response = await client.post(
         Uri.parse('$baseUrl/users/$userId/addresses'),
         headers: _headers(null),
         body: json.encode(addressMap),
       );
-      
+
       if (response.statusCode == 201) {
         final responseData = json.decode(response.body);
         return Address(
@@ -210,11 +222,18 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
           country: responseData['country'],
           phoneNumber: responseData['phone_number'],
           isDefault: responseData['is_default'] ?? false,
-          label: responseData['label'] ?? 'Home',
+          // Label field removed
           additionalInfo: responseData['additional_info'],
-          coordinates: responseData['coordinates'] != null 
-              ? Map<String, double>.from(responseData['coordinates'])
-              : null,
+          latitude: responseData['latitude'] != null ?
+              double.tryParse(responseData['latitude'].toString()) : null,
+          longitude: responseData['longitude'] != null ?
+              double.tryParse(responseData['longitude'].toString()) : null,
+          landmark: responseData['landmark'],
+          zoneId: responseData['zone_id'],
+          addressType: responseData['address_type'],
+          recipientName: responseData['recipient_name'],
+          createdAt: responseData['created_at'] != null ? DateTime.parse(responseData['created_at'].toString()) : null,
+          updatedAt: responseData['updated_at'] != null ? DateTime.parse(responseData['updated_at'].toString()) : null,
         );
       } else {
         throw ServerException(
@@ -243,17 +262,22 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
         'country': address.country,
         'phone_number': address.phoneNumber,
         'is_default': address.isDefault,
-        'label': address.label,
+        // Label field removed
         'additional_info': address.additionalInfo,
-        'coordinates': address.coordinates,
+        'latitude': address.latitude,
+        'longitude': address.longitude,
+        'landmark': address.landmark,
+        'zone_id': address.zoneId,
+        'address_type': address.addressType,
+        'recipient_name': address.recipientName,
       };
-      
+
       final response = await client.put(
         Uri.parse('$baseUrl/users/$userId/addresses/${address.id}'),
         headers: _headers(null),
         body: json.encode(addressMap),
       );
-      
+
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         return Address(
@@ -267,11 +291,18 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
           country: responseData['country'],
           phoneNumber: responseData['phone_number'],
           isDefault: responseData['is_default'] ?? false,
-          label: responseData['label'] ?? 'Home',
+          // Label field removed
           additionalInfo: responseData['additional_info'],
-          coordinates: responseData['coordinates'] != null 
-              ? Map<String, double>.from(responseData['coordinates'])
-              : null,
+          latitude: responseData['latitude'] != null ?
+              double.tryParse(responseData['latitude'].toString()) : null,
+          longitude: responseData['longitude'] != null ?
+              double.tryParse(responseData['longitude'].toString()) : null,
+          landmark: responseData['landmark'],
+          zoneId: responseData['zone_id'],
+          addressType: responseData['address_type'],
+          recipientName: responseData['recipient_name'],
+          createdAt: responseData['created_at'] != null ? DateTime.parse(responseData['created_at'].toString()) : null,
+          updatedAt: responseData['updated_at'] != null ? DateTime.parse(responseData['updated_at'].toString()) : null,
         );
       } else {
         throw ServerException(
@@ -292,7 +323,7 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
         Uri.parse('$baseUrl/users/$userId/addresses/$addressId'),
         headers: _headers(null),
       );
-      
+
       if (response.statusCode == 200 || response.statusCode == 204) {
         return true;
       } else {
@@ -314,7 +345,7 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
         Uri.parse('$baseUrl/users/$userId/addresses/$addressId/default'),
         headers: _headers(null),
       );
-      
+
       if (response.statusCode == 200) {
         return true;
       } else {
@@ -337,7 +368,7 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
         headers: _headers(null),
         body: json.encode(preferences),
       );
-      
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
@@ -351,4 +382,4 @@ class UserProfileRemoteDataSource implements UserProfileDataSource {
       );
     }
   }
-} 
+}

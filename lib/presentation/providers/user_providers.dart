@@ -13,10 +13,17 @@ import '../../domain/usecases/user_profile/set_default_address_usecase.dart';
 import '../../domain/usecases/user_profile/get_user_profile_usecase.dart';
 import '../../di/dependency_injection.dart';
 
-// Provider for the current user ID (this would normally come from auth)
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// Provider for the current user ID from Supabase auth
 final currentUserIdProvider = StateProvider<String?>((ref) {
-  // For testing, return a dummy user ID
-  return 'test-user-123';
+  // Get the current authenticated user ID from Supabase
+  final currentUser = Supabase.instance.client.auth.currentUser;
+  if (currentUser != null) {
+    return currentUser.id;
+  }
+  // Return null if not authenticated
+  return null;
 });
 
 // Provider for the user profile repository
@@ -170,6 +177,23 @@ class AddressesNotifier extends StateNotifier<AsyncValue<List<Address>>> {
     );
   }
 
+  /// Get a specific address by ID
+  Future<Address?> getAddressById(String userId, String addressId) async {
+    // First, ensure we have the latest addresses
+    if (state is AsyncLoading || state.value == null) {
+      await getAddresses(userId);
+    }
+
+    // Find the address in the current state
+    final addresses = state.value ?? [];
+    final address = addresses.firstWhere(
+      (a) => a.id == addressId,
+      orElse: () => throw Exception('Address not found'),
+    );
+
+    return address;
+  }
+
   String _mapFailureToMessage(Failure failure) {
     switch (failure.runtimeType) {
       case ServerFailure:
@@ -257,4 +281,52 @@ final userProfileNotifierProvider = StateNotifierProvider<UserProfileNotifier, A
   return UserProfileNotifier(
     getUserProfileUseCase: ref.watch(getUserProfileUseCaseProvider),
   );
-}); 
+});
+
+// Provider for the selected address ID
+final selectedAddressIdProvider = StateProvider<String?>((ref) {
+  final addressesState = ref.watch(addressesNotifierProvider);
+  return addressesState.maybeWhen(
+    data: (addresses) {
+      if (addresses.isEmpty) return null;
+
+      // Try to find a default address first
+      final defaultAddress = addresses.firstWhere(
+        (address) => address.isDefault,
+        orElse: () => addresses.first,
+      );
+
+      return defaultAddress.id;
+    },
+    orElse: () => null,
+  );
+});
+
+// Provider to get the selected address
+final selectedAddressProvider = Provider<Address?>((ref) {
+  final selectedId = ref.watch(selectedAddressIdProvider);
+  final addressesState = ref.watch(addressesNotifierProvider);
+
+  return addressesState.maybeWhen(
+    data: (addresses) {
+      if (selectedId == null || addresses.isEmpty) return null;
+
+      try {
+        return addresses.firstWhere((address) => address.id == selectedId);
+      } catch (_) {
+        return null;
+      }
+    },
+    orElse: () => null,
+  );
+});
+
+// Provider to refresh addresses
+extension AddressesNotifierExtension on AddressesNotifier {
+  Future<void> refreshAddresses() async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId != null) {
+      await getAddresses(userId);
+    }
+  }
+}

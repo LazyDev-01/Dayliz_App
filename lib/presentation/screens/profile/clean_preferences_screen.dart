@@ -5,6 +5,7 @@ import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_state.dart';
+import '../../widgets/common/common_app_bar.dart';
 
 /// A Clean Architecture implementation of the user preferences screen
 class CleanPreferencesScreen extends ConsumerStatefulWidget {
@@ -20,7 +21,7 @@ class _CleanPreferencesScreenState extends ConsumerState<CleanPreferencesScreen>
   bool _orderUpdates = true;
   bool _promotionalNotifications = false;
   String _selectedLanguage = 'English';
-  String _selectedTheme = 'System Default';
+  String _selectedTheme = 'Light';
   bool _saveChangesEnabled = false;
   bool _isLoading = false;
 
@@ -35,14 +36,14 @@ class _CleanPreferencesScreenState extends ConsumerState<CleanPreferencesScreen>
     final profile = ref.read(userProfileNotifierProvider).profile;
     if (profile?.preferences != null) {
       final preferences = profile!.preferences!;
-      
+
       setState(() {
         _pushNotifications = preferences['push_notifications'] ?? true;
         _emailNotifications = preferences['email_notifications'] ?? true;
         _orderUpdates = preferences['order_updates'] ?? true;
         _promotionalNotifications = preferences['promotional_notifications'] ?? false;
         _selectedLanguage = preferences['language'] ?? 'English';
-        _selectedTheme = preferences['theme'] ?? 'System Default';
+        _selectedTheme = preferences['theme'] ?? 'Light';
       });
     }
   }
@@ -59,8 +60,10 @@ class _CleanPreferencesScreenState extends ConsumerState<CleanPreferencesScreen>
     final currentUser = ref.watch(currentUserProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Preferences'),
+      appBar: CommonAppBars.withBackButton(
+        title: 'Preferences',
+        fallbackRoute: '/profile',
+        backButtonTooltip: 'Back to Profile',
       ),
       body: userProfileState.isLoading || _isLoading
           ? const LoadingIndicator(message: 'Loading preferences...')
@@ -146,37 +149,41 @@ class _CleanPreferencesScreenState extends ConsumerState<CleanPreferencesScreen>
               });
             },
           ),
-          const Divider(),
-          _buildSectionHeader('App Settings'),
-          _buildDropdownTile(
-            title: 'Language',
-            value: _selectedLanguage,
-            items: const ['English', 'Spanish', 'French', 'German', 'Arabic'],
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedLanguage = value;
-                  _changesMade();
-                });
-              }
-            },
+          // Hidden fields to maintain functionality
+          Visibility(
+            visible: false,
+            maintainState: true,
+            child: Column(
+              children: [
+                _buildDropdownTile(
+                  title: 'Language',
+                  value: _selectedLanguage,
+                  items: const ['English', 'Spanish', 'French', 'German', 'Arabic'],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedLanguage = value;
+                        _changesMade();
+                      });
+                    }
+                  },
+                ),
+                _buildDropdownTile(
+                  title: 'Theme',
+                  value: _selectedTheme,
+                  items: const ['System Default', 'Light', 'Dark'],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedTheme = value;
+                        _changesMade();
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
-          _buildDropdownTile(
-            title: 'Theme',
-            value: _selectedTheme,
-            items: const ['System Default', 'Light', 'Dark'],
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedTheme = value;
-                  _changesMade();
-                });
-              }
-            },
-          ),
-          const Divider(),
-          _buildSectionHeader('Privacy'),
-          _buildPrivacyOptions(),
         ],
       ),
     );
@@ -235,37 +242,8 @@ class _CleanPreferencesScreenState extends ConsumerState<CleanPreferencesScreen>
       ),
     );
   }
-  
-  Widget _buildPrivacyOptions() {
-    return Column(
-      children: [
-        ListTile(
-          leading: const Icon(Icons.privacy_tip_outlined),
-          title: const Text('Privacy Policy'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () {
-            // Navigate to privacy policy
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.security_outlined),
-          title: const Text('Data Usage'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () {
-            // Navigate to data usage
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.delete_outline),
-          title: const Text('Delete Account'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () {
-            _showDeleteAccountDialog();
-          },
-        ),
-      ],
-    );
-  }
+
+
 
   Future<void> _savePreferences() async {
     final userId = ref.read(currentUserProvider)?.id;
@@ -316,36 +294,5 @@ class _CleanPreferencesScreenState extends ConsumerState<CleanPreferencesScreen>
     }
   }
 
-  void _showDeleteAccountDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text(
-          'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Implement account deletion
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Account deletion is not implemented yet'),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-} 
+
+}

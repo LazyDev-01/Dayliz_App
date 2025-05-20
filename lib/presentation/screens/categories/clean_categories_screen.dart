@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_colors.dart';
+import '../../../data/mock/mock_categories.dart';
 import '../../../domain/entities/category.dart';
-import '../../providers/clean_category_providers.dart';
-import 'clean_subcategory_products_screen.dart';
+import '../../providers/cart_providers.dart';
+import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/common_bottom_nav_bar.dart';
+import '../product/clean_product_listing_screen.dart';
 
 class CleanCategoriesScreen extends ConsumerStatefulWidget {
   const CleanCategoriesScreen({Key? key}) : super(key: key);
@@ -14,38 +16,78 @@ class CleanCategoriesScreen extends ConsumerStatefulWidget {
 }
 
 class _CleanCategoriesScreenState extends ConsumerState<CleanCategoriesScreen> {
+  late List<CategorySection> _categorySections;
+  bool _isLoading = true;
+  String? _errorMessage;
+
   @override
   void initState() {
     super.initState();
-    // Load categories when the screen initializes
-    Future.microtask(() => 
-      ref.read(categoriesNotifierProvider.notifier).loadCategories()
-    );
+    // Load mock category sections
+    _loadCategorySections();
+  }
+
+  Future<void> _loadCategorySections() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Simulate network delay
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      // Load mock data
+      _categorySections = MockCategories.getCategorySections();
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to load categories: ${e.toString()}';
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Watch the categories state
-    final categoriesState = ref.watch(categoriesNotifierProvider);
-    
+    // Watch cart item count for badge
+    final cartItemCount = ref.watch(cartItemCountProvider);
+
+    // Set the current index for the bottom navigation bar
+    ref.read(bottomNavIndexProvider.notifier).state = 1; // 1 is for Categories
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Categories'),
+      appBar: CommonAppBars.simple(
+        title: 'Categories',
+        centerTitle: true,
+        showShadow: false,
+        elevation: 0,
       ),
-      body: _buildBody(categoriesState),
+      body: _buildBody(),
+      bottomNavigationBar: CommonBottomNavBar(
+        currentIndex: 1, // Categories tab
+        cartItemCount: cartItemCount,
+      ),
     );
   }
 
-  Widget _buildBody(CategoriesState state) {
+  Widget _buildBody() {
     // Show loading state
-    if (state.isLoading) {
+    if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(),
       );
     }
 
     // Show error state
-    if (state.errorMessage != null) {
+    if (_errorMessage != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -53,15 +95,13 @@ class _CleanCategoriesScreenState extends ConsumerState<CleanCategoriesScreen> {
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              'Error: ${state.errorMessage}', 
+              'Error: $_errorMessage',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.red),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
-                ref.read(categoriesNotifierProvider.notifier).loadCategories();
-              },
+              onPressed: _loadCategorySections,
               child: const Text('Retry'),
             ),
           ],
@@ -70,7 +110,7 @@ class _CleanCategoriesScreenState extends ConsumerState<CleanCategoriesScreen> {
     }
 
     // Show empty state
-    if (state.categories.isEmpty) {
+    if (_categorySections.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -81,9 +121,7 @@ class _CleanCategoriesScreenState extends ConsumerState<CleanCategoriesScreen> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
-                ref.read(categoriesNotifierProvider.notifier).loadCategories();
-              },
+              onPressed: _loadCategorySections,
               child: const Text('Refresh'),
             ),
           ],
@@ -91,169 +129,149 @@ class _CleanCategoriesScreenState extends ConsumerState<CleanCategoriesScreen> {
       );
     }
 
-    // Show categories grid
+    // Show category sections with subcategories
     return RefreshIndicator(
       onRefresh: () async {
-        await ref.read(categoriesNotifierProvider.notifier).loadCategories();
+        await _loadCategorySections();
       },
-      child: GridView.builder(
-        padding: const EdgeInsets.all(16.0),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 1.0,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-        ),
-        itemCount: state.categories.length,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
+        itemCount: _categorySections.length,
         itemBuilder: (context, index) {
-          final category = state.categories[index];
-          return _buildCategoryCard(context, category);
+          final section = _categorySections[index];
+          return _buildCategorySection(context, section);
         },
       ),
     );
   }
 
-  Widget _buildCategoryCard(BuildContext context, Category category) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () {
-          // Select this category and navigate to subcategories
-          ref.read(categoriesNotifierProvider.notifier).selectCategory(category.id);
-          _navigateToSubcategories(category);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Category icon
-            Icon(
-              category.icon ?? Icons.category,
-              size: 48,
-              color: category.themeColor ?? AppColors.primary,
-            ),
-            const SizedBox(height: 12),
-            // Category name
-            Text(
-              category.name,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+  Widget _buildCategorySection(BuildContext context, CategorySection section) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Row(
+            children: [
+              Icon(
+                section.icon,
+                color: section.themeColor,
+                size: 24,
               ),
-            ),
-            // Subcategory count
-            if (category.subCategories != null && category.subCategories!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  '${category.subCategories!.length} subcategories',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+              const SizedBox(width: 8),
+              Text(
+                section.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-          ],
+            ],
+          ),
         ),
-      ),
+
+        // Subcategories grid
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            childAspectRatio: 0.8,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: section.subcategories.length,
+          itemBuilder: (context, index) {
+            final subcategory = section.subcategories[index];
+            return _buildSubcategoryCard(context, subcategory, section.themeColor);
+          },
+        ),
+
+        // Add some spacing between sections
+        const SizedBox(height: 24),
+      ],
     );
   }
 
-  void _navigateToSubcategories(Category category) {
-    if (category.subCategories == null || category.subCategories!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No subcategories available'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  Widget _buildSubcategoryCard(BuildContext context, SubCategory subcategory, Color themeColor) {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
       ),
-      builder: (context) => _buildSubcategoriesBottomSheet(category),
-    );
-  }
-
-  Widget _buildSubcategoriesBottomSheet(Category category) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      height: MediaQuery.of(context).size.height * 0.7,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${category.name} Subcategories',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 22,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${category.subCategories!.length} subcategories',
-            style: const TextStyle(
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: ListView.builder(
-              itemCount: category.subCategories!.length,
-              itemBuilder: (context, index) {
-                final subcategory = category.subCategories![index];
-                return ListTile(
-                  leading: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      image: subcategory.imageUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(subcategory.imageUrl!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                      color: subcategory.imageUrl == null
-                          ? Colors.grey.shade200
-                          : null,
-                    ),
-                    child: subcategory.imageUrl == null
-                        ? const Icon(Icons.category, color: Colors.grey)
-                        : null,
-                  ),
-                  title: Text(subcategory.name),
-                  subtitle: subcategory.productCount != null
-                      ? Text('${subcategory.productCount} products')
-                      : null,
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.pop(context); // Close bottom sheet
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CleanSubcategoryProductsScreen(
-                          subcategoryId: subcategory.id,
-                          subcategoryName: subcategory.name,
+      child: InkWell(
+        onTap: () => _navigateToSubcategoryProducts(subcategory),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Subcategory image
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: themeColor.withAlpha(30),
+                  shape: BoxShape.circle,
+                ),
+                child: subcategory.imageUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          subcategory.imageUrl!,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.category,
+                              color: themeColor.withAlpha(150),
+                              size: 30,
+                            );
+                          },
                         ),
+                      )
+                    : Icon(
+                        Icons.category,
+                        color: themeColor.withAlpha(150),
+                        size: 30,
                       ),
-                    );
-                  },
-                );
-              },
-            ),
+              ),
+              const SizedBox(height: 8),
+              // Subcategory name
+              Text(
+                subcategory.name,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
-} 
+
+  void _navigateToSubcategoryProducts(SubCategory subcategory) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CleanProductListingScreen(
+          subcategoryId: subcategory.id,
+        ),
+        // Pass the subcategory name as an argument to be used in the title
+        settings: RouteSettings(
+          arguments: {
+            'subcategoryName': subcategory.name,
+          },
+        ),
+      ),
+    );
+  }
+}

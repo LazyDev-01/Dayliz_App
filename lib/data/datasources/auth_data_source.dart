@@ -12,7 +12,7 @@ abstract class AuthDataSource {
   Future<User> register(String email, String password, String name, {String? phone});
 
   /// Logout the current user
-  Future<void> logout();
+  Future<bool> logout();
 
   /// Get the current authenticated user
   Future<User?> getCurrentUser();
@@ -43,4 +43,19 @@ abstract class AuthDataSource {
 
   /// Cache the user locally
   Future<void> cacheUser(User user);
+}
+
+/// Interface for remote authentication data sources
+abstract class AuthRemoteDataSource extends AuthDataSource {}
+
+/// Interface for local authentication data sources
+abstract class AuthLocalDataSource {
+  /// Caches a user locally
+  Future<void> cacheUser(User user);
+
+  /// Gets the cached user
+  Future<User?> getCachedUser();
+
+  /// Clears the cached user
+  Future<bool> clearCachedUser();
 }

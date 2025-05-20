@@ -45,7 +45,13 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
 
     // Update login error if there's an error message in the state
     if (authState.errorMessage != null && _loginError != authState.errorMessage) {
-      _loginError = authState.errorMessage;
+      // Filter out the "No authenticated user found" error as it's not relevant for login
+      if (authState.errorMessage != "No authenticated user found") {
+        _loginError = authState.errorMessage;
+      } else {
+        // Clear the error if it's "No authenticated user found"
+        _loginError = null;
+      }
     }
 
     return Scaffold(
@@ -91,7 +97,7 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
                 const SizedBox(height: 16),
 
                 // Or divider
-                Row(
+                const Row(
                   children: [
                     Expanded(child: Divider()),
                     Padding(

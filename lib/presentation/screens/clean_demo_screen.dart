@@ -38,7 +38,7 @@ class CleanDemoScreen extends StatelessWidget {
               description: 'Clean architecture implementation of the forgot password screen',
               onTap: () => CleanRoutes.navigateToCleanForgotPassword(context),
             ),
-            
+
             const Divider(height: 32),
             const _SectionTitle(title: 'User Profile'),
             _buildFeatureCard(
@@ -55,9 +55,16 @@ class CleanDemoScreen extends StatelessWidget {
               description: 'Manage your delivery addresses with clean architecture',
               onTap: () => CleanRoutes.navigateToAddresses(context),
             ),
-            
+
             const Divider(height: 32),
             const _SectionTitle(title: 'Shopping Experience'),
+            _buildFeatureCard(
+              context,
+              icon: Icons.home,
+              title: 'Home Screen',
+              description: 'Clean architecture implementation of the home screen',
+              onTap: () => context.go('/clean-home'),
+            ),
             _buildFeatureCard(
               context,
               icon: Icons.category,
@@ -79,7 +86,7 @@ class CleanDemoScreen extends StatelessWidget {
               description: 'Clean architecture implementation of the cart screen',
               onTap: () => CleanRoutes.navigateToCart(context),
             ),
-            
+
             const Divider(height: 32),
             const _SectionTitle(title: 'Checkout Process'),
             _buildFeatureCard(
@@ -96,7 +103,7 @@ class CleanDemoScreen extends StatelessWidget {
               description: 'Complete checkout process with clean architecture',
               onTap: () => CleanRoutes.navigateToCheckout(context),
             ),
-            
+
             const SizedBox(height: 24),
             const Center(
               child: Text(
@@ -209,4 +216,4 @@ class _SectionTitle extends StatelessWidget {
       ),
     );
   }
-} 
+}

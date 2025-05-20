@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../providers/auth_providers.dart';
 import '../../../core/validators/validators.dart';
 
+
 /// Clean architecture registration screen that uses Riverpod for state management
 class CleanRegisterScreen extends ConsumerStatefulWidget {
   const CleanRegisterScreen({Key? key}) : super(key: key);
@@ -25,6 +26,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _registerError;
+  String? _emailError; // New variable to track email-specific errors
 
   @override
   void initState() {
@@ -48,10 +50,9 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
             debugPrint('User authenticated, navigating to home');
             if (mounted) {
               // Use Future.microtask to avoid build phase navigation issues
-              final navigator = GoRouter.of(context);
               Future.microtask(() {
                 if (mounted) {
-                  navigator.go('/home');
+                  context.go('/home');
                 }
               });
             }
@@ -77,7 +78,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
     final authState = ref.watch(authNotifierProvider);
 
     // Check authentication status
-    if (authState.isAuthenticated) {
+    if (authState.isAuthenticated && authState.user != null) {
       // If authenticated, navigate to home page on next frame
       WidgetsBinding.instance.addPostFrameCallback((_) {
         context.go('/home');
@@ -86,7 +87,13 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
 
     // Update register error if there's an error message in the state
     if (authState.errorMessage != null && _registerError != authState.errorMessage) {
-      _registerError = authState.errorMessage;
+      // Filter out the "No authenticated user found" error as it's not relevant for registration
+      if (authState.errorMessage != "No authenticated user found") {
+        _registerError = authState.errorMessage;
+      } else {
+        // Clear the error if it's "No authenticated user found"
+        _registerError = null;
+      }
     }
 
     return Scaffold(
@@ -94,7 +101,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
         title: const Text('Create Account'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/login'),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: SafeArea(
@@ -115,16 +122,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
 
                 const SizedBox(height: 16),
 
-                // Error message
-                if (_registerError != null)
-                  Text(
-                    _registerError!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                // Error message placeholder - actual error is shown below the form
 
                 const SizedBox(height: 24),
 
@@ -209,16 +207,52 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
           const SizedBox(height: 16),
 
           // Email field
-          TextFormField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              hintText: 'Enter your email',
-              prefixIcon: Icon(Icons.email_outlined),
-              border: OutlineInputBorder(),
-            ),
-            validator: Validators.validateEmail,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  hintText: 'Enter your email',
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: const OutlineInputBorder(),
+                  // Show error outline if there's an email-specific error
+                  errorBorder: _emailError != null
+                    ? OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                          width: 2.0,
+                        ),
+                      )
+                    : null,
+                  // Don't show the error text in the field itself
+                  errorStyle: const TextStyle(height: 0, fontSize: 0),
+                ),
+                validator: (value) {
+                  // Clear email error when validating
+                  if (_emailError != null) {
+                    setState(() {
+                      _emailError = null;
+                    });
+                  }
+                  return Validators.validateEmail(value);
+                },
+              ),
+              // Display email-specific error message
+              if (_emailError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6.0, left: 12.0),
+                  child: Text(
+                    _emailError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12.0,
+                    ),
+                  ),
+                ),
+            ],
           ),
 
           const SizedBox(height: 16),
@@ -398,8 +432,8 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
               // If authenticated, navigate to home
               context.go('/home');
             } else {
-              // Otherwise, navigate to login
-              context.go('/login');
+              // Otherwise, navigate back (which should be login)
+              Navigator.of(context).pop();
             }
           },
           child: const Text('Sign In'),
@@ -426,6 +460,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
     // Clear any previous errors
     setState(() {
       _registerError = null;
+      _emailError = null;
     });
 
     // Validate form
@@ -468,20 +503,76 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen> {
           debugPrint('User authenticated in _handleRegister, navigating to home');
           // If authenticated, navigate to home
           if (mounted) {
-            final navigator = GoRouter.of(context);
-            // Use a slight delay to ensure the state is fully updated
-            Future.delayed(const Duration(milliseconds: 100), () {
-              if (mounted) {
-                navigator.go('/home');
-              }
-            });
+            // Navigate directly to home screen without any delay
+            debugPrint('Navigating to home screen...');
+            context.go('/home');
           }
+        } else {
+          debugPrint('Registration completed but user is not authenticated yet');
+          // Try to get the current user manually
+          try {
+            debugPrint('Attempting to manually check authentication status...');
+            // Try to get the current authentication state again
+            final authState = ref.read(authNotifierProvider);
+
+            // Check if we're authenticated now
+            if (authState.isAuthenticated) {
+              debugPrint('Manual check found authenticated user, navigating to home');
+              if (mounted) {
+                context.go('/home');
+                return;
+              }
+            } else {
+              debugPrint('Manual check did not find authenticated user');
+            }
+          } catch (e) {
+            debugPrint('Error during manual authentication check: $e');
+          }
+
+          // Show a success message but don't navigate away
+          setState(() {
+            _registerError = 'Account created successfully! Please sign in.';
+          });
+
+          // Optionally, navigate to login screen after a delay
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              Navigator.of(context).pop(); // Go back to login screen
+            }
+          });
         }
       } catch (e) {
         debugPrint('Registration error: $e');
         // Show error in UI
         setState(() {
-          _registerError = 'Registration failed: ${e.toString()}';
+          String errorMsg = e.toString().toLowerCase();
+
+          // Check if the error message already contains a user-friendly message about duplicate email
+          if (errorMsg.contains('already registered') ||
+              errorMsg.contains('email is already') ||
+              errorMsg.contains('email already') ||
+              errorMsg.contains('already exists') ||
+              errorMsg.contains('duplicate')) {
+            // Set email-specific error instead of general register error
+            _emailError = 'Email id already exists!';
+            // Scroll to the email field to make the error visible
+            _formKey.currentState?.validate(); // This will trigger the validator and show the error
+          }
+          // Check for password format errors
+          else if (errorMsg.contains('password must') ||
+                   errorMsg.contains('password should') ||
+                   errorMsg.contains('password requirements')) {
+            _registerError = 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character.';
+          }
+          // Check for invalid email format
+          else if (errorMsg.contains('invalid email') ||
+                   errorMsg.contains('email format')) {
+            _registerError = 'Please enter a valid email address.';
+          }
+          // For any other error, display a cleaned-up version of the error message
+          else {
+            _registerError = 'Registration failed: ${e.toString().replaceAll('Exception: ', '')}';
+          }
         });
       }
     }

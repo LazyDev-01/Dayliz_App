@@ -22,6 +22,8 @@ class Product extends Equatable {
   final DateTime? updatedAt;
   final List<String>? images;
   final bool onSale;
+  final String? categoryName;
+  final String? subcategoryName;
 
   const Product({
     required this.id,
@@ -44,6 +46,8 @@ class Product extends Equatable {
     this.updatedAt,
     this.images,
     this.onSale = false,
+    this.categoryName,
+    this.subcategoryName,
   });
 
   @override
@@ -68,6 +72,8 @@ class Product extends Equatable {
         updatedAt,
         images,
         onSale,
+        categoryName,
+        subcategoryName,
       ];
 
   /// Calculate the discounted price of the product
@@ -100,6 +106,8 @@ class Product extends Equatable {
     DateTime? updatedAt,
     List<String>? images,
     bool? onSale,
+    String? categoryName,
+    String? subcategoryName,
   }) {
     return Product(
       id: id ?? this.id,
@@ -122,6 +130,8 @@ class Product extends Equatable {
       updatedAt: updatedAt ?? this.updatedAt,
       images: images ?? this.images,
       onSale: onSale ?? this.onSale,
+      categoryName: categoryName ?? this.categoryName,
+      subcategoryName: subcategoryName ?? this.subcategoryName,
     );
   }
-} 
+}

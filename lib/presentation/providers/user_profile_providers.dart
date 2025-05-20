@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../core/errors/failures.dart';
 import '../../core/errors/exceptions.dart';
@@ -91,6 +92,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
   final DeleteAddressUseCase deleteAddressUseCase;
   final SetDefaultAddressUseCase setDefaultAddressUseCase;
   final UpdatePreferencesUseCase updatePreferencesUseCase;
+  final Ref ref;
 
   UserProfileNotifier({
     required this.getUserProfileUseCase,
@@ -102,23 +104,32 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
     required this.deleteAddressUseCase,
     required this.setDefaultAddressUseCase,
     required this.updatePreferencesUseCase,
+    required this.ref,
   }) : super(const UserProfileState());
 
   /// Load user profile
   Future<void> loadUserProfile(String userId) async {
+    debugPrint('UserProfileNotifier: Loading profile for user ID: $userId');
     state = state.copyWith(isLoading: true, clearError: true);
 
     final result = await getUserProfileUseCase(userId);
 
     result.fold(
-      (failure) => state = state.copyWith(
-        isLoading: false,
-        errorMessage: _mapFailureToMessage(failure),
-      ),
-      (profile) => state = state.copyWith(
-        isLoading: false,
-        profile: profile,
-      ),
+      (failure) {
+        debugPrint('UserProfileNotifier: Failed to load profile: ${_mapFailureToMessage(failure)}');
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: _mapFailureToMessage(failure),
+        );
+      },
+      (profile) {
+        debugPrint('UserProfileNotifier: Profile loaded successfully');
+        debugPrint('UserProfileNotifier: Profile data - fullName: ${profile.fullName}, gender: ${profile.gender}');
+        state = state.copyWith(
+          isLoading: false,
+          profile: profile,
+        );
+      },
     );
   }
 
@@ -126,7 +137,16 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
   Future<void> updateProfile(UserProfile profile) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
-    final result = await updateUserProfileUseCase(UpdateUserProfileParams(profile: profile));
+    // Ensure the profile's fullName is synchronized with the User's name
+    final currentUser = ref.read(currentUserProvider);
+    UserProfile profileToUpdate = profile;
+
+    if (currentUser != null && (profile.fullName == null || profile.fullName!.isEmpty)) {
+      debugPrint('UserProfileNotifier: Synchronizing profile fullName with user name: ${currentUser.name}');
+      profileToUpdate = profile.copyWith(fullName: currentUser.name);
+    }
+
+    final result = await updateUserProfileUseCase(UpdateUserProfileParams(profile: profileToUpdate));
 
     result.fold(
       (failure) => state = state.copyWith(
@@ -159,7 +179,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
           final updatedProfile = state.profile!.copyWith(
             profileImageUrl: imageUrl,
           );
-          
+
           state = state.copyWith(
             isImageUploading: false,
             profile: updatedProfile,
@@ -205,7 +225,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
       (newAddress) {
         final updatedAddresses = List<Address>.from(state.addresses ?? []);
         updatedAddresses.add(newAddress);
-        
+
         // If this is the default address, update other addresses
         if (newAddress.isDefault) {
           for (var i = 0; i < updatedAddresses.length - 1; i++) {
@@ -214,7 +234,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
             }
           }
         }
-        
+
         state = state.copyWith(
           isAddressesLoading: false,
           addresses: updatedAddresses,
@@ -240,10 +260,10 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
         if (state.addresses != null) {
           final updatedAddresses = List<Address>.from(state.addresses!);
           final index = updatedAddresses.indexWhere((a) => a.id == updatedAddress.id);
-          
+
           if (index != -1) {
             updatedAddresses[index] = updatedAddress;
-            
+
             // If this address is now the default, update other addresses
             if (updatedAddress.isDefault) {
               for (var i = 0; i < updatedAddresses.length; i++) {
@@ -253,7 +273,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
               }
             }
           }
-          
+
           state = state.copyWith(
             isAddressesLoading: false,
             addresses: updatedAddresses,
@@ -283,7 +303,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
           final updatedAddresses = state.addresses!
               .where((address) => address.id != addressId)
               .toList();
-          
+
           state = state.copyWith(
             isAddressesLoading: false,
             addresses: updatedAddresses,
@@ -313,7 +333,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
           final updatedAddresses = state.addresses!.map((address) {
             return address.copyWith(isDefault: address.id == addressId);
           }).toList();
-          
+
           state = state.copyWith(
             isAddressesLoading: false,
             addresses: updatedAddresses,
@@ -345,7 +365,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
             preferences: updatedPreferences,
             lastUpdated: DateTime.now(),
           );
-          
+
           state = state.copyWith(
             isLoading: false,
             profile: updatedProfile,
@@ -483,24 +503,20 @@ class TempUserProfileRepositoryImpl implements UserProfileRepository {
           id: profile.id,
           userId: profile.userId,
           fullName: profile.fullName,
-          displayName: profile.displayName,
-          bio: profile.bio,
           profileImageUrl: profile.profileImageUrl,
           dateOfBirth: profile.dateOfBirth,
           gender: profile.gender,
-          isPublic: profile.isPublic,
           lastUpdated: profile.lastUpdated,
           preferences: profile.preferences,
-          addresses: profile.addresses,
         );
-          
+
         final updatedProfile = await remoteDataSource.updateUserProfile(profileModel);
         return Right(updatedProfile);
       } on ServerException catch (e) {
         return Left(ServerFailure(message: e.message));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -514,7 +530,7 @@ class TempUserProfileRepositoryImpl implements UserProfileRepository {
         return Left(ServerFailure(message: e.message));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -528,7 +544,7 @@ class TempUserProfileRepositoryImpl implements UserProfileRepository {
         return Left(ServerFailure(message: e.message));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -545,7 +561,7 @@ class TempUserProfileRepositoryImpl implements UserProfileRepository {
         return Left(ServerFailure(message: e.message));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
 }
@@ -605,6 +621,7 @@ final userProfileNotifierProvider = StateNotifierProvider<UserProfileNotifier, U
     deleteAddressUseCase: ref.watch(deleteAddressUseCaseProvider),
     setDefaultAddressUseCase: ref.watch(setDefaultAddressUseCaseProvider),
     updatePreferencesUseCase: ref.watch(updatePreferencesUseCaseProvider),
+    ref: ref,
   ),
 );
 
@@ -634,33 +651,21 @@ final defaultAddressProvider = Provider<Address?>(
 final autoLoadUserProfileProvider = Provider<void>(
   (ref) {
     final authState = ref.watch(authStateProvider);
-    
+
     ref.listen(authStateProvider, (previous, current) {
-      if (current.isAuthenticated && current.user != null && 
+      if (current.isAuthenticated && current.user != null &&
           (previous == null || !previous.isAuthenticated || previous.user == null)) {
         ref.read(userProfileNotifierProvider.notifier).loadUserProfile(current.user!.id);
       }
     });
-    
+
     if (authState.isAuthenticated && authState.user != null) {
       Future.microtask(() {
         ref.read(userProfileNotifierProvider.notifier).loadUserProfile(authState.user!.id);
       });
     }
-    
+
     return;
   },
 );
 
-String _mapFailureToMessage(Failure failure) {
-  switch (failure.runtimeType) {
-    case ServerFailure:
-      return 'Server error occurred. Please try again.';
-    case NetworkFailure:
-      return 'No internet connection. Please check your connection.';
-    case CacheFailure:
-      return 'Cache error occurred. Please try again.';
-    default:
-      return 'Unexpected error occurred. Please try again.';
-  }
-} 

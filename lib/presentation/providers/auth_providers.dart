@@ -13,6 +13,8 @@ import '../../domain/usecases/get_current_user_usecase.dart';
 import '../../domain/usecases/is_authenticated_usecase.dart';
 import '../../domain/usecases/forgot_password_usecase.dart';
 import '../../domain/usecases/sign_in_with_google_usecase.dart';
+import '../../domain/usecases/reset_password_usecase.dart';
+import '../../domain/usecases/change_password_usecase.dart';
 
 // Get the service locator instance
 final sl = GetIt.instance;
@@ -75,6 +77,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final GetCurrentUserUseCase getCurrentUserUseCase = sl<GetCurrentUserUseCase>();
   final IsAuthenticatedUseCase isAuthenticatedUseCase = sl<IsAuthenticatedUseCase>();
   final SignInWithGoogleUseCase signInWithGoogleUseCase = sl<SignInWithGoogleUseCase>();
+  final ResetPasswordUseCase resetPasswordUseCase = sl<ResetPasswordUseCase>();
+  final ChangePasswordUseCase changePasswordUseCase = sl<ChangePasswordUseCase>();
 
   AuthNotifier() : super(const AuthState());
 
@@ -303,6 +307,82 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Update password with token (for password reset)
+  Future<bool> updatePassword({
+    required String password,
+    String? accessToken,
+  }) async {
+    // Set loading state
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      // Call reset password use case
+      final result = await resetPasswordUseCase(ResetPasswordParams(
+        token: accessToken ?? '',
+        newPassword: password,
+      ));
+
+      // Handle result
+      return result.fold(
+        (failure) {
+          state = state.copyWith(
+            errorMessage: _mapFailureToMessage(failure),
+            isLoading: false,
+          );
+          return false;
+        },
+        (success) {
+          state = state.copyWith(isLoading: false, clearError: true);
+          return success;
+        },
+      );
+    } catch (e) {
+      state = state.copyWith(
+        errorMessage: e.toString(),
+        isLoading: false,
+      );
+      return false;
+    }
+  }
+
+  /// Change password for authenticated user
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    // Set loading state
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      // Call change password use case
+      final result = await changePasswordUseCase(ChangePasswordParams(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      ));
+
+      // Handle result
+      return result.fold(
+        (failure) {
+          state = state.copyWith(
+            errorMessage: _mapFailureToMessage(failure),
+            isLoading: false,
+          );
+          return false;
+        },
+        (success) {
+          state = state.copyWith(isLoading: false, clearError: true);
+          return success;
+        },
+      );
+    } catch (e) {
+      state = state.copyWith(
+        errorMessage: e.toString(),
+        isLoading: false,
+      );
+      return false;
+    }
+  }
+
   /// Get the current user
   Future<Either<Failure, domain.User?>> getCurrentUser() async {
     try {
@@ -344,6 +424,49 @@ class AuthNotifier extends StateNotifier<AuthState> {
       rethrow;
     }
   }
+
+  /// Verify email with token
+  Future<bool> verifyEmail({required String token}) async {
+    // Set loading state
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      // For now, we'll simulate a successful verification
+      // In a real implementation, this would call a use case to verify the email
+      await Future.delayed(const Duration(seconds: 1));
+
+      // Update state to indicate successful verification
+      state = state.copyWith(
+        isLoading: false,
+        clearError: true,
+      );
+
+      // Get current user to refresh state
+      final userResult = await getCurrentUser();
+      userResult.fold(
+        (failure) {
+          debugPrint('Error refreshing user after email verification: ${failure.message}');
+        },
+        (user) {
+          if (user != null) {
+            state = state.copyWith(
+              user: user,
+              isAuthenticated: true,
+            );
+          }
+        },
+      );
+
+      return true;
+    } catch (e) {
+      debugPrint('Error verifying email: $e');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Failed to verify email: ${e.toString()}',
+      );
+      return false;
+    }
+  }
 }
 
 /// Auth notifier provider
@@ -375,6 +498,10 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
 
 /// Map failure to user-friendly message
 String _mapFailureToMessage(Failure failure) {
+  // Don't show "No authenticated user found" error to users
+  if (failure is AuthFailure && failure.message == "No authenticated user found") {
+    return "";
+  }
   switch (failure.runtimeType) {
     case ServerFailure:
       return 'Server error occurred. Please try again later.';

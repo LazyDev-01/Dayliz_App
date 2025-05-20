@@ -1,22 +1,28 @@
 # Dayliz App
 
-A Q-commerce grocery delivery app with modern UI built with Flutter.
+A Q-commerce grocery delivery app with modern UI built with Flutter, following clean architecture principles.
 
 ## Features
 
-- User Authentication
-- Product Browsing
-- Shopping Cart
-- Checkout Process
-- Order Confirmation
+- User Authentication (Login, Register, Forgot Password)
+- Product Browsing and Search
+- Category and Subcategory Navigation
+- Shopping Cart and Checkout
+- Order Management and Tracking
 - Address Management
+- User Profile and Preferences
+- Wishlist Functionality
 
 ## Tech Stack
 
-- Flutter
+- Flutter for cross-platform development
+- Clean Architecture for code organization
 - Riverpod for State Management
+- GetIt for Dependency Injection
 - Go Router for Navigation
-- SharedPreferences for Local Storage
+- Supabase for Backend Services
+- Dartz for Functional Programming
+- Equatable for Value Equality
 
 ## Setup Instructions
 
@@ -50,11 +56,49 @@ For detailed testing instructions, please check [README_TESTING.md](README_TESTI
 
 ## Project Structure
 
-- `lib/models`: Data models
-- `lib/providers`: State management
-- `lib/screens`: UI screens
-- `lib/widgets`: Reusable UI components
+### Clean Architecture Layers
+
+- `lib/core`: Application-wide utilities and constants
+  - `constants`: API endpoints, app constants
+  - `errors`: Exception and failure handling
+  - `utils`: Network info, validators, formatters
+
+- `lib/domain`: Business logic layer
+  - `entities`: Core business objects
+  - `repositories`: Repository interfaces
+  - `usecases`: Specific business operations
+
+- `lib/data`: Data layer
+  - `datasources`: Remote and local data sources
+  - `models`: Data models extending domain entities
+  - `repositories`: Repository implementations
+
+- `lib/presentation`: UI layer
+  - `providers`: State management
+  - `screens`: UI screens
+  - `widgets`: Reusable UI components
+
+- `lib/di`: Dependency injection
+
+### Legacy Structure (Being Migrated)
+
+- `lib/models`: Legacy data models
+- `lib/providers`: Legacy state management
+- `lib/screens`: Legacy UI screens
+- `lib/widgets`: Legacy UI components
 - `lib/theme`: App theme and styling
+
+## Clean Architecture Migration
+
+The project is currently undergoing a migration to clean architecture. Current progress:
+
+- Overall Structure: 75% complete
+- Domain Layer: 85% complete
+- Data Layer: 70% complete
+- Presentation Layer: 65% complete
+- Core Layer: 80% complete
+
+For detailed migration status, see [Clean Architecture Migration Plan](./docs/clean_architecture_migration_plan_updated.md).
 
 ## License
 
@@ -66,35 +110,45 @@ MIT
 
 ## Database Schema Alignment
 
-The clean architecture migration includes database schema alignment to ensure consistency between domain entities and the Supabase database. Key features include:
+The clean architecture migration includes database schema alignment to ensure consistency between domain entities and the Supabase database. This phase has been completed (100%). Key features implemented:
 
 - Entity-table mapping for all domain models
 - Database view creation for efficient data access
-- Version tracking with the `clean_architecture_versions` table
+- Migration scripts for schema updates
 - Row Level Security (RLS) policy implementations
+- Performance optimizations (indexes, materialized views)
+- Full-text search capabilities
+- Geospatial query support
+- Real-time notification system
 
-See [Database Schema Alignment](./docs/database_schema_alignment.md) for complete documentation.
+See [Database Schema Alignment](./docs/database/database_schema_alignment_updated.md) for complete documentation.
 
-## Backend Integration
+## Backend Integration Strategy
 
-The app includes multiple backend options:
+The app implements a dual backend strategy:
 
-### Supabase Integration
+### Supabase Integration (Primary)
 
+- Currently being implemented as the primary backend
 - Data source implementations for each entity using Supabase client
-- Factory pattern to select correct backend implementation at runtime
 - Row Level Security (RLS) policies for data protection
 - Clean mapping between Supabase responses and domain entities
 
-Example usage:
+### FastAPI Backend (Future)
+
+- Planned as an alternative backend option
+- Will be enabled 2-3 months after initial launch
+- HTTP-based implementations for all data sources
+- Consistent API endpoints for all entities
+
+The architecture allows switching between backends through dependency injection:
 
 ```dart
-// Using the Cart data source with Supabase
-final cartDataSource = CartDataSourceFactory.getSupabaseDataSource();
+// Using the factory pattern to get the appropriate data source
+final cartDataSource = CartDataSourceFactory.getDataSource();
 final cartItems = await cartDataSource.getCartItems();
 ```
 
-### FastAPI Backend (Alternative)
+## Remaining Work
 
-- HTTP-based implementations for all data sources
-- Consistent API endpoints for all entities
+See [Remaining Screens Implementation](./docs/remaining_screens_implementation.md) for details on screens yet to be implemented.

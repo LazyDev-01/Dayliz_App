@@ -13,9 +13,16 @@ class AddressModel extends Address {
     required String country,
     String? phoneNumber,
     bool isDefault = false,
-    String label = 'Home',
+    // Label field removed
+    String? addressType,
     String? additionalInfo,
-    Map<String, double>? coordinates,
+    double? latitude,
+    double? longitude,
+    String? landmark,
+    String? zoneId,
+    String? recipientName,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) : super(
           id: id,
           userId: userId,
@@ -27,9 +34,16 @@ class AddressModel extends Address {
           country: country,
           phoneNumber: phoneNumber,
           isDefault: isDefault,
-          label: label,
+          // Label field removed
+          addressType: addressType,
           additionalInfo: additionalInfo,
-          coordinates: coordinates,
+          latitude: latitude,
+          longitude: longitude,
+          landmark: landmark,
+          zoneId: zoneId,
+          recipientName: recipientName,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
         );
 
   /// Factory constructor to create an [AddressModel] from a map (JSON)
@@ -45,11 +59,18 @@ class AddressModel extends Address {
       country: map['country'],
       phoneNumber: map['phone_number'],
       isDefault: map['is_default'] ?? false,
-      label: map['label'] ?? 'Home',
+      // Label field removed
+      addressType: map['address_type'],
       additionalInfo: map['additional_info'],
-      coordinates: map['coordinates'] != null
-          ? Map<String, double>.from(map['coordinates'])
-          : null,
+      latitude: map['latitude'] != null ?
+          double.tryParse(map['latitude'].toString()) : null,
+      longitude: map['longitude'] != null ?
+          double.tryParse(map['longitude'].toString()) : null,
+      landmark: map['landmark'],
+      zoneId: map['zone_id'],
+      recipientName: map['recipient_name'],
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at'].toString()) : null,
+      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at'].toString()) : null,
     );
   }
 
@@ -66,13 +87,20 @@ class AddressModel extends Address {
       'country': country,
       'phone_number': phoneNumber,
       'is_default': isDefault,
-      'label': label,
+      // Label field removed
+      'address_type': addressType,
       'additional_info': additionalInfo,
-      'coordinates': coordinates,
+      'latitude': latitude,
+      'longitude': longitude,
+      'landmark': landmark,
+      'zone_id': zoneId,
+      'recipient_name': recipientName,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
   }
-  
+
   // For backward compatibility with existing code
   factory AddressModel.fromJson(Map<String, dynamic> json) => AddressModel.fromMap(json);
   Map<String, dynamic> toJson() => toMap();
-} 
+}

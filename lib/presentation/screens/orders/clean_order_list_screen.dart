@@ -8,6 +8,7 @@ import '../../providers/order_providers.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/common_app_bar.dart';
 
 class CleanOrderListScreen extends ConsumerStatefulWidget {
   const CleanOrderListScreen({Key? key}) : super(key: key);
@@ -31,8 +32,10 @@ class _CleanOrderListScreenState extends ConsumerState<CleanOrderListScreen> {
     final ordersAsyncValue = ref.watch(userOrdersProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Orders'),
+      appBar: CommonAppBars.withBackButton(
+        title: 'My Orders',
+        fallbackRoute: '/clean/profile',
+        backButtonTooltip: 'Back to Profile',
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -48,7 +51,7 @@ class _CleanOrderListScreenState extends ConsumerState<CleanOrderListScreen> {
                   child: LoadingIndicator(message: 'Loading orders...'),
                 );
               }
-              
+
               return const EmptyState(
                 icon: Icons.receipt_long,
                 title: 'No Orders Yet',
@@ -85,7 +88,7 @@ class _CleanOrderListScreenState extends ConsumerState<CleanOrderListScreen> {
 
 class _OrderCard extends StatelessWidget {
   final domain.Order order;
-  
+
   const _OrderCard({
     Key? key,
     required this.order,
@@ -95,7 +98,7 @@ class _OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currencyFormat = NumberFormat.currency(symbol: '\$');
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
@@ -142,7 +145,7 @@ class _OrderCard extends StatelessWidget {
 
   Widget _buildStatusChip(BuildContext context, String status) {
     Color chipColor;
-    
+
     switch (status) {
       case domain.Order.statusPending:
         chipColor = Colors.blue;
@@ -162,7 +165,7 @@ class _OrderCard extends StatelessWidget {
       default:
         chipColor = Colors.grey;
     }
-    
+
     return Chip(
       label: Text(
         _formatStatus(status),
@@ -185,4 +188,4 @@ class _OrderCard extends StatelessWidget {
   String _formatDate(DateTime date) {
     return DateFormat('MMM d, yyyy').format(date);
   }
-} 
+}
