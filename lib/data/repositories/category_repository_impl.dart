@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/error/exceptions.dart';
+import '../../core/errors/exceptions.dart';
 import '../../core/errors/failures.dart';
 import '../../core/network/network_info.dart';
 import '../../domain/entities/category.dart';
@@ -186,4 +186,4 @@ class CategoryRepositoryImpl implements CategoryRepository {
       }
     }
   }
-} 
+}

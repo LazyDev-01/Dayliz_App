@@ -72,11 +72,11 @@ class DebugMenuScreen extends ConsumerWidget {
           ),
           _buildDebugTile(
             context,
-            title: 'Search Test',
+            title: 'Search',
             subtitle: 'Test the clean search screen implementation',
             icon: Icons.search,
             onTap: () {
-              CleanRoutes.navigateToSearchTest(context);
+              CleanRoutes.navigateToSearch(context);
             },
           ),
 

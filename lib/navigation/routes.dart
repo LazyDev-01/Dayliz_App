@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../domain/entities/category.dart';
-import '../domain/entities/user_profile.dart';
 import '../domain/entities/address.dart';
 import '../presentation/screens/product/clean_product_listing_screen.dart';
 import '../presentation/screens/product/clean_product_details_screen.dart';
@@ -21,7 +20,6 @@ import '../presentation/screens/profile/clean_preferences_screen.dart';
 import '../presentation/screens/orders/clean_order_list_screen.dart';
 import '../presentation/screens/orders/clean_order_detail_screen.dart';
 import '../presentation/screens/search/clean_search_screen.dart';
-import '../presentation/screens/search/search_test_screen.dart';
 import '../presentation/screens/wishlist/clean_wishlist_screen.dart';
 import '../presentation/screens/debug/supabase_connection_test_screen.dart';
 import '../presentation/screens/debug/supabase_auth_test_screen.dart';
@@ -241,13 +239,6 @@ class CleanRoutes {
           settings: settings,
         );
 
-      case 'search-test':
-        // Search test screen
-        return MaterialPageRoute(
-          builder: (_) => const SearchTestScreen(),
-          settings: settings,
-        );
-
       case 'wishlist':
         // Wishlist screen
         return MaterialPageRoute(
@@ -363,11 +354,6 @@ class CleanRoutes {
   // Navigation method for search
   static void navigateToSearch(BuildContext context) {
     GoRouter.of(context).push('/clean/search');
-  }
-
-  // Navigation method for search test
-  static void navigateToSearchTest(BuildContext context) {
-    GoRouter.of(context).push('/clean/search-test');
   }
 
   // Navigation method for wishlist

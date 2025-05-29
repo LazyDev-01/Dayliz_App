@@ -2,9 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_it/get_it.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/failures.dart';
-import '../../core/usecases/usecase.dart' hide NoParams;
+
 import '../../domain/entities/user.dart' as domain;
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
@@ -12,9 +13,10 @@ import '../../domain/usecases/logout_usecase.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
 import '../../domain/usecases/is_authenticated_usecase.dart';
 import '../../domain/usecases/forgot_password_usecase.dart';
-import '../../domain/usecases/sign_in_with_google_usecase.dart';
+import '../../domain/usecases/sign_in_with_google_usecase.dart' as google_signin;
 import '../../domain/usecases/reset_password_usecase.dart';
 import '../../domain/usecases/change_password_usecase.dart';
+import '../../domain/usecases/check_email_exists_usecase.dart';
 
 // Get the service locator instance
 final sl = GetIt.instance;
@@ -49,143 +51,65 @@ class AuthState {
   }
 }
 
-/// User class
-class User {
-  final String id;
-  final String email;
-  final String? displayName;
-
-  const User({
-    required this.id,
-    required this.email,
-    this.displayName,
-  });
-}
-
-/// Auth state provider
-final authStateProvider = StateProvider<AuthState>((ref) {
-  // Default to unauthenticated state
-  return const AuthState();
-});
-
 /// Auth notifier
 class AuthNotifier extends StateNotifier<AuthState> {
-  final LoginUseCase loginUseCase = sl<LoginUseCase>();
-  final RegisterUseCase registerUseCase = sl<RegisterUseCase>();
-  final LogoutUseCase logoutUseCase = sl<LogoutUseCase>();
-  final ForgotPasswordUseCase forgotPasswordUseCase = sl<ForgotPasswordUseCase>();
-  final GetCurrentUserUseCase getCurrentUserUseCase = sl<GetCurrentUserUseCase>();
-  final IsAuthenticatedUseCase isAuthenticatedUseCase = sl<IsAuthenticatedUseCase>();
-  final SignInWithGoogleUseCase signInWithGoogleUseCase = sl<SignInWithGoogleUseCase>();
-  final ResetPasswordUseCase resetPasswordUseCase = sl<ResetPasswordUseCase>();
-  final ChangePasswordUseCase changePasswordUseCase = sl<ChangePasswordUseCase>();
+  final LoginUseCase loginUseCase;
+  final RegisterUseCase registerUseCase;
+  final LogoutUseCase logoutUseCase;
+  final ForgotPasswordUseCase forgotPasswordUseCase;
+  final GetCurrentUserUseCase getCurrentUserUseCase;
+  final IsAuthenticatedUseCase isAuthenticatedUseCase;
+  final google_signin.SignInWithGoogleUseCase signInWithGoogleUseCase;
+  final ResetPasswordUseCase resetPasswordUseCase;
+  final ChangePasswordUseCase changePasswordUseCase;
+  final CheckEmailExistsUseCase checkEmailExistsUseCase;
 
-  AuthNotifier() : super(const AuthState());
+  AuthNotifier({
+    required this.loginUseCase,
+    required this.registerUseCase,
+    required this.logoutUseCase,
+    required this.forgotPasswordUseCase,
+    required this.getCurrentUserUseCase,
+    required this.isAuthenticatedUseCase,
+    required this.signInWithGoogleUseCase,
+    required this.resetPasswordUseCase,
+    required this.changePasswordUseCase,
+    required this.checkEmailExistsUseCase,
+  }) : super(const AuthState());
 
-  Future<void> login(String email, String password, {bool rememberMe = true}) async {
-    // Set loading state
-    state = state.copyWith(isLoading: true, clearError: true);
-
-    try {
-      // Call login use case
-      final result = await loginUseCase(LoginParams(email: email, password: password, rememberMe: rememberMe));
-
-      // Handle result
-      result.fold(
-        (failure) => state = state.copyWith(
-          errorMessage: _mapFailureToMessage(failure),
-          isLoading: false,
-        ),
-        (user) => state = state.copyWith(
-          isAuthenticated: true,
-          user: user,
-          isLoading: false,
-          clearError: true,
-        ),
-      );
-    } catch (e) {
-      state = state.copyWith(
-        errorMessage: e.toString(),
-        isLoading: false,
-      );
-    }
+  // Constructor that uses service locator
+  factory AuthNotifier.fromServiceLocator() {
+    return AuthNotifier(
+      loginUseCase: sl<LoginUseCase>(),
+      registerUseCase: sl<RegisterUseCase>(),
+      logoutUseCase: sl<LogoutUseCase>(),
+      forgotPasswordUseCase: sl<ForgotPasswordUseCase>(),
+      getCurrentUserUseCase: sl<GetCurrentUserUseCase>(),
+      isAuthenticatedUseCase: sl<IsAuthenticatedUseCase>(),
+      signInWithGoogleUseCase: sl<google_signin.SignInWithGoogleUseCase>(),
+      resetPasswordUseCase: sl<ResetPasswordUseCase>(),
+      changePasswordUseCase: sl<ChangePasswordUseCase>(),
+      checkEmailExistsUseCase: sl<CheckEmailExistsUseCase>(),
+    );
   }
 
-  Future<void> register(String email, String password, String name, {String? phone}) async {
-    // Set loading state
+  Future<void> login(String email, String password, {bool rememberMe = true}) async {
+    debugPrint('🔄 [AuthNotifier] Starting login for email: $email');
     state = state.copyWith(isLoading: true, clearError: true);
-    debugPrint('AuthNotifier: Starting registration for $email');
-    debugPrint('AuthNotifier: Current state: isLoading=${state.isLoading}, isAuthenticated=${state.isAuthenticated}');
 
     try {
-      debugPrint('AuthNotifier: Calling registerUseCase with email: $email, name: $name, phone: $phone');
-      debugPrint('AuthNotifier: registerUseCase instance: $registerUseCase');
+      final result = await loginUseCase(LoginParams(email: email, password: password, rememberMe: rememberMe));
 
-      // Call register use case
-      final params = RegisterParams(
-        email: email,
-        password: password,
-        name: name,
-        phone: phone,
-      );
-      debugPrint('AuthNotifier: Created RegisterParams');
-
-      final result = await registerUseCase(params);
-      debugPrint('AuthNotifier: registerUseCase call completed');
-
-      debugPrint('AuthNotifier: Got result from registerUseCase');
-      // Handle result
       result.fold(
         (failure) {
-          debugPrint('AuthNotifier: Registration failed with error: ${failure.message}');
-
-          // Check if we're already authenticated despite the error
-          // This can happen if auth succeeded but profile creation failed
-          if (state.isAuthenticated || state.user != null) {
-            debugPrint('AuthNotifier: Already authenticated, ignoring error');
-            state = state.copyWith(
-              isLoading: false,
-              clearError: true,
-            );
-            return;
-          }
-
-          // Check if we have a current user in Supabase despite the error
-          // This is a workaround for the "Database error saving new user" issue
-          getCurrentUser().then((userResult) {
-            userResult.fold(
-              (failure) {
-                debugPrint('AuthNotifier: Failed to get current user after registration error');
-                // No user found, show the original error
-                state = state.copyWith(
-                  errorMessage: _mapFailureToMessage(failure),
-                  isLoading: false,
-                );
-              },
-              (user) {
-                if (user != null) {
-                  debugPrint('AuthNotifier: Found user despite registration error: ${user.id}');
-                  // User exists, update state to authenticated
-                  state = state.copyWith(
-                    isAuthenticated: true,
-                    user: user,
-                    isLoading: false,
-                    clearError: true,
-                  );
-                } else {
-                  debugPrint('AuthNotifier: No user found after registration error');
-                  // No user found, show the original error
-                  state = state.copyWith(
-                    errorMessage: _mapFailureToMessage(failure),
-                    isLoading: false,
-                  );
-                }
-              },
-            );
-          });
+          debugPrint('🔍 [AuthNotifier] Login failed with failure: ${failure.runtimeType} - ${failure.message}');
+          state = state.copyWith(
+            errorMessage: _mapFailureToMessage(failure),
+            isLoading: false,
+          );
         },
         (user) {
-          debugPrint('AuthNotifier: Registration successful for user: ${user.id}');
+          debugPrint('✅ [AuthNotifier] Login successful for user: ${user.id}');
           state = state.copyWith(
             isAuthenticated: true,
             user: user,
@@ -194,52 +118,71 @@ class AuthNotifier extends StateNotifier<AuthState> {
           );
         },
       );
-    } catch (e, stackTrace) {
-      debugPrint('AuthNotifier: Exception during registration: ${e.toString()}');
-      debugPrint('AuthNotifier: Stack trace: $stackTrace');
+    } catch (e) {
+      debugPrint('🔍 [AuthNotifier] Login caught exception: ${e.toString()}');
+      state = state.copyWith(
+        errorMessage: e.toString(),
+        isLoading: false,
+      );
+    }
+  }
 
-      // Check if we're already authenticated despite the error
-      if (state.isAuthenticated || state.user != null) {
-        debugPrint('AuthNotifier: Already authenticated, ignoring error');
-        state = state.copyWith(
-          isLoading: false,
-          clearError: true,
-        );
-        return;
-      }
+  Future<void> register(String email, String password, String name, {String? phone}) async {
+    state = state.copyWith(isLoading: true, clearError: true);
 
-      // Check if we have a current user in Supabase despite the error
-      getCurrentUser().then((userResult) {
-        userResult.fold(
-          (failure) {
-            debugPrint('AuthNotifier: Failed to get current user after exception');
-            // No user found, show a generic error
+    try {
+      final params = RegisterParams(
+        email: email,
+        password: password,
+        name: name,
+        phone: phone,
+      );
+
+      final result = await registerUseCase(params);
+
+      result.fold(
+        (failure) {
+          String errorMsg = failure.message.toLowerCase();
+          if (errorMsg.contains('already registered') ||
+              errorMsg.contains('email is already') ||
+              errorMsg.contains('email already') ||
+              errorMsg.contains('already exists') ||
+              errorMsg.contains('duplicate') ||
+              errorMsg.contains('already in use')) {
+
+            try {
+              Supabase.instance.client.auth.signOut();
+            } catch (e) {
+              debugPrint('AuthNotifier: Error signing out: $e');
+            }
+
             state = state.copyWith(
-              errorMessage: 'Server error occurred. Please try again later.',
+              errorMessage: 'This email is already registered. Please use a different email or try logging in.',
+              isLoading: false,
+              isAuthenticated: false,
+              user: null,
+            );
+          } else {
+            state = state.copyWith(
+              errorMessage: _mapFailureToMessage(failure),
               isLoading: false,
             );
-          },
-          (user) {
-            if (user != null) {
-              debugPrint('AuthNotifier: Found user despite exception: ${user.id}');
-              // User exists, update state to authenticated
-              state = state.copyWith(
-                isAuthenticated: true,
-                user: user,
-                isLoading: false,
-                clearError: true,
-              );
-            } else {
-              debugPrint('AuthNotifier: No user found after exception');
-              // No user found, show a generic error
-              state = state.copyWith(
-                errorMessage: 'Server error occurred. Please try again later.',
-                isLoading: false,
-              );
-            }
-          },
-        );
-      });
+          }
+        },
+        (user) {
+          state = state.copyWith(
+            isAuthenticated: true,
+            user: user,
+            isLoading: false,
+            clearError: true,
+          );
+        },
+      );
+    } catch (e) {
+      state = state.copyWith(
+        errorMessage: 'Registration failed: ${e.toString()}',
+        isLoading: false,
+      );
     }
   }
 
@@ -277,14 +220,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> forgotPassword(String email) async {
-    // Set loading state
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      // Call forgot password use case
       final result = await forgotPasswordUseCase(ForgotPasswordParams(email: email));
 
-      // Handle result
       return result.fold(
         (failure) {
           state = state.copyWith(
@@ -307,22 +247,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Update password with token (for password reset)
   Future<bool> updatePassword({
     required String password,
     String? accessToken,
   }) async {
-    // Set loading state
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      // Call reset password use case
       final result = await resetPasswordUseCase(ResetPasswordParams(
         token: accessToken ?? '',
         newPassword: password,
       ));
 
-      // Handle result
       return result.fold(
         (failure) {
           state = state.copyWith(
@@ -345,22 +281,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Change password for authenticated user
   Future<bool> changePassword({
     required String currentPassword,
     required String newPassword,
   }) async {
-    // Set loading state
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      // Call change password use case
       final result = await changePasswordUseCase(ChangePasswordParams(
         currentPassword: currentPassword,
         newPassword: newPassword,
       ));
 
-      // Handle result
       return result.fold(
         (failure) {
           state = state.copyWith(
@@ -383,32 +315,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Get the current user
   Future<Either<Failure, domain.User?>> getCurrentUser() async {
     try {
-      debugPrint('AuthNotifier: Getting current user');
       return await getCurrentUserUseCase();
     } catch (e) {
-      debugPrint('AuthNotifier: Error getting current user: ${e.toString()}');
       return Left(ServerFailure(message: e.toString()));
     }
   }
 
-  /// Sign in with Google
   Future<void> signInWithGoogle() async {
-    // Set loading state
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      // Call the signInWithGoogle use case using the NoParams from sign_in_with_google_usecase.dart
-      final result = await signInWithGoogleUseCase(const NoParams());
+      final result = await signInWithGoogleUseCase(const google_signin.NoParams());
 
-      // Handle result
       result.fold(
-        (failure) => state = state.copyWith(
-          isLoading: false,
-          errorMessage: _mapFailureToMessage(failure),
-        ),
+        (failure) {
+          // CRITICAL FIX: Handle user cancellation silently
+          if (failure is UserCancellationFailure) {
+            debugPrint('🔍 [AuthNotifier] User cancelled Google Sign-In - handling silently');
+            state = state.copyWith(
+              isLoading: false,
+              clearError: true, // Don't show any error message
+            );
+          } else {
+            state = state.copyWith(
+              isLoading: false,
+              errorMessage: _mapFailureToMessage(failure),
+            );
+          }
+        },
         (user) => state = state.copyWith(
           isLoading: false,
           isAuthenticated: true,
@@ -417,6 +353,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
         ),
       );
     } catch (e) {
+      // CRITICAL FIX: Handle user cancellation silently even in catch block
+      if (e.toString().contains('UserCancellationException') ||
+          e.toString().contains('cancelled by user')) {
+        debugPrint('🔍 [AuthNotifier] User cancelled Google Sign-In in catch block - handling silently');
+        state = state.copyWith(
+          isLoading: false,
+          clearError: true, // Don't show any error message
+        );
+        return; // Don't rethrow for cancellation
+      }
+
       state = state.copyWith(
         isLoading: false,
         errorMessage: e.toString(),
@@ -425,23 +372,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Verify email with token
   Future<bool> verifyEmail({required String token}) async {
-    // Set loading state
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      // For now, we'll simulate a successful verification
-      // In a real implementation, this would call a use case to verify the email
       await Future.delayed(const Duration(seconds: 1));
 
-      // Update state to indicate successful verification
       state = state.copyWith(
         isLoading: false,
         clearError: true,
       );
 
-      // Get current user to refresh state
       final userResult = await getCurrentUser();
       userResult.fold(
         (failure) {
@@ -467,49 +408,90 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     }
   }
+
+  void clearErrors() {
+    state = state.copyWith(clearError: true);
+  }
+
+  /// Check if an email already exists in the system
+  Future<bool> checkEmailExists(String email) async {
+    try {
+      debugPrint('🔄 [AuthNotifier] Checking if email exists: $email');
+
+      final result = await checkEmailExistsUseCase(CheckEmailExistsParams(email: email));
+
+      return result.fold(
+        (failure) {
+          debugPrint('❌ [AuthNotifier] Email check failed: ${failure.message}');
+          // On failure, return false to allow user to proceed (fail-safe approach)
+          return false;
+        },
+        (exists) {
+          debugPrint('✅ [AuthNotifier] Email exists check result: $exists');
+          return exists;
+        },
+      );
+    } catch (e) {
+      debugPrint('❌ [AuthNotifier] Error checking email existence: $e');
+      // On error, return false to allow user to proceed (fail-safe approach)
+      return false;
+    }
+  }
+
+  /// ENHANCED FIX: Set validation error without triggering auth operations
+  void setValidationError(String message) {
+    state = state.copyWith(
+      errorMessage: message,
+      isLoading: false,
+    );
+  }
+
+  String _mapFailureToMessage(Failure failure) {
+    debugPrint('🔍 [AuthNotifier] Mapping failure: ${failure.runtimeType} - ${failure.message}');
+
+    if (failure is AuthFailure && failure.message == "No authenticated user found") {
+      return "";
+    }
+
+    switch (failure.runtimeType) {
+      case ServerFailure:
+        debugPrint('🔍 [AuthNotifier] Returning actual server error message: ${failure.message}');
+        // CRITICAL FIX: Return the actual server error message instead of generic message
+        // This allows users to see specific errors like password requirements, email issues, etc.
+        return failure.message.isNotEmpty
+            ? failure.message
+            : 'Server error occurred. Please try again later.';
+      case NetworkFailure:
+        debugPrint('🔍 [AuthNotifier] Returning network error message');
+        return 'Network error. Please check your internet connection.';
+      case AuthFailure:
+        debugPrint('🔍 [AuthNotifier] Returning auth failure message: ${failure.message}');
+        return failure.message;
+      default:
+        debugPrint('🔍 [AuthNotifier] Returning unexpected error message');
+        return 'An unexpected error occurred.';
+    }
+  }
 }
 
 /// Auth notifier provider
 final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier();
+  return AuthNotifier.fromServiceLocator();
 });
 
 /// Convenience providers for specific auth states
-
-/// Loading state provider
 final authLoadingProvider = Provider<bool>((ref) {
   return ref.watch(authNotifierProvider).isLoading;
 });
 
-/// Error message provider
 final authErrorProvider = Provider<String?>((ref) {
   return ref.watch(authNotifierProvider).errorMessage;
 });
 
-/// Current user provider
 final currentUserProvider = Provider<domain.User?>((ref) {
   return ref.watch(authNotifierProvider).user;
 });
 
-/// Authentication status provider
 final isAuthenticatedProvider = Provider<bool>((ref) {
   return ref.watch(authNotifierProvider).isAuthenticated;
 });
-
-/// Map failure to user-friendly message
-String _mapFailureToMessage(Failure failure) {
-  // Don't show "No authenticated user found" error to users
-  if (failure is AuthFailure && failure.message == "No authenticated user found") {
-    return "";
-  }
-  switch (failure.runtimeType) {
-    case ServerFailure:
-      return 'Server error occurred. Please try again later.';
-    case NetworkFailure:
-      return 'Network error. Please check your internet connection.';
-    case AuthFailure:
-      return failure.message;
-    default:
-      return 'An unexpected error occurred.';
-  }
-}

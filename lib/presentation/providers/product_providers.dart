@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_it/get_it.dart';
 
@@ -11,6 +12,52 @@ import '../../domain/usecases/get_related_products_usecase.dart';
 
 // Get the service locator instance
 final sl = GetIt.instance;
+
+// Use case providers
+final productRepositoryProvider = Provider<ProductRepository>((ref) {
+  try {
+    return sl<ProductRepository>();
+  } catch (e) {
+    debugPrint('Error getting ProductRepository from service locator: $e');
+    rethrow;
+  }
+});
+
+final getProductsUseCaseProvider = Provider<GetProductsUseCase>((ref) {
+  try {
+    return sl<GetProductsUseCase>();
+  } catch (e) {
+    debugPrint('Error getting GetProductsUseCase from service locator: $e');
+    rethrow;
+  }
+});
+
+final getProductByIdUseCaseProvider = Provider<GetProductByIdUseCase>((ref) {
+  try {
+    return sl<GetProductByIdUseCase>();
+  } catch (e) {
+    debugPrint('Error getting GetProductByIdUseCase from service locator: $e');
+    rethrow;
+  }
+});
+
+final getProductsBySubcategoryUseCaseProvider = Provider<GetProductsBySubcategoryUseCase>((ref) {
+  try {
+    return sl<GetProductsBySubcategoryUseCase>();
+  } catch (e) {
+    debugPrint('Error getting GetProductsBySubcategoryUseCase from service locator: $e');
+    rethrow;
+  }
+});
+
+final getRelatedProductsUseCaseProvider = Provider<GetRelatedProductsUseCase>((ref) {
+  try {
+    return sl<GetRelatedProductsUseCase>();
+  } catch (e) {
+    debugPrint('Error getting GetRelatedProductsUseCase from service locator: $e');
+    rethrow;
+  }
+});
 
 // Product filters provider (manages pagination, category, subcategory, etc.)
 final productFiltersProvider = StateProvider.autoDispose<Map<String, dynamic>>((ref) {
@@ -66,9 +113,9 @@ class ProductByIdNotifier extends StateNotifier<ProductState> {
 
   Future<void> getProduct() async {
     state = ProductState(isLoading: true);
-    
+
     final result = await getProductByIdUseCase(GetProductByIdParams(id: productId));
-    
+
     result.fold(
       (failure) => state = ProductState(
         isLoading: false,
@@ -86,7 +133,7 @@ class ProductByIdNotifier extends StateNotifier<ProductState> {
 final productByIdNotifierProvider = StateNotifierProvider.family<ProductByIdNotifier, ProductState, String>(
   (ref, productId) => ProductByIdNotifier(
     productId: productId,
-    getProductByIdUseCase: sl<GetProductByIdUseCase>(),
+    getProductByIdUseCase: ref.watch(getProductByIdUseCaseProvider),
   ),
 );
 
@@ -131,7 +178,7 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
 
   Future<void> getProducts() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
-    
+
     final params = GetProductsParams(
       categoryId: state.filters['categoryId'],
       subcategoryId: state.filters['subcategoryId'],
@@ -141,9 +188,9 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
       minPrice: state.filters['minPrice'],
       maxPrice: state.filters['maxPrice'],
     );
-    
+
     final result = await getProductsUseCase(params);
-    
+
     result.fold(
       (failure) => state = state.copyWith(
         isLoading: false,
@@ -155,7 +202,7 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
       ),
     );
   }
-  
+
   void updateFilters(Map<String, dynamic> newFilters) {
     state = state.copyWith(filters: {...state.filters, ...newFilters});
     getProducts();
@@ -165,7 +212,7 @@ class ProductsNotifier extends StateNotifier<ProductsState> {
 // ProductsNotifierProvider
 final productsNotifierProvider = StateNotifierProvider<ProductsNotifier, ProductsState>(
   (ref) => ProductsNotifier(
-    getProductsUseCase: sl<GetProductsUseCase>(),
+    getProductsUseCase: ref.watch(getProductsUseCaseProvider),
   ),
 );
 
@@ -208,9 +255,9 @@ class RelatedProductsNotifier extends StateNotifier<RelatedProductsState> {
 
   Future<void> getRelatedProducts() async {
     state = RelatedProductsState(isLoading: true);
-    
+
     final result = await getRelatedProductsUseCase(GetRelatedProductsParams(productId: productId));
-    
+
     result.fold(
       (failure) => state = RelatedProductsState(
         isLoading: false,
@@ -228,7 +275,7 @@ class RelatedProductsNotifier extends StateNotifier<RelatedProductsState> {
 final relatedProductsNotifierProvider = StateNotifierProvider.family<RelatedProductsNotifier, RelatedProductsState, String>(
   (ref, productId) => RelatedProductsNotifier(
     productId: productId,
-    getRelatedProductsUseCase: sl<GetRelatedProductsUseCase>(),
+    getRelatedProductsUseCase: ref.watch(getRelatedProductsUseCaseProvider),
   ),
 );
 
@@ -262,15 +309,15 @@ class FeaturedProductsState {
 // Featured products notifier
 class FeaturedProductsNotifier extends StateNotifier<FeaturedProductsState> {
   final ProductRepository repository;
-  
-  FeaturedProductsNotifier(this.repository) 
+
+  FeaturedProductsNotifier(this.repository)
       : super(const FeaturedProductsState(products: [], isLoading: true));
-  
+
   Future<void> getFeaturedProducts({int? limit}) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
-    
+
     final result = await repository.getFeaturedProducts(limit: limit);
-    
+
     result.fold(
       (failure) {
         state = state.copyWith(
@@ -290,12 +337,12 @@ class FeaturedProductsNotifier extends StateNotifier<FeaturedProductsState> {
 
 // Featured products provider
 final featuredProductsProvider = StateNotifierProvider.autoDispose<FeaturedProductsNotifier, FeaturedProductsState>((ref) {
-  final repository = sl<ProductRepository>();
+  final repository = ref.watch(productRepositoryProvider);
   final notifier = FeaturedProductsNotifier(repository);
-  
+
   // Schedule the operation after initialization
   Future.microtask(() => notifier.getFeaturedProducts(limit: 5));
-  
+
   return notifier;
 });
 
@@ -327,15 +374,15 @@ class SaleProductsState {
 // Sale products notifier
 class SaleProductsNotifier extends StateNotifier<SaleProductsState> {
   final ProductRepository repository;
-  
-  SaleProductsNotifier(this.repository) 
+
+  SaleProductsNotifier(this.repository)
       : super(const SaleProductsState(products: [], isLoading: true));
-  
+
   Future<void> getProductsOnSale({int? limit}) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
-    
+
     final result = await repository.getProductsOnSale(limit: limit);
-    
+
     result.fold(
       (failure) {
         state = state.copyWith(
@@ -355,22 +402,22 @@ class SaleProductsNotifier extends StateNotifier<SaleProductsState> {
 
 // Sale products provider
 final saleProductsProvider = StateNotifierProvider.autoDispose<SaleProductsNotifier, SaleProductsState>((ref) {
-  final repository = sl<ProductRepository>();
+  final repository = ref.watch(productRepositoryProvider);
   final notifier = SaleProductsNotifier(repository);
-  
+
   // Schedule the operation after initialization
   Future.microtask(() => notifier.getProductsOnSale(limit: 5));
-  
+
   return notifier;
 });
 
 // Subcategory products notifier
 class SubcategoryProductsNotifier extends StateNotifier<ProductsState> {
   final GetProductsBySubcategoryUseCase getProductsBySubcategoryUseCase;
-  
-  SubcategoryProductsNotifier(this.getProductsBySubcategoryUseCase) 
+
+  SubcategoryProductsNotifier(this.getProductsBySubcategoryUseCase)
       : super(ProductsState(products: const [], isLoading: true));
-  
+
   Future<void> getProductsBySubcategory({
     required String subcategoryId,
     int? page,
@@ -379,7 +426,7 @@ class SubcategoryProductsNotifier extends StateNotifier<ProductsState> {
     bool? ascending,
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
-    
+
     final result = await getProductsBySubcategoryUseCase(
       GetProductsBySubcategoryParams(
         subcategoryId: subcategoryId,
@@ -389,7 +436,7 @@ class SubcategoryProductsNotifier extends StateNotifier<ProductsState> {
         ascending: ascending ?? false,
       ),
     );
-    
+
     result.fold(
       (failure) {
         state = state.copyWith(
@@ -410,15 +457,15 @@ class SubcategoryProductsNotifier extends StateNotifier<ProductsState> {
 // Subcategory products provider
 final productsBySubcategoryProvider = StateNotifierProvider.family.autoDispose<SubcategoryProductsNotifier, ProductsState, Map<String, dynamic>>(
   (ref, params) {
-    final getProductsBySubcategoryUseCase = sl<GetProductsBySubcategoryUseCase>();
+    final getProductsBySubcategoryUseCase = ref.watch(getProductsBySubcategoryUseCaseProvider);
     final notifier = SubcategoryProductsNotifier(getProductsBySubcategoryUseCase);
-    
+
     final subcategoryId = params['subcategoryId'] as String;
     final page = params['page'] as int?;
     final limit = params['limit'] as int?;
     final sortBy = params['sortBy'] as String?;
     final ascending = params['ascending'] as bool?;
-    
+
     // Schedule the operation after initialization
     Future.microtask(() => notifier.getProductsBySubcategory(
       subcategoryId: subcategoryId,
@@ -427,7 +474,7 @@ final productsBySubcategoryProvider = StateNotifierProvider.family.autoDispose<S
       sortBy: sortBy,
       ascending: ascending,
     ));
-    
+
     return notifier;
   },
 );
@@ -444,4 +491,4 @@ String _mapFailureToMessage(Failure failure) {
     default:
       return 'An unexpected error occurred.';
   }
-} 
+}

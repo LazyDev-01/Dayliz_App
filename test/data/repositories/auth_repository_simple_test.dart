@@ -95,6 +95,12 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, bool>> checkEmailExists({required String email}) async {
+    // For testing, return false (email doesn't exist) by default
+    return const Right(false);
+  }
+
+  @override
   Future<Either<Failure, bool>> resetPassword({
     required String token,
     required String newPassword,

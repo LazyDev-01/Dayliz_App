@@ -15,7 +15,7 @@ class OrderModel extends Order {
   static const String statusDelivered = 'delivered';
   static const String statusCancelled = 'cancelled';
   static const String statusRefunded = 'refunded';
-  
+
   const OrderModel({
     required String id,
     required String userId,
@@ -71,9 +71,10 @@ class OrderModel extends Order {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
-      shippingAddress: AddressModel.fromJson(json['shipping_address']),
+      // Cast to Address since AddressModel extends Address
+      shippingAddress: AddressModel.fromJson(json['shipping_address']) as Address,
       billingAddress: json['billing_address'] != null
-          ? AddressModel.fromJson(json['billing_address'])
+          ? AddressModel.fromJson(json['billing_address']) as Address
           : null,
       paymentMethod: PaymentMethodModel.fromJson(json['payment_method']),
       trackingNumber: json['tracking_number'],
@@ -153,4 +154,4 @@ class OrderModel extends Order {
       discount: discount ?? this.discount,
     );
   }
-} 
+}

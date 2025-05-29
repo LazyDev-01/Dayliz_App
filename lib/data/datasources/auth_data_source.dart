@@ -23,6 +23,9 @@ abstract class AuthDataSource {
   /// Send a password reset email
   Future<void> forgotPassword(String email);
 
+  /// Check if an email already exists in the system
+  Future<bool> checkEmailExists(String email);
+
   /// Reset password with token and new password
   /// Returns a [bool] indicating success
   Future<bool> resetPassword({

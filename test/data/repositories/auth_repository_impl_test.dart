@@ -1,29 +1,28 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
 
 import 'package:dayliz_app/core/errors/exceptions.dart';
 import 'package:dayliz_app/core/errors/failures.dart';
 import 'package:dayliz_app/core/network/network_info.dart';
 import 'package:dayliz_app/data/datasources/auth_data_source.dart';
-import 'package:dayliz_app/data/datasources/auth_local_data_source.dart';
 import 'package:dayliz_app/data/models/user_model.dart';
 import 'package:dayliz_app/data/repositories/auth_repository_impl.dart';
 import 'package:dayliz_app/domain/entities/user.dart';
 
-@GenerateMocks([AuthRemoteDataSource, AuthLocalDataSource, NetworkInfo])
-import 'auth_repository_impl_test.mocks.dart';
+// Manual mock classes
+class MockAuthDataSource extends Mock implements AuthDataSource {}
+class MockNetworkInfo extends Mock implements NetworkInfo {}
 
 void main() {
   late AuthRepositoryImpl repository;
-  late MockAuthRemoteDataSource mockRemoteDataSource;
-  late MockAuthLocalDataSource mockLocalDataSource;
+  late MockAuthDataSource mockRemoteDataSource;
+  late MockAuthDataSource mockLocalDataSource;
   late MockNetworkInfo mockNetworkInfo;
 
   setUp(() {
-    mockRemoteDataSource = MockAuthRemoteDataSource();
-    mockLocalDataSource = MockAuthLocalDataSource();
+    mockRemoteDataSource = MockAuthDataSource();
+    mockLocalDataSource = MockAuthDataSource();
     mockNetworkInfo = MockNetworkInfo();
     repository = AuthRepositoryImpl(
       remoteDataSource: mockRemoteDataSource,

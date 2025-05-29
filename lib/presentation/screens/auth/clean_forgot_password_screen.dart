@@ -33,7 +33,15 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
         title: const Text('Forgot Password'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/login'),
+          onPressed: () {
+            // Use Navigator.pop() for smooth back transition
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              // Fallback to context.go if no previous route exists
+              context.go('/login');
+            }
+          },
         ),
       ),
       body: SafeArea(
@@ -148,7 +156,15 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
 
         // Back to login
         TextButton(
-          onPressed: () => context.go('/login'),
+          onPressed: () {
+            // Use Navigator.pop() for smooth back transition
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              // Fallback to context.go if no previous route exists
+              context.go('/login');
+            }
+          },
           child: const Text('Back to Login'),
         ),
       ],
@@ -191,7 +207,15 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
 
         // Back to login button
         ElevatedButton(
-          onPressed: () => context.go('/login'),
+          onPressed: () {
+            // Use Navigator.pop() for smooth back transition
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              // Fallback to context.go if no previous route exists
+              context.go('/login');
+            }
+          },
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
@@ -209,9 +233,11 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
         // Didn't receive email
         TextButton(
           onPressed: () {
-            setState(() {
-              _emailSent = false;
-            });
+            if (mounted) {
+              setState(() {
+                _emailSent = false;
+              });
+            }
           },
           child: const Text('Didn\'t receive the email? Try again'),
         ),
@@ -221,16 +247,20 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
 
   Future<void> _handleResetPassword() async {
     // Clear previous errors
-    setState(() {
-      _errorMessage = null;
-    });
+    if (mounted) {
+      setState(() {
+        _errorMessage = null;
+      });
+    }
 
     // Validate form
     if (_formKey.currentState?.validate() == true) {
       // Show loading indicator
-      setState(() {
-        _isSubmitting = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isSubmitting = true;
+        });
+      }
 
       // Get form value
       final email = _emailController.text.trim();
@@ -238,6 +268,9 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
       try {
         // Attempt to reset password
         final success = await ref.read(authNotifierProvider.notifier).forgotPassword(email);
+
+        // Check if widget is still mounted before calling setState
+        if (!mounted) return;
 
         // If successful, show success view
         if (success) {
@@ -253,6 +286,9 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
           });
         }
       } catch (e) {
+        // Check if widget is still mounted before calling setState
+        if (!mounted) return;
+
         // Handle any unexpected errors
         setState(() {
           _isSubmitting = false;

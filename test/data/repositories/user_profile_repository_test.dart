@@ -140,7 +140,7 @@ void main() {
 
   group('getUserAddresses', () {
     final tUserId = 'test_user_id';
-    final tAddresses = [
+    final List<Address> tAddresses = [
       Address(
         id: '1',
         userId: tUserId,
@@ -149,7 +149,7 @@ void main() {
         state: 'Test State',
         postalCode: '12345',
         country: 'Test Country',
-        label: 'Home',
+        addressType: 'Home',
       ),
       Address(
         id: '2',
@@ -159,7 +159,7 @@ void main() {
         state: 'Test State',
         postalCode: '12345',
         country: 'Test Country',
-        label: 'Work',
+        addressType: 'Work',
       ),
     ];
 
@@ -250,7 +250,7 @@ void main() {
       state: 'Test State',
       postalCode: '12345',
       country: 'Test Country',
-      label: 'Home',
+      addressType: 'Home',
     );
 
     test(
@@ -353,4 +353,4 @@ void main() {
 
   // Additional tests for updateAddress, deleteAddress, setDefaultAddress, updateUserPreferences, etc.
   // would follow the same pattern as above
-} 
+}

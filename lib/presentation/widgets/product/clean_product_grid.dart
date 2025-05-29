@@ -248,6 +248,6 @@ class CleanProductGrid extends StatelessWidget {
 
   /// Navigate to product details screen
   void _navigateToProductDetails(BuildContext context, Product product) {
-    context.push('/product/${product.id}');
+    context.push('/clean/product/${product.id}');
   }
 }

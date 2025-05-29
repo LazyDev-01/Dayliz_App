@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../domain/entities/cart_item.dart';
 import '../../../domain/entities/address.dart';
-import '../../../models/payment_method.dart';
+import '../../../domain/entities/payment_method.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/cart_providers.dart';
 import '../../providers/payment_method_providers.dart';
@@ -16,7 +16,7 @@ import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/payment/payment_method_card.dart';
-import '../../widgets/payment/payment_method_selection_widget.dart';
+import '../../widgets/payment/modern_payment_options_widget.dart';
 
 class CleanCheckoutScreen extends ConsumerStatefulWidget {
   const CleanCheckoutScreen({Key? key}) : super(key: key);
@@ -28,7 +28,7 @@ class CleanCheckoutScreen extends ConsumerStatefulWidget {
 class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
   int _currentStep = 0;
   bool _isProcessing = false;
-  String _selectedPaymentMethod = 'card'; // Default payment method
+  String? _selectedPaymentMethod; // Selected payment method
 
   @override
   Widget build(BuildContext context) {
@@ -179,14 +179,55 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
             onRetry: () => ref.read(paymentMethodNotifierProvider(userId).notifier).loadPaymentMethods(),
           )
         else if (paymentMethodState.methods.isEmpty)
-          // Use our simplified payment method selection widget
-          PaymentMethodSelectionWidget(
-            selectedMethod: _selectedPaymentMethod,
-            onMethodSelected: (method) {
-              setState(() {
-                _selectedPaymentMethod = method;
-              });
-            },
+          // Modern payment options button
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.payment,
+                  size: 48,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _selectedPaymentMethod != null
+                      ? _getPaymentMethodDisplayName(_selectedPaymentMethod!)
+                      : 'Select Payment Method',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Choose from UPI, Wallets & Cash on Delivery',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => _openPaymentOptions(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('Choose Payment Method'),
+                ),
+              ],
+            ),
           )
         else
           _buildPaymentMethodsList(paymentMethodState, userId),
@@ -195,9 +236,9 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
 
         // Add payment method button
         OutlinedButton.icon(
-          onPressed: () => context.push('/clean/payment-methods'),
+          onPressed: () => context.push('/payment-options'),
           icon: const Icon(Icons.add),
-          label: const Text('Manage Payment Methods'),
+          label: const Text('Choose Payment Method'),
         ),
       ],
     );
@@ -223,8 +264,8 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
             ),
             const SizedBox(height: 16),
             PrimaryButton(
-              text: 'Add Payment Method',
-              onPressed: () => context.push('/clean/payment-methods'),
+              text: 'Choose Payment Method',
+              onPressed: () => context.push('/payment-options'),
               isFullWidth: false,
             ),
           ],
@@ -242,7 +283,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
           paymentMethod: method,
           isSelected: isSelected,
           onTap: () => ref.read(paymentMethodNotifierProvider(userId).notifier)
-              .selectPaymentMethod(method.id!),
+              .selectPaymentMethod(method.id),
         );
       }).toList(),
     );
@@ -412,8 +453,8 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
     Color iconColor;
 
     switch (method.type) {
-      case 'credit_card':
-      case 'debit_card':
+      case PaymentMethod.typeCreditCard:
+      case PaymentMethod.typeDebitCard:
         if (method.cardType == 'visa') {
           iconData = Icons.credit_card;
           iconColor = Colors.blue;
@@ -425,11 +466,11 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
           iconColor = Colors.grey;
         }
         break;
-      case 'upi':
+      case PaymentMethod.typeUpi:
         iconData = Icons.account_balance;
         iconColor = Colors.green;
         break;
-      case 'cod':
+      case PaymentMethod.typeCod:
         iconData = Icons.money;
         iconColor = Colors.green.shade800;
         break;
@@ -475,9 +516,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
 
   Future<void> _placeOrder(String userId) async {
     // Get cart items, address, and payment method
-    final cartState = ref.read(cartNotifierProvider);
     final selectedAddress = ref.read(selectedAddressProvider);
-    final selectedMethod = ref.read(paymentMethodNotifierProvider(userId)).selectedMethod;
 
     // Validate required data
     if (selectedAddress == null) {
@@ -490,7 +529,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
       return;
     }
 
-    if (selectedMethod == null) {
+    if (_selectedPaymentMethod == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a payment method')),
       );
@@ -527,6 +566,44 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
           _isProcessing = false;
         });
       }
+    }
+  }
+
+  /// Opens the modern payment options screen
+  void _openPaymentOptions(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ModernPaymentOptionsWidget(
+          selectedPaymentMethod: _selectedPaymentMethod,
+          onPaymentMethodSelected: (method) {
+            setState(() {
+              _selectedPaymentMethod = method;
+            });
+            Navigator.pop(context);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Gets display name for payment method
+  String _getPaymentMethodDisplayName(String method) {
+    switch (method) {
+      case 'phonepe':
+        return 'PhonePe';
+      case 'googlepay':
+        return 'Google Pay';
+      case 'paytm':
+        return 'Paytm';
+      case 'amazonpay':
+        return 'Amazon Pay';
+      case 'mobikwik':
+        return 'Mobikwik';
+      case 'cod':
+        return 'Cash on Delivery';
+      default:
+        return 'Payment Method';
     }
   }
 }

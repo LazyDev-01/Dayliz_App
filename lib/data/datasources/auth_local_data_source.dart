@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/entities/user.dart';
-import '../../core/error/exceptions.dart';
+import '../../core/errors/exceptions.dart';
 import 'auth_data_source.dart';
 
 /// Local data source for authentication operations
@@ -94,14 +94,18 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<User> login(String email, String password) async {
-    // Not implemented in local data source
-    throw UnimplementedError('Login not implemented in local data source');
+    // Local data source doesn't handle login - return cached user if available
+    final cachedUser = await getCachedUser();
+    if (cachedUser != null) {
+      return cachedUser;
+    }
+    throw CacheException(message: 'No cached user found for login');
   }
 
   @override
   Future<User> register(String email, String password, String name, {String? phone}) async {
-    // Not implemented in local data source
-    throw UnimplementedError('Register not implemented in local data source');
+    // Local data source doesn't handle registration
+    throw CacheException(message: 'Registration not supported in local data source');
   }
 
   @override
@@ -124,31 +128,41 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<void> forgotPassword(String email) async {
-    // Not implemented in local data source
-    throw UnimplementedError('Forgot password not implemented in local data source');
+    // Local data source doesn't handle password operations
+    throw CacheException(message: 'Forgot password not supported in local data source');
+  }
+
+  @override
+  Future<bool> checkEmailExists(String email) async {
+    // Local data source doesn't handle email existence checks
+    throw CacheException(message: 'Email existence check not supported in local data source');
   }
 
   @override
   Future<bool> resetPassword({required String token, required String newPassword}) async {
-    // Not implemented in local data source
-    throw UnimplementedError('Reset password not implemented in local data source');
+    // Local data source doesn't handle password operations
+    throw CacheException(message: 'Reset password not supported in local data source');
   }
 
   @override
   Future<bool> changePassword({required String currentPassword, required String newPassword}) async {
-    // Not implemented in local data source
-    throw UnimplementedError('Change password not implemented in local data source');
+    // Local data source doesn't handle password operations
+    throw CacheException(message: 'Change password not supported in local data source');
   }
 
   @override
   Future<String> refreshToken() async {
-    // Not implemented in local data source
-    throw UnimplementedError('Refresh token not implemented in local data source');
+    // Return cached token if available
+    final token = getCachedToken();
+    if (token != null && token.isNotEmpty) {
+      return token;
+    }
+    throw CacheException(message: 'No cached token found');
   }
 
   @override
   Future<User> signInWithGoogle() async {
-    // Not implemented in local data source
-    throw UnimplementedError('Sign in with Google not implemented in local data source');
+    // Local data source doesn't handle Google sign-in
+    throw CacheException(message: 'Google sign-in not supported in local data source');
   }
 }

@@ -2,22 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../domain/entities/category.dart';
-import '../../navigation/routes.dart';
-import '../providers/category_providers.dart' as category_providers;
 import '../providers/clean_category_providers.dart' as clean_category_providers;
-import '../screens/product/product_feature_testing_screen.dart';
 import '../../core/config/app_config.dart';
 import '../screens/dev/backend_config_screen.dart';
+import '../../test_gps_integration.dart';
 
 class CleanArchitectureDemoScreen extends ConsumerWidget {
   const CleanArchitectureDemoScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the categories using the legacy provider (not the clean architecture one)
-    final categoriesAsync = ref.watch(category_providers.categoriesProvider);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Clean Architecture Demo'),
@@ -192,7 +186,7 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
                       context: context,
                       title: category.name,
                       description: 'Browse ${category.subCategories?.length ?? 0} subcategories',
-                      icon: category.icon ?? Icons.category,
+                      icon: category.icon,
                       onTap: () {
                         // Set selected category
                         ref.read(clean_category_providers.categoriesNotifierProvider.notifier).selectCategory(category.id);
@@ -228,6 +222,19 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
               description: 'Manage your shipping addresses',
               icon: Icons.location_on_outlined,
               onTap: () => context.go('/clean/addresses'),
+            ),
+            const SizedBox(height: 12),
+            _buildFeatureCard(
+              context: context,
+              title: 'GPS Integration Test',
+              description: 'Test real GPS location services and permissions',
+              icon: Icons.gps_fixed,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TestGPSIntegrationScreen(),
+                ),
+              ),
             ),
           ],
         ),

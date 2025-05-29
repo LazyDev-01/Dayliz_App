@@ -10,8 +10,6 @@ import '../data/datasources/user_profile_supabase_adapter.dart';
 import '../core/network/network_info.dart';
 import '../domain/repositories/auth_repository.dart';
 import '../data/repositories/auth_repository_impl.dart';
-
-import '../services/auth_service.dart';
 import '../domain/usecases/login_usecase.dart';
 import '../domain/usecases/register_usecase.dart';
 import '../domain/usecases/logout_usecase.dart';
@@ -21,13 +19,9 @@ import '../domain/usecases/forgot_password_usecase.dart';
 import '../domain/usecases/sign_in_with_google_usecase.dart';
 import '../domain/usecases/reset_password_usecase.dart';
 import '../domain/usecases/change_password_usecase.dart';
-import '../domain/repositories/product_repository.dart';
-import '../data/repositories/product_repository_mock_impl.dart';
-import '../domain/usecases/get_products_usecase.dart';
-import '../domain/usecases/get_product_by_id_usecase.dart';
-import '../domain/usecases/get_related_products_usecase.dart';
-import '../domain/usecases/search_products_usecase.dart';
-import '../services/product_service.dart';
+import '../domain/usecases/check_email_exists_usecase.dart';
+import '../core/services/supabase_service.dart';
+
 import '../domain/repositories/cart_repository.dart';
 import '../data/repositories/cart_repository_impl.dart';
 import '../data/datasources/cart_remote_data_source.dart';
@@ -44,11 +38,14 @@ import '../domain/usecases/is_in_cart_usecase.dart';
 import '../domain/repositories/category_repository.dart';
 import '../data/repositories/category_repository_impl.dart';
 import '../domain/usecases/get_categories_usecase.dart';
+import '../data/datasources/category_remote_data_source.dart';
+import '../data/datasources/category_supabase_data_source.dart';
 
-import '../domain/usecases/get_products_by_subcategory_usecase.dart';
+
 import '../data/datasources/auth_data_source.dart';
-import '../data/datasources/auth_data_source_factory.dart' show AuthDataSourceFactory, BackendType;
-import '../core/config/app_config.dart' show AppConfig;
+import '../data/datasources/auth_supabase_data_source_new.dart';
+import '../data/datasources/auth_local_data_source.dart';
+import '../core/config/app_config.dart';
 
 import '../domain/repositories/user_profile_repository.dart';
 import '../data/repositories/user_profile_repository_impl.dart';
@@ -84,13 +81,13 @@ import '../domain/repositories/wishlist_repository.dart';
 import '../data/repositories/wishlist_repository_impl.dart';
 import '../data/datasources/wishlist_remote_data_source.dart';
 import '../data/datasources/wishlist_local_data_source.dart';
+import '../data/datasources/wishlist_local_adapter.dart';
 import '../domain/usecases/get_wishlist_items_usecase.dart';
 import '../domain/usecases/add_to_wishlist_usecase.dart';
 import '../domain/usecases/remove_from_wishlist_usecase.dart';
 import '../domain/usecases/is_in_wishlist_usecase.dart';
 import '../domain/usecases/clear_wishlist_usecase.dart';
 import '../domain/usecases/get_wishlist_products_usecase.dart';
-import '../data/datasources/wishlist_local_adapter.dart';
 import '../data/datasources/cart_data_source_factory.dart' show CartDataSourceFactory;
 import '../domain/repositories/payment_method_repository.dart';
 import '../data/repositories/payment_method_repository_impl.dart';
@@ -106,39 +103,49 @@ final sl = GetIt.instance;
 /// Initializes clean architecture components with minimal dependencies
 /// to avoid conflicts with existing code.
 Future<void> initCleanArchitecture() async {
-  // Core
-  sl.registerLazySingleton<NetworkInfo>(() {
-    // For web platforms, use the web-specific implementation that always returns true
-    if (kIsWeb) {
-      return WebNetworkInfoImpl();
-    }
-    // For other platforms, use the regular implementation
-    return NetworkInfoImpl(sl());
-  });
+  // Core - Register NetworkInfo only if not already registered
+  if (!sl.isRegistered<NetworkInfo>()) {
+    sl.registerLazySingleton<NetworkInfo>(() {
+      // For web platforms, use the web-specific implementation that always returns true
+      if (kIsWeb) {
+        return WebNetworkInfoImpl();
+      }
+      // For other platforms, use the regular implementation
+      return NetworkInfoImpl(sl());
+    });
+  }
 
-  // External
-  sl.registerLazySingleton(() => http.Client());
+  // External - Register http.Client only if not already registered
+  if (!sl.isRegistered<http.Client>()) {
+    sl.registerLazySingleton(() => http.Client());
+  }
 
-  // Only register InternetConnectionChecker for non-web platforms
-  if (!kIsWeb) {
+  // Only register InternetConnectionChecker for non-web platforms and if not already registered
+  if (!kIsWeb && !sl.isRegistered<InternetConnectionChecker>()) {
     sl.registerLazySingleton(() => InternetConnectionChecker());
   }
 
-  final sharedPreferences = await SharedPreferences.getInstance();
-  sl.registerLazySingleton(() => sharedPreferences);
-
-  // Register Supabase client
-  try {
-    sl.registerLazySingleton<SupabaseClient>(() => Supabase.instance.client);
-    debugPrint('SupabaseClient registered in GetIt successfully');
-  } catch (e) {
-    debugPrint('Error registering SupabaseClient in GetIt: $e');
-    // If Supabase is not initialized yet, we'll handle this later
+  // Register SharedPreferences only if not already registered
+  if (!sl.isRegistered<SharedPreferences>()) {
+    final sharedPreferences = await SharedPreferences.getInstance();
+    sl.registerLazySingleton(() => sharedPreferences);
   }
 
-  // Services - Use existing instances for backward compatibility
-  sl.registerLazySingleton(() => AuthService.instance);
-  sl.registerLazySingleton(() => ProductService());
+  // Register Supabase client only if not already registered
+  if (!sl.isRegistered<SupabaseClient>()) {
+    try {
+      sl.registerLazySingleton<SupabaseClient>(() => Supabase.instance.client);
+      debugPrint('SupabaseClient registered in GetIt successfully');
+    } catch (e) {
+      debugPrint('Error registering SupabaseClient in GetIt: $e');
+      // If Supabase is not initialized yet, we'll handle this later
+    }
+  }
+
+  // Register SupabaseService for clean architecture only if not already registered
+  if (!sl.isRegistered<SupabaseService>()) {
+    sl.registerLazySingleton<SupabaseService>(() => SupabaseService.instance);
+  }
 
   // Initialize app configuration
   await AppConfig.init();
@@ -147,104 +154,159 @@ Future<void> initCleanArchitecture() async {
   // Authentication
   //-------------------------------------------------------------------------
 
-  // Auth Data Sources - Using a factory for backend flexibility
-  sl.registerLazySingleton<AuthDataSource>(
-    () => AuthDataSourceFactory.getActiveDataSource(),
-    instanceName: 'remote',
-  );
+  // Auth Data Sources - Direct Supabase registration
+  if (!sl.isRegistered<AuthDataSource>(instanceName: 'remote')) {
+    sl.registerLazySingleton<AuthDataSource>(
+      () => AuthSupabaseDataSource(supabaseClient: sl<SupabaseClient>()),
+      instanceName: 'remote',
+    );
+  }
 
-  sl.registerLazySingleton<AuthDataSource>(
-    () => AuthDataSourceFactory.getDataSource(BackendType.supabase),
-    instanceName: 'local',
-  );
+  if (!sl.isRegistered<AuthDataSource>(instanceName: 'local')) {
+    sl.registerLazySingleton<AuthDataSource>(
+      () => AuthLocalDataSourceImpl(sharedPreferences: sl<SharedPreferences>()),
+      instanceName: 'local',
+    );
+  }
 
   // Auth Repository
-  sl.registerLazySingleton<AuthRepository>(
-    () => AuthRepositoryImpl(
-      remoteDataSource: sl.get<AuthDataSource>(instanceName: 'remote'),
-      localDataSource: sl.get<AuthDataSource>(instanceName: 'local'),
-      networkInfo: sl(),
-    ),
-  );
+  if (!sl.isRegistered<AuthRepository>()) {
+    sl.registerLazySingleton<AuthRepository>(
+      () => AuthRepositoryImpl(
+        remoteDataSource: sl.get<AuthDataSource>(instanceName: 'remote'),
+        localDataSource: sl.get<AuthDataSource>(instanceName: 'local'),
+        networkInfo: sl(),
+      ),
+    );
+  }
 
   // Auth Use Cases
-  sl.registerLazySingleton(() => LoginUseCase(sl()));
-  sl.registerLazySingleton(() => RegisterUseCase(sl()));
-  sl.registerLazySingleton(() => LogoutUseCase(sl()));
-  sl.registerLazySingleton(() => GetCurrentUserUseCase(sl()));
-  sl.registerLazySingleton(() => IsAuthenticatedUseCase(sl()));
-  sl.registerLazySingleton(() => ForgotPasswordUseCase(sl()));
-  sl.registerLazySingleton(() => SignInWithGoogleUseCase(sl()));
-  sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
-  sl.registerLazySingleton(() => ChangePasswordUseCase(sl()));
+  if (!sl.isRegistered<LoginUseCase>()) {
+    sl.registerLazySingleton(() => LoginUseCase(sl()));
+  }
+  if (!sl.isRegistered<RegisterUseCase>()) {
+    sl.registerLazySingleton(() => RegisterUseCase(sl()));
+  }
+  if (!sl.isRegistered<LogoutUseCase>()) {
+    sl.registerLazySingleton(() => LogoutUseCase(sl()));
+  }
+  if (!sl.isRegistered<GetCurrentUserUseCase>()) {
+    sl.registerLazySingleton(() => GetCurrentUserUseCase(sl()));
+  }
+  if (!sl.isRegistered<IsAuthenticatedUseCase>()) {
+    sl.registerLazySingleton(() => IsAuthenticatedUseCase(sl()));
+  }
+  if (!sl.isRegistered<ForgotPasswordUseCase>()) {
+    sl.registerLazySingleton(() => ForgotPasswordUseCase(sl()));
+  }
+  if (!sl.isRegistered<SignInWithGoogleUseCase>()) {
+    sl.registerLazySingleton(() => SignInWithGoogleUseCase(sl()));
+  }
+  if (!sl.isRegistered<ResetPasswordUseCase>()) {
+    sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
+  }
+  if (!sl.isRegistered<ChangePasswordUseCase>()) {
+    sl.registerLazySingleton(() => ChangePasswordUseCase(sl()));
+  }
+  if (!sl.isRegistered<CheckEmailExistsUseCase>()) {
+    sl.registerLazySingleton(() => CheckEmailExistsUseCase(sl()));
+  }
 
   //-------------------------------------------------------------------------
   // Product
   //-------------------------------------------------------------------------
 
-  // Product Data Sources - Not needed with mock repository
-
-  // Product Repository - Using mock implementation for now
-  sl.registerLazySingleton<ProductRepository>(
-    () => ProductRepositoryMockImpl(),
-  );
-
-  // Product Use Cases
-  sl.registerLazySingleton(() => GetProductsUseCase(sl()));
-  sl.registerLazySingleton(() => GetProductByIdUseCase(sl()));
-  sl.registerLazySingleton(() => GetProductsBySubcategoryUseCase(sl()));
-  sl.registerLazySingleton(() => GetRelatedProductsUseCase(sl()));
-  sl.registerLazySingleton(() => SearchProductsUseCase(sl()));
+  // Product dependencies will be initialized by product_dependency_injection.dart
+  // This ensures we use real Supabase data instead of mock data
 
   //-------------------------------------------------------------------------
   // Category
   //-------------------------------------------------------------------------
 
-  // Register Category Repository with mock implementation
-  sl.registerLazySingleton<CategoryRepository>(
-    () => CategoryRepositoryImpl(
-      networkInfo: sl(),
-      remoteDataSource: null, // Use mock data for now
-    ),
-  );
+  // Register Category Remote Data Source (Supabase) only if not already registered
+  if (!sl.isRegistered<CategoryRemoteDataSource>()) {
+    sl.registerLazySingleton<CategoryRemoteDataSource>(
+      () => CategorySupabaseDataSource(supabaseClient: sl()),
+    );
+  }
 
-  // Register Category Use Cases
-  sl.registerLazySingleton(() => GetCategoriesUseCase(sl()));
-  sl.registerLazySingleton(() => GetCategoriesWithSubcategoriesUseCase(sl()));
-  sl.registerLazySingleton(() => GetCategoryByIdUseCase(sl()));
-  sl.registerLazySingleton(() => GetSubcategoriesUseCase(sl()));
+  // Register Category Repository with Supabase implementation only if not already registered
+  if (!sl.isRegistered<CategoryRepository>()) {
+    sl.registerLazySingleton<CategoryRepository>(
+      () => CategoryRepositoryImpl(
+        networkInfo: sl(),
+        remoteDataSource: sl(), // Use Supabase data source
+      ),
+    );
+  }
+
+  // Register Category Use Cases only if not already registered
+  if (!sl.isRegistered<GetCategoriesUseCase>()) {
+    sl.registerLazySingleton(() => GetCategoriesUseCase(sl()));
+  }
+  if (!sl.isRegistered<GetCategoriesWithSubcategoriesUseCase>()) {
+    sl.registerLazySingleton(() => GetCategoriesWithSubcategoriesUseCase(sl()));
+  }
+  if (!sl.isRegistered<GetCategoryByIdUseCase>()) {
+    sl.registerLazySingleton(() => GetCategoryByIdUseCase(sl()));
+  }
+  if (!sl.isRegistered<GetSubcategoriesUseCase>()) {
+    sl.registerLazySingleton(() => GetSubcategoriesUseCase(sl()));
+  }
 
   //-------------------------------------------------------------------------
   // Cart
   //-------------------------------------------------------------------------
 
   // Register cart data sources
-  sl.registerLazySingleton<CartRemoteDataSource>(
-    () => CartDataSourceFactory.getActiveDataSource(),
-  );
+  if (!sl.isRegistered<CartRemoteDataSource>()) {
+    sl.registerLazySingleton<CartRemoteDataSource>(
+      () => CartDataSourceFactory.getActiveDataSource(),
+    );
+  }
 
-  sl.registerLazySingleton<CartLocalDataSource>(
-    () => CartLocalDataSourceImpl(sharedPreferences: sl()),
-  );
+  if (!sl.isRegistered<CartLocalDataSource>()) {
+    sl.registerLazySingleton<CartLocalDataSource>(
+      () => CartLocalDataSourceImpl(sharedPreferences: sl()),
+    );
+  }
 
   // Cart Repository
-  sl.registerLazySingleton<CartRepository>(
-    () => CartRepositoryImpl(
-      remoteDataSource: sl(),
-      localDataSource: sl(),
-      networkInfo: sl(),
-    ),
-  );
+  if (!sl.isRegistered<CartRepository>()) {
+    sl.registerLazySingleton<CartRepository>(
+      () => CartRepositoryImpl(
+        remoteDataSource: sl(),
+        localDataSource: sl(),
+        networkInfo: sl(),
+      ),
+    );
+  }
 
   // Cart Use Cases
-  sl.registerLazySingleton(() => GetCartItemsUseCase(sl()));
-  sl.registerLazySingleton(() => AddToCartUseCase(sl()));
-  sl.registerLazySingleton(() => RemoveFromCartUseCase(sl()));
-  sl.registerLazySingleton(() => UpdateCartQuantityUseCase(sl()));
-  sl.registerLazySingleton(() => ClearCartUseCase(sl()));
-  sl.registerLazySingleton(() => GetCartTotalPriceUseCase(sl()));
-  sl.registerLazySingleton(() => GetCartItemCountUseCase(sl()));
-  sl.registerLazySingleton(() => IsInCartUseCase(sl()));
+  if (!sl.isRegistered<GetCartItemsUseCase>()) {
+    sl.registerLazySingleton(() => GetCartItemsUseCase(sl()));
+  }
+  if (!sl.isRegistered<AddToCartUseCase>()) {
+    sl.registerLazySingleton(() => AddToCartUseCase(sl()));
+  }
+  if (!sl.isRegistered<RemoveFromCartUseCase>()) {
+    sl.registerLazySingleton(() => RemoveFromCartUseCase(sl()));
+  }
+  if (!sl.isRegistered<UpdateCartQuantityUseCase>()) {
+    sl.registerLazySingleton(() => UpdateCartQuantityUseCase(sl()));
+  }
+  if (!sl.isRegistered<ClearCartUseCase>()) {
+    sl.registerLazySingleton(() => ClearCartUseCase(sl()));
+  }
+  if (!sl.isRegistered<GetCartTotalPriceUseCase>()) {
+    sl.registerLazySingleton(() => GetCartTotalPriceUseCase(sl()));
+  }
+  if (!sl.isRegistered<GetCartItemCountUseCase>()) {
+    sl.registerLazySingleton(() => GetCartItemCountUseCase(sl()));
+  }
+  if (!sl.isRegistered<IsInCartUseCase>()) {
+    sl.registerLazySingleton(() => IsInCartUseCase(sl()));
+  }
 
   //-------------------------------------------------------------------------
   // User Profile
@@ -254,7 +316,12 @@ Future<void> initCleanArchitecture() async {
   sl.registerLazySingleton(() => GetUserProfileUseCase(sl()));
   sl.registerLazySingleton(() => UpdateUserProfileUseCase(sl()));
   sl.registerLazySingleton(() => UpdateProfileImageUseCase(sl()));
-  sl.registerLazySingleton(() => UploadProfileImageUseCase(sl()));
+
+  // Register UploadProfileImageUseCase with the correct repository
+  sl.registerLazySingleton<UploadProfileImageUseCase>(
+    () => UploadProfileImageUseCase(sl<UserProfileRepository>())
+  );
+
   sl.registerLazySingleton(() => GetUserAddressesUseCase(sl()));
   sl.registerLazySingleton(() => AddAddressUseCase(sl()));
   sl.registerLazySingleton(() => UpdateAddressUseCase(sl()));
@@ -327,31 +394,50 @@ Future<void> initCleanArchitecture() async {
   //-------------------------------------------------------------------------
 
   // Wishlist Data Sources
-  sl.registerLazySingleton<WishlistLocalDataSource>(
-    () => WishlistLocalDataSourceImpl(sharedPreferences: sl()),
-  );
+  if (!sl.isRegistered<WishlistLocalDataSource>()) {
+    sl.registerLazySingleton<WishlistLocalDataSource>(
+      () => WishlistLocalDataSourceImpl(sharedPreferences: sl()),
+    );
+  }
 
-  // Register the WishlistRemoteDataSource with our adapter
-  sl.registerLazySingleton<WishlistRemoteDataSource>(
-    () => LocalWishlistAdapter(localDataSource: sl()),
-  );
+  // Register the WishlistRemoteDataSource using LocalWishlistAdapter
+  // This uses local storage until the FastAPI backend is ready
+  if (!sl.isRegistered<WishlistRemoteDataSource>()) {
+    sl.registerLazySingleton<WishlistRemoteDataSource>(
+      () => LocalWishlistAdapter(localDataSource: sl()),
+    );
+  }
 
   // Wishlist Repository
-  sl.registerLazySingleton<WishlistRepository>(
-    () => WishlistRepositoryImpl(
-      remoteDataSource: sl(),
-      localDataSource: sl(),
-      networkInfo: sl(),
-    ),
-  );
+  if (!sl.isRegistered<WishlistRepository>()) {
+    sl.registerLazySingleton<WishlistRepository>(
+      () => WishlistRepositoryImpl(
+        remoteDataSource: sl(),
+        localDataSource: sl(),
+        networkInfo: sl(),
+      ),
+    );
+  }
 
   // Wishlist Use Cases
-  sl.registerLazySingleton(() => GetWishlistItemsUseCase(sl()));
-  sl.registerLazySingleton(() => AddToWishlistUseCase(sl()));
-  sl.registerLazySingleton(() => RemoveFromWishlistUseCase(sl()));
-  sl.registerLazySingleton(() => IsInWishlistUseCase(sl()));
-  sl.registerLazySingleton(() => ClearWishlistUseCase(sl()));
-  sl.registerLazySingleton(() => GetWishlistProductsUseCase(sl()));
+  if (!sl.isRegistered<GetWishlistItemsUseCase>()) {
+    sl.registerLazySingleton(() => GetWishlistItemsUseCase(sl()));
+  }
+  if (!sl.isRegistered<AddToWishlistUseCase>()) {
+    sl.registerLazySingleton(() => AddToWishlistUseCase(sl()));
+  }
+  if (!sl.isRegistered<RemoveFromWishlistUseCase>()) {
+    sl.registerLazySingleton(() => RemoveFromWishlistUseCase(sl()));
+  }
+  if (!sl.isRegistered<IsInWishlistUseCase>()) {
+    sl.registerLazySingleton(() => IsInWishlistUseCase(sl()));
+  }
+  if (!sl.isRegistered<ClearWishlistUseCase>()) {
+    sl.registerLazySingleton(() => ClearWishlistUseCase(sl()));
+  }
+  if (!sl.isRegistered<GetWishlistProductsUseCase>()) {
+    sl.registerLazySingleton(() => GetWishlistProductsUseCase(sl()));
+  }
 
   //-------------------------------------------------------------------------
   // Payment Methods
@@ -387,7 +473,74 @@ Future<void> initCleanArchitecture() async {
   sl.registerLazySingleton(() => AddPaymentMethodUseCase(sl()));
   sl.registerLazySingleton(() => SetDefaultPaymentMethodUseCase(sl()));
 
+  // Register Order-related dependencies
+  _registerOrderDependencies();
+
   debugPrint('Clean architecture component registration complete');
+}
+
+/// Register order-related dependencies
+void _registerOrderDependencies() {
+  try {
+    // Register OrderRepository if not already registered
+    if (!sl.isRegistered<OrderRepository>()) {
+      // Register OrderRemoteDataSource if not already registered
+      if (!sl.isRegistered<OrderRemoteDataSource>()) {
+        sl.registerLazySingleton<OrderRemoteDataSource>(
+          () => OrderRemoteDataSource(
+            client: sl(),
+            baseUrl: AppConfig.useFastAPI ?
+              AppConfig.fastApiBaseUrl :
+              AppConfig.supabaseUrl,
+          ),
+        );
+      }
+
+      // Register OrderLocalDataSource if not already registered
+      if (!sl.isRegistered<OrderLocalDataSource>()) {
+        sl.registerLazySingleton<OrderLocalDataSource>(
+          () => OrderLocalDataSource(
+            sharedPreferences: sl(),
+          ),
+        );
+      }
+
+      // Register OrderRepository
+      sl.registerLazySingleton<OrderRepository>(
+        () => OrderRepositoryImpl(
+          remoteDataSource: sl<OrderRemoteDataSource>(),
+          localDataSource: sl<OrderLocalDataSource>(),
+          networkInfo: sl<NetworkInfo>(),
+        ),
+      );
+    }
+
+    // Register Order Use Cases
+    if (!sl.isRegistered<GetOrdersUseCase>()) {
+      sl.registerLazySingleton(() => GetOrdersUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<GetOrderByIdUseCase>()) {
+      sl.registerLazySingleton(() => GetOrderByIdUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<CreateOrderUseCase>()) {
+      sl.registerLazySingleton(() => CreateOrderUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<GetOrdersByStatusUseCase>()) {
+      sl.registerLazySingleton(() => GetOrdersByStatusUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<CancelOrderUseCase>()) {
+      sl.registerLazySingleton(() => CancelOrderUseCase(sl()));
+    }
+
+    debugPrint('Order dependencies registered successfully');
+  } catch (e) {
+    debugPrint('Error registering order dependencies: $e');
+    // Don't rethrow to avoid breaking the initialization process
+  }
 }
 
 /// Initialize authentication components separately
@@ -424,17 +577,23 @@ Future<void> initAuthentication() async {
       debugPrint('SupabaseClient registered in GetIt successfully');
     }
 
+    // Register SupabaseService for clean architecture if not already registered
+    if (!sl.isRegistered<SupabaseService>()) {
+      sl.registerLazySingleton<SupabaseService>(() => SupabaseService.instance);
+      debugPrint('SupabaseService registered in GetIt for clean architecture');
+    }
+
     // Initialize auth data sources and repository if not already registered
     if (!sl.isRegistered<AuthDataSource>(instanceName: 'remote')) {
       sl.registerLazySingleton<AuthDataSource>(
-        () => AuthDataSourceFactory.getActiveDataSource(),
+        () => AuthSupabaseDataSource(supabaseClient: sl<SupabaseClient>()),
         instanceName: 'remote',
       );
     }
 
     if (!sl.isRegistered<AuthDataSource>(instanceName: 'local')) {
       sl.registerLazySingleton<AuthDataSource>(
-        () => AuthDataSourceFactory.getDataSource(BackendType.supabase),
+        () => AuthLocalDataSourceImpl(sharedPreferences: sl<SharedPreferences>()),
         instanceName: 'local',
       );
     }
@@ -484,6 +643,10 @@ Future<void> initAuthentication() async {
 
     if (!sl.isRegistered<ChangePasswordUseCase>()) {
       sl.registerLazySingleton(() => ChangePasswordUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<CheckEmailExistsUseCase>()) {
+      sl.registerLazySingleton(() => CheckEmailExistsUseCase(sl()));
     }
 
     // Initialize cart components if not already registered
@@ -557,14 +720,14 @@ Future<void> reInitializeAuthDependencies() async {
   sl.unregister<AuthDataSource>(instanceName: 'local');
   sl.unregister<AuthRepository>();
 
-  // Re-register with new backend selection
+  // Re-register with direct Supabase registration
   sl.registerLazySingleton<AuthDataSource>(
-    () => AuthDataSourceFactory.getActiveDataSource(),
+    () => AuthSupabaseDataSource(supabaseClient: sl<SupabaseClient>()),
     instanceName: 'remote',
   );
 
   sl.registerLazySingleton<AuthDataSource>(
-    () => AuthDataSourceFactory.getDataSource(BackendType.supabase),
+    () => AuthLocalDataSourceImpl(sharedPreferences: sl<SharedPreferences>()),
     instanceName: 'local',
   );
 

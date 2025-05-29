@@ -40,7 +40,7 @@ class _TestingScreenContent extends StatelessWidget {
               Text(
                 'Clean Architecture Product Feature Testing',
                 style: TextStyle(
-                  fontSize: 18, 
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -51,7 +51,7 @@ class _TestingScreenContent extends StatelessWidget {
             ],
           ),
         ),
-        
+
         Expanded(
           child: ListView(
             padding: const EdgeInsets.all(16),
@@ -63,9 +63,9 @@ class _TestingScreenContent extends StatelessWidget {
                 icon: Icons.list_alt,
                 onTap: () => _navigateToProductListing(context),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               _buildTestCard(
                 context: context,
                 title: 'View Sample Product Details',
@@ -73,9 +73,9 @@ class _TestingScreenContent extends StatelessWidget {
                 icon: Icons.inventory_2,
                 onTap: () => _navigateToSampleProductDetails(context),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               _buildTestCard(
                 context: context,
                 title: 'View Products by Category',
@@ -83,9 +83,9 @@ class _TestingScreenContent extends StatelessWidget {
                 icon: Icons.category,
                 onTap: () => _navigateToProductsByCategory(context),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Information section
               Container(
                 padding: const EdgeInsets.all(16),
@@ -120,7 +120,7 @@ class _TestingScreenContent extends StatelessWidget {
       ],
     );
   }
-  
+
   /// Build a card for each testing option
   Widget _buildTestCard({
     required BuildContext context,
@@ -175,22 +175,22 @@ class _TestingScreenContent extends StatelessWidget {
       ),
     );
   }
-  
+
   /// Navigate to the products listing screen
   void _navigateToProductListing(BuildContext context) {
     Navigator.push(
-      context, 
+      context,
       MaterialPageRoute(
         builder: (context) => const StaticProductListingScreen(),
       ),
     );
   }
-  
+
   /// Navigate to a sample product's details screen
   void _navigateToSampleProductDetails(BuildContext context) {
     // Try multiple product IDs in case some aren't available
-    const fallbackProductIds = ['1', '2', '3']; 
-    
+    const fallbackProductIds = ['1', '2', '3'];
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -198,12 +198,12 @@ class _TestingScreenContent extends StatelessWidget {
       ),
     );
   }
-  
+
   /// Navigate to products by category
   void _navigateToProductsByCategory(BuildContext context) {
     // Sample category ID
     const sampleCategoryId = '1'; // Or any category ID that exists in your system
-    
+
     Navigator.pushNamed(
       context,
       '/clean/category',
@@ -212,92 +212,72 @@ class _TestingScreenContent extends StatelessWidget {
   }
 }
 
-/// A completely static product listing screen to avoid provider issues
-class StaticProductListingScreen extends StatelessWidget {
+/// A product listing screen that uses real Supabase data
+class StaticProductListingScreen extends ConsumerWidget {
   const StaticProductListingScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    // Create sample static products for demonstration
-    final sampleProducts = [
-      Product(
-        id: '1',
-        name: 'Organic Fresh Vegetables Bundle',
-        description: 'A bundle of fresh, organic vegetables including carrots, tomatoes, and lettuce.',
-        price: 399.99,
-        discountPercentage: 15,
-        rating: 4.5,
-        reviewCount: 128,
-        mainImageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        inStock: true,
-        categoryId: '1',
-      ),
-      Product(
-        id: '2',
-        name: 'Fresh Fruits Basket',
-        description: 'Assorted fresh fruits including apples, oranges, and bananas.',
-        price: 499.99,
-        discountPercentage: 0,
-        rating: 4.8,
-        reviewCount: 95,
-        mainImageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        inStock: true,
-        categoryId: '1',
-      ),
-      Product(
-        id: '3',
-        name: 'Organic Apples (1kg)',
-        description: 'Sweet and crispy organic apples.',
-        price: 149.99,
-        discountPercentage: 10,
-        rating: 4.7,
-        reviewCount: 110,
-        mainImageUrl: 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        inStock: true,
-        categoryId: '1',
-      ),
-      Product(
-        id: '4',
-        name: 'Fresh Berries Mix',
-        description: 'A mix of fresh berries including strawberries, blueberries, and raspberries.',
-        price: 349.99,
-        discountPercentage: 5,
-        rating: 4.9,
-        reviewCount: 85,
-        mainImageUrl: 'https://images.unsplash.com/photo-1563746924237-f4351c246054?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-        inStock: true,
-        categoryId: '1',
-      ),
-    ];
-    
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Use the real product providers instead of hardcoded data
+    final productsAsyncValue = ref.watch(featuredProductsProvider);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Product Listing (Static Demo)'),
+        title: const Text('Product Listing (Real Data)'),
       ),
-      body: GridView.builder(
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.7,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
+      body: _buildBody(productsAsyncValue, ref),
+    );
+  }
+
+  Widget _buildBody(FeaturedProductsState state, WidgetRef ref) {
+    if (state.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state.errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error loading products: ${state.errorMessage}'),
+            ElevatedButton(
+              onPressed: () => ref.refresh(featuredProductsProvider),
+              child: const Text('Retry'),
+            ),
+          ],
         ),
-        itemCount: sampleProducts.length,
-        itemBuilder: (context, index) {
-          final product = sampleProducts[index];
-          return _SimpleProductCard(
-            product: product,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => CleanProductDetailsScreen(
-                  productId: product.id,
-                ),
+      );
+    }
+
+    if (state.products.isEmpty) {
+      return const Center(
+        child: Text('No products found'),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.7,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: state.products.length,
+      itemBuilder: (context, index) {
+        final product = state.products[index];
+        return _SimpleProductCard(
+          product: product,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CleanProductDetailsScreen(
+                productId: product.id,
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -306,12 +286,12 @@ class StaticProductListingScreen extends StatelessWidget {
 class _SimpleProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback? onTap;
-  
+
   const _SimpleProductCard({
     required this.product,
     this.onTap,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -351,7 +331,7 @@ class _SimpleProductCard extends StatelessWidget {
                     : null,
               ),
             ),
-            
+
             // Product info
             Expanded(
               flex: 2,

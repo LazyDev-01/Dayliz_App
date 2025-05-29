@@ -361,7 +361,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return GestureDetector(
       onTap: () {
-        context.push('/product/${product.id}', extra: product);
+        context.push('/clean/product/${product.id}', extra: product);
       },
       child: Container(
         width: isGrid ? null : 180,

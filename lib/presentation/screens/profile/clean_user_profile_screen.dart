@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../../domain/entities/user_profile.dart';
+import '../../../domain/entities/user.dart' as domain;
 import '../../widgets/common/common_app_bar.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_state.dart';
@@ -29,11 +32,10 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
     super.initState();
     _nameController = TextEditingController();
 
-    // Initialize auto-load provider (registers listener)
-    ref.read(autoLoadUserProfileProvider);
-
-    // Load user profile data
-    _loadUserData();
+    // Reset any stuck loading state and load user profile data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensureProfileLoaded();
+    });
   }
 
   @override
@@ -42,13 +44,35 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
     super.dispose();
   }
 
-  void _loadUserData() {
-    final authState = ref.read(authStateProvider);
+  void _ensureProfileLoaded() {
+    final authState = ref.read(authNotifierProvider);
+    final profileState = ref.read(userProfileNotifierProvider);
+
+    debugPrint('CleanUserProfileScreen: _ensureProfileLoaded called');
+    debugPrint('CleanUserProfileScreen: Auth state - isAuthenticated: ${authState.isAuthenticated}, hasUser: ${authState.user != null}');
+    debugPrint('CleanUserProfileScreen: Profile state - isLoading: ${profileState.isLoading}, hasProfile: ${profileState.profile != null}, hasError: ${profileState.errorMessage != null}');
+
     if (authState.isAuthenticated && authState.user != null) {
-      // Load user profile
-      debugPrint('Loading user profile for user ID: ${authState.user!.id}');
-      ref.read(userProfileNotifierProvider.notifier).loadUserProfile(authState.user!.id);
+      // If stuck in loading state, reset it first
+      if (profileState.isLoading && profileState.profile == null) {
+        debugPrint('CleanUserProfileScreen: Resetting stuck loading state');
+        ref.read(userProfileNotifierProvider.notifier).resetLoadingState();
+      }
+
+      // If no profile or error state, trigger load
+      if (profileState.profile == null) {
+        debugPrint('CleanUserProfileScreen: Loading user profile for user ID: ${authState.user!.id}');
+        ref.read(userProfileNotifierProvider.notifier).loadUserProfile(authState.user!.id);
+      } else {
+        debugPrint('CleanUserProfileScreen: Profile already loaded');
+      }
+    } else {
+      debugPrint('CleanUserProfileScreen: User not authenticated - Auth: ${authState.isAuthenticated}, User: ${authState.user?.id}');
     }
+  }
+
+  void _loadUserData() {
+    _ensureProfileLoaded();
   }
 
   void _populateFormFields(UserProfile profile) {
@@ -70,8 +94,36 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Watch the auto-load provider to ensure profile loading is triggered
+    ref.watch(autoLoadUserProfileProvider);
+
     final userProfileState = ref.watch(userProfileNotifierProvider);
     final currentUser = ref.watch(currentUserProvider);
+    final authState = ref.watch(authNotifierProvider);
+
+    // Debug logging
+    debugPrint('Profile Screen Build - Auth: ${authState.isAuthenticated}, User: ${authState.user?.id}');
+    debugPrint('Profile Screen Build - Loading: ${userProfileState.isLoading}, Profile: ${userProfileState.profile != null}');
+    debugPrint('Profile Screen Build - Error: ${userProfileState.errorMessage}');
+
+    // Enhanced fallback: Always ensure profile is loaded when screen is accessed
+    if (authState.isAuthenticated && authState.user != null) {
+      // If no profile and not loading and no error, trigger load
+      if (userProfileState.profile == null &&
+          !userProfileState.isLoading &&
+          userProfileState.errorMessage == null) {
+        debugPrint('Profile Screen Build - No profile found, triggering load');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _loadUserData();
+        });
+      }
+      // If there's an error but no profile, also trigger load
+      else if (userProfileState.profile == null &&
+               userProfileState.errorMessage != null &&
+               !userProfileState.isLoading) {
+        debugPrint('Profile Screen Build - Error state with no profile, will show retry option');
+      }
+    }
 
     // If profile loaded, populate form fields
     if (userProfileState.profile != null) {
@@ -79,22 +131,13 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
     }
 
     return Scaffold(
+      backgroundColor: Colors.grey[50], // Light grey background color
       appBar: CommonAppBars.withBackButton(
         title: 'Profile',
         centerTitle: true,
         fallbackRoute: '/home',
         backButtonTooltip: 'Back to Home',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {
-              // TODO: Navigate to settings
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings coming soon')),
-              );
-            },
-          ),
-        ],
+        // Removed settings icon from actions
       ),
       body: userProfileState.isLoading
           ? const LoadingIndicator(message: 'Loading profile...')
@@ -107,26 +150,20 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
     );
   }
 
-  Widget _buildProfileContent(UserProfileState state, dynamic currentUser) {
+  Widget _buildProfileContent(UserProfileState state, domain.User? currentUser) {
     return SingleChildScrollView(
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile image and user info section
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: _buildProfileImageSection(state, currentUser),
-            ),
-
-            // Space after the profile section
-            const SizedBox(height: 16),
+            // Combined profile and quick actions section
+            _buildCombinedProfileSection(state, currentUser),
 
             // Hidden user info section (maintains functionality)
             _buildUserInfoSection(state, currentUser),
 
-            // Action buttons - no extra padding needed as it's handled within the method
+            // Account and settings sections
             _buildActionButtons(),
           ],
         ),
@@ -134,110 +171,316 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
     );
   }
 
-  Widget _buildProfileImageSection(UserProfileState state, dynamic currentUser) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Profile image (smaller and on the left)
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Theme.of(context).primaryColor,
-              width: 2,
-            ),
+  Widget _buildCombinedProfileSection(UserProfileState state, domain.User? currentUser) {
+    final primaryColor = Theme.of(context).primaryColor;
+    final displayName = currentUser?.name ?? state.profile?.fullName ?? 'User';
+    final email = currentUser?.email ?? 'No email';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-          child: ClipOval(
-            child: state.profile?.profileImageUrl != null
-                ? Image.network(
-                    state.profile!.profileImageUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.person,
-                        size: 36,
-                        color: Colors.grey,
-                      );
-                    },
-                  )
-                : const Icon(
-                    Icons.person,
-                    size: 36,
-                    color: Colors.grey,
-                  ),
-          ),
-        ),
-
-        const SizedBox(width: 16),
-
-        // User info next to the profile image
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Full Name
-              Builder(
-                builder: (context) {
-                  // Debug the values
-                  debugPrint('Building name text with:');
-                  debugPrint('Controller text: "${_nameController.text}"');
-                  debugPrint('Profile fullName: "${state.profile?.fullName}"');
-                  debugPrint('Current user name: "${currentUser?.name}"');
-
-                  // First try to use the name from currentUser, then fall back to profile's fullName
-                  final displayName = currentUser?.name ?? state.profile?.fullName ?? 'User';
-                  return Text(
-                    displayName,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  );
-                },
-              ),
-
-              const SizedBox(height: 4),
-
-              // Email
-              Text(
-                currentUser?.email ?? 'No email',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-
-        if (state.isImageUploading)
+        ],
+      ),
+      child: Column(
+        children: [
+          // Profile section
           Padding(
-            padding: const EdgeInsets.only(left: 8.0),
+            padding: const EdgeInsets.all(16.0),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                // Profile avatar section
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        primaryColor.withOpacity(0.7),
+                        primaryColor.withOpacity(0.9),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryColor.withOpacity(0.2),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.person,
+                      color: Colors.white,
+                      size: 34,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  'Uploading...',
-                  style: Theme.of(context).textTheme.bodySmall,
+
+                const SizedBox(width: 16),
+
+                // User info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        displayName,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                        email,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-      ],
+
+          // Quick action buttons
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Wallet Button
+                _buildQuickActionButton(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: 'Wallet',
+                  onTap: () {
+                    _showFeatureComingSoonDialog('Wallet');
+                  },
+                ),
+
+                // Support Button
+                _buildQuickActionButton(
+                  icon: Icons.chat_outlined,
+                  label: 'Support',
+                  onTap: () {
+                    _showFeatureComingSoonDialog('Support');
+                  },
+                ),
+
+                // Payment Button
+                _buildQuickActionButton(
+                  icon: Icons.payment_outlined,
+                  label: 'Payment',
+                  onTap: () {
+                    // Navigate to modern payment options screen
+                    final authState = ref.read(authNotifierProvider);
+                    if (authState.isAuthenticated && authState.user != null) {
+                      context.push('/payment-options');
+                    } else {
+                      _showAuthRequiredDialog('Payment Methods');
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildUserInfoSection(UserProfileState state, dynamic currentUser) {
+  // Keep the original method for backward compatibility
+  Widget _buildProfileImageSection(UserProfileState state, dynamic currentUser) {
+    final primaryColor = Theme.of(context).primaryColor;
+    final displayName = currentUser?.name ?? state.profile?.fullName ?? 'User';
+    final email = currentUser?.email ?? 'No email';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            // Profile image section
+            GestureDetector(
+              onTap: _pickAndUploadImage,
+              child: Stack(
+                children: [
+                  // Profile image
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: primaryColor.withOpacity(0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: ClipOval(
+                      child: state.profile?.profileImageUrl != null
+                          ? Image.network(
+                              state.profile!.profileImageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[300],
+                                  child: const Icon(
+                                    Icons.person,
+                                    size: 36,
+                                    color: Colors.white,
+                                  ),
+                                );
+                              },
+                            )
+                          : Container(
+                              color: Colors.grey[300],
+                              child: const Icon(
+                                Icons.person,
+                                size: 36,
+                                color: Colors.white,
+                              ),
+                            ),
+                    ),
+                  ),
+
+                  // Camera icon
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.grey[200]!,
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.camera_alt,
+                        size: 14,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ),
+
+                  // Uploading indicator
+                  if (state.isImageUploading)
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // User info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    displayName,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    email,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  if (state.isImageUploading)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Uploading...',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserInfoSection(UserProfileState state, domain.User? currentUser) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -326,38 +569,59 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
   }
 
   Widget _buildQuickActionButtons() {
-    return Padding(
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16.0),
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // Wallet Button
-          _buildQuickActionButton(
-            icon: Icons.account_balance_wallet_outlined,
-            label: 'Wallet',
-            onTap: () {
-              _showFeatureComingSoonDialog('Wallet');
-            },
-          ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // Wallet Button
+            _buildQuickActionButton(
+              icon: Icons.account_balance_wallet_outlined,
+              label: 'Wallet',
+              onTap: () {
+                _showFeatureComingSoonDialog('Wallet');
+              },
+            ),
 
-          // Support Button
-          _buildQuickActionButton(
-            icon: Icons.chat_outlined,
-            label: 'Support',
-            onTap: () {
-              _showFeatureComingSoonDialog('Support');
-            },
-          ),
+            // Support Button
+            _buildQuickActionButton(
+              icon: Icons.chat_outlined,
+              label: 'Support',
+              onTap: () {
+                _showFeatureComingSoonDialog('Support');
+              },
+            ),
 
-          // Wishlist Button
-          _buildQuickActionButton(
-            icon: Icons.favorite_border_outlined,
-            label: 'Wishlist',
-            onTap: () {
-              _showFeatureComingSoonDialog('Wishlist');
-            },
-          ),
-        ],
+            // Payment Button
+            _buildQuickActionButton(
+              icon: Icons.payment_outlined,
+              label: 'Payment',
+              onTap: () {
+                // Navigate to modern payment options screen
+                final authState = ref.read(authNotifierProvider);
+                if (authState.isAuthenticated && authState.user != null) {
+                  context.push('/payment-options');
+                } else {
+                  _showAuthRequiredDialog('Payment Methods');
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -369,36 +633,33 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
   }) {
     final primaryColor = Theme.of(context).primaryColor;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 70,
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon without container
+              Icon(
                 icon,
                 color: primaryColor,
-                size: 24,
+                size: 28,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w500,
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[800],
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -410,54 +671,63 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Quick Action Buttons
-        _buildQuickActionButtons(),
 
         // Your Account Section
         Padding(
-          padding: const EdgeInsets.only(bottom: 16.0, left: 16.0, top: 8.0),
+          padding: const EdgeInsets.only(bottom: 16.0, left: 24.0, top: 8.0),
           child: Text(
             'Account',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            style: TextStyle(
+              fontSize: 20,
               fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
             ),
           ),
         ),
 
         // Account Section List
-        Card(
-          margin: const EdgeInsets.symmetric(horizontal: 0),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             children: [
-              // My Orders
+              // Your Orders (renamed from My Orders)
               ListTile(
-                onTap: () => context.push('/orders'),
                 leading: Icon(Icons.shopping_bag_outlined, color: primaryColor),
-                title: const Text('My Orders'),
+                title: const Text('Your Orders'),
                 trailing: const Icon(Icons.chevron_right),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
+                onTap: () => context.push('/orders'),
               ),
 
-              // My Addresses
+              Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
+
+              // Address Book (renamed from My Addresses)
               ListTile(
-                onTap: () => context.push('/addresses'),
                 leading: Icon(Icons.location_on_outlined, color: primaryColor),
-                title: const Text('My Addresses'),
+                title: const Text('Address Book'),
                 trailing: const Icon(Icons.chevron_right),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
+                onTap: () => context.push('/addresses'),
               ),
 
-              // Payment Methods
+              Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
+
+              // Your Wishlist (replaced Payment Methods)
               ListTile(
-                onTap: () => context.push('/payment-methods'),
-                leading: Icon(Icons.payment_outlined, color: primaryColor),
-                title: const Text('Payment Methods'),
+                leading: Icon(Icons.favorite_border_outlined, color: primaryColor),
+                title: const Text('Your Wishlist'),
                 trailing: const Icon(Icons.chevron_right),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
+                onTap: () => context.push('/wishlist'),
               ),
             ],
           ),
@@ -467,32 +737,43 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
 
         // Settings & Preferences Section
         Padding(
-          padding: const EdgeInsets.only(bottom: 16.0, left: 16.0, top: 8.0),
+          padding: const EdgeInsets.only(bottom: 8.0, left: 16.0, top: 16.0),
           child: Text(
             'Settings & Preferences',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            style: TextStyle(
+              fontSize: 20,
               fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
             ),
           ),
         ),
 
         // Settings Section List
-        Card(
-          margin: const EdgeInsets.symmetric(horizontal: 0),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             children: [
               // Notifications
               ListTile(
-                onTap: () => context.push('/preferences'),
                 leading: Icon(Icons.notifications_outlined, color: primaryColor),
                 title: const Text('Notifications'),
                 trailing: const Icon(Icons.chevron_right),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
+                onTap: () => context.push('/preferences'),
               ),
+
+              Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
 
               // Hidden Language and Theme items - functionality maintained
               Visibility(
@@ -523,40 +804,47 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
 
               // Privacy Policy
               ListTile(
-                onTap: () {
-                  _showFeatureComingSoonDialog('Privacy Policy');
-                },
                 leading: Icon(Icons.privacy_tip_outlined, color: primaryColor),
                 title: const Text('Privacy Policy'),
                 trailing: const Icon(Icons.chevron_right),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
+                onTap: () {
+                  _showFeatureComingSoonDialog('Privacy Policy');
+                },
               ),
+
+              Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
 
               // About
               ListTile(
-                onTap: () => _showAboutDialog(),
                 leading: Icon(Icons.info_outline, color: primaryColor),
                 title: const Text('About'),
                 trailing: const Icon(Icons.chevron_right),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
+                onTap: () => _showAboutDialog(),
               ),
+
+              Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
 
               // Debug Menu (for development)
               ListTile(
-                onTap: () => context.push('/clean/debug'),
                 leading: Icon(Icons.bug_report_outlined, color: primaryColor),
                 title: const Text('Debug Menu'),
                 trailing: const Icon(Icons.chevron_right),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
+                onTap: () => context.push('/clean/debug'),
               ),
 
-              // Delete Account
+              Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
+
+              // Delete Account - special styling for warning action
               ListTile(
-                onTap: () => _showDeleteAccountDialog(),
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('Delete Account', style: TextStyle(color: Colors.red)),
+                title: const Text(
+                  'Delete Account',
+                  style: TextStyle(
+                    color: Colors.red,
+                  ),
+                ),
                 trailing: const Icon(Icons.chevron_right, color: Colors.red),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
+                onTap: () => _showDeleteAccountDialog(),
               ),
             ],
           ),
@@ -565,16 +853,41 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
         const SizedBox(height: 32),
 
         // Sign Out
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: TextButton.icon(
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+          child: ElevatedButton(
             onPressed: _signOut,
-            icon: const Icon(Icons.logout),
-            label: const Text('Sign Out'),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              alignment: Alignment.center,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Colors.white,
               foregroundColor: Colors.red,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.red.withOpacity(0.5), width: 1.5),
+              ),
+              shadowColor: Colors.transparent,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.logout, size: 20),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Sign Out',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -617,6 +930,31 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
 
   void _navigateToLogin() {
     context.go('/login');
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+      if (pickedFile != null) {
+        final authState = ref.read(authNotifierProvider);
+        if (authState.isAuthenticated && authState.user != null) {
+          // Pass the path as a String instead of a File object
+          await ref.read(userProfileNotifierProvider.notifier).uploadProfileImage(
+            authState.user!.id,
+            pickedFile.path,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking/uploading image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error uploading image: $e')),
+        );
+      }
+    }
   }
 
   void _showLanguageDialog() {
@@ -886,7 +1224,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
           );
         },
       ),
-      applicationLegalese: '© 2023 Dayliz App',
+      applicationLegalese: '© 2025 Dayliz App',
       children: [
         const SizedBox(height: 16),
         const Text(
@@ -894,6 +1232,29 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+
+  void _showAuthRequiredDialog(String featureName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Authentication Required'),
+        content: Text('Please log in to access $featureName.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.go('/login');
+            },
+            child: const Text('Log In'),
+          ),
+        ],
+      ),
     );
   }
 }

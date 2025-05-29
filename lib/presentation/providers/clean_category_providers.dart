@@ -55,7 +55,7 @@ class CategoriesNotifier extends StateNotifier<CategoriesState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     final result = await getCategoriesWithSubcategoriesUseCase(NoParams());
-    
+
     result.fold(
       (failure) {
         state = state.copyWith(
@@ -77,7 +77,7 @@ class CategoriesNotifier extends StateNotifier<CategoriesState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     final result = await getCategoryByIdUseCase(GetCategoryByIdParams(id: id));
-    
+
     result.fold(
       (failure) {
         state = state.copyWith(
@@ -123,7 +123,15 @@ class CategoriesNotifier extends StateNotifier<CategoriesState> {
 }
 
 // Providers
-final categoryRepositoryProvider = Provider((_) => di.sl<CategoryRepository>());
+final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
+  try {
+    return di.sl<CategoryRepository>();
+  } catch (e) {
+    debugPrint('CategoryRepository not yet registered in GetIt: $e');
+    // Return a fallback or throw a more descriptive error
+    throw Exception('CategoryRepository not available. Make sure dependency injection is properly initialized.');
+  }
+});
 
 final getCategoriesUseCaseProvider = Provider(
   (ref) => GetCategoriesUseCase(ref.watch(categoryRepositoryProvider)),
@@ -173,4 +181,4 @@ String _mapFailureToMessage(Failure failure) {
     default:
       return 'An unexpected error occurred.';
   }
-} 
+}

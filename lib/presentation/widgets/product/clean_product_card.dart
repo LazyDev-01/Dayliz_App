@@ -4,9 +4,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../domain/entities/product.dart';
 import '../../providers/cart_providers.dart';
+import '../../providers/auth_providers.dart';
+import '../auth/auth_guard.dart';
 
 /// A clean architecture implementation of a product card for q-commerce applications
 /// following industry standards like Blinkit and Zepto.
@@ -410,10 +413,25 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
     );
   }
 
-  /// Add product to cart
+  /// Add product to cart - PROTECTED by AuthGuard
   Future<void> _addToCart(BuildContext context) async {
-    // Debug print
-    print('Adding product to cart: ${widget.product.id} - ${widget.product.name}');
+    // CART PROTECTION: Check authentication before adding to cart
+    final isAllowed = AuthGuardService.checkAuthAndPrompt(
+      context: context,
+      ref: ref,
+      action: 'add_to_cart',
+      onAuthRequired: () {
+        debugPrint('🔒 CART PROTECTION: Guest user tried to add ${widget.product.name} to cart');
+      },
+    );
+
+    // If user is not authenticated, the auth prompt is shown and we return
+    if (!isAllowed) {
+      return;
+    }
+
+    // User is authenticated, proceed with adding to cart
+    debugPrint('🔓 CART PROTECTION: Authenticated user adding ${widget.product.name} to cart');
 
     // Update state immediately for better UX
     if (mounted) {
@@ -556,7 +574,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
             action: SnackBarAction(
               label: 'VIEW CART',
               onPressed: () {
-                Navigator.of(context).pushNamed('/cart');
+                context.go('/clean/cart');
               },
             ),
           ),

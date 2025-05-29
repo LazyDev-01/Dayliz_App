@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
-import '../../../models/payment_method.dart';
+import '../../../domain/entities/payment_method.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/payment_method_providers.dart';
 import '../../widgets/common/empty_state.dart';
@@ -15,7 +15,7 @@ import '../../widgets/payment/add_payment_method_dialog.dart';
 
 class PaymentMethodsScreen extends ConsumerWidget {
   final bool isCheckout;
-  
+
   const PaymentMethodsScreen({
     Key? key,
     this.isCheckout = false,
@@ -27,14 +27,14 @@ class PaymentMethodsScreen extends ConsumerWidget {
     final authState = ref.watch(authNotifierProvider);
     final user = authState.user;
     final isAuthenticated = authState.isAuthenticated;
-    
+
     if (!isAuthenticated) {
       return _buildNotLoggedInState(context);
     }
-    
+
     return _buildContent(context, ref, user?.id ?? '');
   }
-  
+
   Widget _buildNotLoggedInState(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -52,7 +52,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
 
   Widget _buildContent(BuildContext context, WidgetRef ref, String userId) {
     final paymentMethodState = ref.watch(paymentMethodNotifierProvider(userId));
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Payment Methods'),
@@ -113,19 +113,19 @@ class PaymentMethodsScreen extends ConsumerWidget {
       itemBuilder: (context, index) {
         final paymentMethod = state.methods[index];
         final isSelected = state.selectedMethod?.id == paymentMethod.id;
-        
+
         return PaymentMethodCard(
           paymentMethod: paymentMethod,
           isSelected: isSelected,
           onTap: () => ref.read(paymentMethodNotifierProvider(userId).notifier)
-              .selectPaymentMethod(paymentMethod.id!),
+              .selectPaymentMethod(paymentMethod.id),
           onDelete: paymentMethod.isDefault
               ? null // Prevent deleting default payment method
               : () => _showDeleteConfirmationDialog(context, ref, userId, paymentMethod),
           onSetDefault: paymentMethod.isDefault
               ? null
               : () => ref.read(paymentMethodNotifierProvider(userId).notifier)
-                  .setDefaultPaymentMethod(paymentMethod.id!),
+                  .setDefaultPaymentMethod(paymentMethod.id),
         );
       },
     );
@@ -138,7 +138,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
         onAddPaymentMethod: (paymentMethod) {
           // Add actual user ID to the payment method
           final updatedMethod = paymentMethod.copyWith(userId: userId);
-          
+
           // Add the payment method to the list
           ref.read(paymentMethodNotifierProvider(userId).notifier)
               .addPaymentMethod(updatedMethod);
@@ -148,8 +148,8 @@ class PaymentMethodsScreen extends ConsumerWidget {
   }
 
   void _showDeleteConfirmationDialog(
-    BuildContext context, 
-    WidgetRef ref, 
+    BuildContext context,
+    WidgetRef ref,
     String userId,
     PaymentMethod paymentMethod,
   ) {
@@ -169,7 +169,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
             onPressed: () {
               Navigator.of(context).pop();
               ref.read(paymentMethodNotifierProvider(userId).notifier)
-                  .deletePaymentMethod(paymentMethod.id!);
+                  .deletePaymentMethod(paymentMethod.id);
             },
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
@@ -180,4 +180,4 @@ class PaymentMethodsScreen extends ConsumerWidget {
       ),
     );
   }
-} 
+}

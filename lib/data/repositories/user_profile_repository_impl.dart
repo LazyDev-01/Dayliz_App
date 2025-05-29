@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../core/errors/exceptions.dart';
 import '../../core/errors/failures.dart';
@@ -25,26 +26,54 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
 
   @override
   Future<Either<Failure, UserProfile>> getUserProfile(String userId) async {
-    if (await networkInfo.isConnected) {
+    debugPrint('UserProfileRepositoryImpl: Getting user profile for user ID: $userId');
+
+    final isConnected = await networkInfo.isConnected;
+    debugPrint('UserProfileRepositoryImpl: Network connected: $isConnected');
+
+    if (isConnected) {
       try {
-        final userProfile = await remoteDataSource.getUserProfile(userId);
+        debugPrint('UserProfileRepositoryImpl: Fetching profile from remote data source');
+        final userProfileModel = await remoteDataSource.getUserProfile(userId);
+        debugPrint('UserProfileRepositoryImpl: Successfully fetched profile from remote data source');
+
         // Cache the result locally
-        await localDataSource.updateUserProfile(userProfile);
-        return Right(userProfile);
-      } on ServerException catch (e) {
-        // If server fails, try to get from local cache
         try {
-          final localUserProfile = await localDataSource.getUserProfile(userId);
-          return Right(localUserProfile);
-        } on ServerException {
+          debugPrint('UserProfileRepositoryImpl: Caching profile in local data source');
+          await localDataSource.updateUserProfile(userProfileModel);
+          debugPrint('UserProfileRepositoryImpl: Successfully cached profile in local data source');
+        } catch (cacheError) {
+          debugPrint('UserProfileRepositoryImpl: Error caching profile: $cacheError');
+          // Continue even if caching fails
+        }
+
+        // Return the model as it extends the entity
+        debugPrint('UserProfileRepositoryImpl: Returning profile from remote data source');
+        return Right(userProfileModel);
+      } on ServerException catch (e) {
+        debugPrint('UserProfileRepositoryImpl: Error fetching profile from remote data source: ${e.message}');
+
+        // If server fails, try to get from local cache
+        debugPrint('UserProfileRepositoryImpl: Trying to fetch profile from local data source');
+        try {
+          final localUserProfileModel = await localDataSource.getUserProfile(userId);
+          debugPrint('UserProfileRepositoryImpl: Successfully fetched profile from local data source');
+
+          // Return the model as it extends the entity
+          return Right(localUserProfileModel);
+        } on ServerException catch (localError) {
+          debugPrint('UserProfileRepositoryImpl: Error fetching profile from local data source: ${localError.message}');
           return Left(ServerFailure(message: e.message));
         }
       }
     } else {
+      debugPrint('UserProfileRepositoryImpl: No network connection, trying local data source');
       try {
         final localUserProfile = await localDataSource.getUserProfile(userId);
+        debugPrint('UserProfileRepositoryImpl: Successfully fetched profile from local data source');
         return Right(localUserProfile);
       } on ServerException catch (e) {
+        debugPrint('UserProfileRepositoryImpl: Error fetching profile from local data source: ${e.message}');
         return Left(CacheFailure(message: e.message));
       }
     }

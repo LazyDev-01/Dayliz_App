@@ -4,10 +4,10 @@ import 'package:equatable/equatable.dart';
 abstract class Failure extends Equatable {
   /// Message describing the failure
   final String message;
-  
+
   /// Creates a new failure with a message
   const Failure(this.message);
-  
+
   @override
   List<Object> get props => [message];
 }
@@ -45,4 +45,10 @@ class ValidationFailure extends Failure {
 /// Unimplemented failure for features not implemented yet
 class UnimplementedFailure extends Failure {
   const UnimplementedFailure({String message = 'Feature not implemented'}) : super(message);
-} 
+}
+
+/// User cancellation failure for when user cancels an operation
+/// This should be handled silently without showing error messages
+class UserCancellationFailure extends Failure {
+  const UserCancellationFailure({String message = 'Operation cancelled by user'}) : super(message);
+}

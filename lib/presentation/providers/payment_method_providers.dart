@@ -3,7 +3,7 @@ import 'package:get_it/get_it.dart';
 import 'package:dartz/dartz.dart';
 
 import '../../core/errors/failures.dart';
-import '../../models/payment_method.dart';
+import '../../domain/entities/payment_method.dart';
 
 // Get the service locator instance
 final sl = GetIt.instance;
@@ -40,7 +40,7 @@ class PaymentMethodState {
 /// Payment method notifier for handling payment method operations
 class PaymentMethodNotifier extends StateNotifier<PaymentMethodState> {
   final String userId;
-  
+
   PaymentMethodNotifier({
     required this.userId,
   }) : super(PaymentMethodState()) {
@@ -51,58 +51,69 @@ class PaymentMethodNotifier extends StateNotifier<PaymentMethodState> {
   /// Load all payment methods for the user
   Future<void> loadPaymentMethods() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
-    
+
     // Simulated data for now
     // TODO: Replace with actual repository call
     await Future.delayed(const Duration(milliseconds: 800));
-    
+
     try {
       final methods = [
         PaymentMethod(
           id: '1',
           userId: userId,
-          type: 'credit_card',
-          cardNumber: '4242',
-          cardHolderName: 'John Doe',
-          expiryDate: '12/25',
-          cardType: 'visa',
+          type: PaymentMethod.typeCreditCard,
+          name: 'Personal Visa',
           isDefault: true,
-          nickName: 'Personal Visa',
+          details: {
+            'cardNumber': '4242',
+            'cardHolderName': 'John Doe',
+            'expiryDate': '12/25',
+            'cardType': 'visa',
+            'last4': '4242',
+            'brand': 'visa',
+          },
         ),
         PaymentMethod(
           id: '2',
           userId: userId,
-          type: 'credit_card',
-          cardNumber: '5353',
-          cardHolderName: 'John Doe',
-          expiryDate: '10/26',
-          cardType: 'mastercard',
+          type: PaymentMethod.typeCreditCard,
+          name: 'Work Mastercard',
           isDefault: false,
-          nickName: 'Work Mastercard',
+          details: {
+            'cardNumber': '5353',
+            'cardHolderName': 'John Doe',
+            'expiryDate': '10/26',
+            'cardType': 'mastercard',
+            'last4': '5353',
+            'brand': 'mastercard',
+          },
         ),
         PaymentMethod(
           id: '3',
           userId: userId,
-          type: 'upi',
-          upiId: 'johndoe@upi',
+          type: PaymentMethod.typeUpi,
+          name: 'UPI Payment',
           isDefault: false,
-          nickName: 'UPI Payment',
+          details: {
+            'upiId': 'johndoe@upi',
+          },
         ),
         PaymentMethod(
           id: '4',
           userId: userId,
-          type: 'cod',
+          type: PaymentMethod.typeCod,
+          name: 'Cash on Delivery',
           isDefault: false,
-          nickName: 'Cash on Delivery',
+          details: {},
         ),
       ];
-      
+
       // Set default selected method
       final defaultMethod = methods.firstWhere(
-        (method) => method.isDefault, 
+        (method) => method.isDefault,
         orElse: () => methods.first
       );
-      
+
       state = state.copyWith(
         isLoading: false,
         methods: methods,
@@ -119,14 +130,21 @@ class PaymentMethodNotifier extends StateNotifier<PaymentMethodState> {
   /// Add a new payment method
   Future<bool> addPaymentMethod(PaymentMethod method) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
-    
+
     // TODO: Replace with actual repository call
     await Future.delayed(const Duration(milliseconds: 800));
-    
+
     try {
       // Simulate adding a new method
-      final newMethod = method.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString());
-      
+      final newMethod = PaymentMethod(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: method.userId,
+        type: method.type,
+        name: method.name,
+        isDefault: method.isDefault,
+        details: method.details,
+      );
+
       // If this is the first method or set as default, update other methods
       final updatedMethods = [...state.methods];
       if (newMethod.isDefault) {
@@ -136,15 +154,15 @@ class PaymentMethodNotifier extends StateNotifier<PaymentMethodState> {
           }
         }
       }
-      
+
       updatedMethods.add(newMethod);
-      
+
       state = state.copyWith(
         isLoading: false,
         methods: updatedMethods,
         selectedMethod: newMethod.isDefault ? newMethod : state.selectedMethod,
       );
-      
+
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -158,25 +176,25 @@ class PaymentMethodNotifier extends StateNotifier<PaymentMethodState> {
   /// Delete a payment method
   Future<bool> deletePaymentMethod(String methodId) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
-    
+
     // TODO: Replace with actual repository call
     await Future.delayed(const Duration(milliseconds: 800));
-    
+
     try {
       final updatedMethods = state.methods.where((m) => m.id != methodId).toList();
-      
+
       // If we deleted the selected method, select a new one
       PaymentMethod? newSelectedMethod = state.selectedMethod;
       if (state.selectedMethod?.id == methodId) {
         newSelectedMethod = updatedMethods.isNotEmpty ? updatedMethods.first : null;
       }
-      
+
       state = state.copyWith(
         isLoading: false,
         methods: updatedMethods,
         selectedMethod: newSelectedMethod,
       );
-      
+
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -196,13 +214,13 @@ class PaymentMethodNotifier extends StateNotifier<PaymentMethodState> {
   /// Set a payment method as default
   Future<bool> setDefaultPaymentMethod(String methodId) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
-    
+
     // TODO: Replace with actual repository call
     await Future.delayed(const Duration(milliseconds: 800));
-    
+
     try {
       final updatedMethods = [...state.methods];
-      
+
       for (var i = 0; i < updatedMethods.length; i++) {
         if (updatedMethods[i].id == methodId) {
           updatedMethods[i] = updatedMethods[i].copyWith(isDefault: true);
@@ -210,16 +228,16 @@ class PaymentMethodNotifier extends StateNotifier<PaymentMethodState> {
           updatedMethods[i] = updatedMethods[i].copyWith(isDefault: false);
         }
       }
-      
+
       // Find the new default method
       final defaultMethod = updatedMethods.firstWhere((m) => m.id == methodId);
-      
+
       state = state.copyWith(
         isLoading: false,
         methods: updatedMethods,
         selectedMethod: defaultMethod,
       );
-      
+
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -270,4 +288,4 @@ final paymentMethodLoadingProvider = Provider.family<bool, String>((ref, userId)
 /// Payment method error message provider
 final paymentMethodErrorProvider = Provider.family<String?, String>((ref, userId) {
   return ref.watch(paymentMethodNotifierProvider(userId)).errorMessage;
-}); 
+});

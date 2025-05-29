@@ -34,6 +34,8 @@ class _CleanVerifyTokenHandlerState extends ConsumerState<CleanVerifyTokenHandle
   }
 
   Future<void> _processToken() async {
+    debugPrint('🔄 [VerifyTokenHandler] Processing token: ${widget.token.substring(0, 10)}... type: ${widget.type}');
+
     try {
       if (widget.type == 'verify_email') {
         // Process email verification token
@@ -61,9 +63,16 @@ class _CleanVerifyTokenHandlerState extends ConsumerState<CleanVerifyTokenHandle
         }
       } else if (widget.type == 'reset_password') {
         // For reset password links, redirect to update password screen with token
+        debugPrint('🔄 [VerifyTokenHandler] Processing password reset token');
+
         if (mounted) {
-          // Navigate to update password screen with token
-          context.go('/update-password?token=${widget.token}');
+          // CRITICAL FIX: Defer navigation to avoid setState during build
+          debugPrint('➡️ [VerifyTokenHandler] Redirecting to update password screen');
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              context.go('/update-password?token=${widget.token}');
+            }
+          });
           return;
         }
       } else {

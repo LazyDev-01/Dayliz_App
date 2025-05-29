@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/payment_method_model.dart';
-import '../../core/error/exceptions.dart';
+import '../../core/errors/exceptions.dart';
 
 abstract class PaymentMethodRemoteDataSource {
   /// Gets all payment methods for a user
@@ -161,4 +161,4 @@ class PaymentMethodRemoteDataSourceImpl implements PaymentMethodRemoteDataSource
       throw ServerException(message: 'Failed to set default payment method');
     }
   }
-} 
+}

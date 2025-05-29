@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../models/payment_method.dart';
+import '../../../domain/entities/payment_method.dart';
 
 class PaymentMethodCard extends StatelessWidget {
   final PaymentMethod paymentMethod;
@@ -20,13 +20,13 @@ class PaymentMethodCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: isSelected ? 2 : 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: isSelected 
+        side: isSelected
             ? BorderSide(color: theme.colorScheme.primary, width: 2)
             : BorderSide.none,
       ),
@@ -136,10 +136,10 @@ class PaymentMethodCard extends StatelessWidget {
   Widget _buildPaymentMethodIcon() {
     IconData iconData;
     Color iconColor;
-    
+
     switch (paymentMethod.type) {
-      case 'credit_card':
-      case 'debit_card':
+      case PaymentMethod.typeCreditCard:
+      case PaymentMethod.typeDebitCard:
         if (paymentMethod.cardType == 'visa') {
           iconData = Icons.credit_card;
           iconColor = Colors.blue;
@@ -151,11 +151,11 @@ class PaymentMethodCard extends StatelessWidget {
           iconColor = Colors.grey;
         }
         break;
-      case 'upi':
+      case PaymentMethod.typeUpi:
         iconData = Icons.account_balance;
         iconColor = Colors.green;
         break;
-      case 'cod':
+      case PaymentMethod.typeCod:
         iconData = Icons.money;
         iconColor = Colors.green.shade800;
         break;
@@ -163,7 +163,7 @@ class PaymentMethodCard extends StatelessWidget {
         iconData = Icons.payment;
         iconColor = Colors.grey;
     }
-    
+
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -180,12 +180,12 @@ class PaymentMethodCard extends StatelessWidget {
 
   String _getDefaultTitle() {
     switch (paymentMethod.type) {
-      case 'credit_card':
-      case 'debit_card':
+      case PaymentMethod.typeCreditCard:
+      case PaymentMethod.typeDebitCard:
         return paymentMethod.cardType?.toUpperCase() ?? 'Card';
-      case 'upi':
+      case PaymentMethod.typeUpi:
         return 'UPI';
-      case 'cod':
+      case PaymentMethod.typeCod:
         return 'Cash on Delivery';
       default:
         return paymentMethod.type;
@@ -194,20 +194,20 @@ class PaymentMethodCard extends StatelessWidget {
 
   String _getCardDetails() {
     switch (paymentMethod.type) {
-      case 'credit_card':
-      case 'debit_card':
+      case PaymentMethod.typeCreditCard:
+      case PaymentMethod.typeDebitCard:
         if (paymentMethod.cardNumber != null && paymentMethod.expiryDate != null) {
           return '•••• ${paymentMethod.cardNumber} | Expires ${paymentMethod.expiryDate}';
         } else if (paymentMethod.cardNumber != null) {
           return '•••• ${paymentMethod.cardNumber}';
         }
         return 'Credit/Debit Card';
-      case 'upi':
+      case PaymentMethod.typeUpi:
         return paymentMethod.upiId ?? 'UPI Payment';
-      case 'cod':
+      case PaymentMethod.typeCod:
         return 'Pay when you receive your order';
       default:
         return '';
     }
   }
-} 
+}

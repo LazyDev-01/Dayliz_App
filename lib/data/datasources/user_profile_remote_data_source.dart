@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
-import '../../core/error/exceptions.dart';
+import '../../core/errors/exceptions.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../models/user_profile_model.dart';
 import 'user_profile_data_source.dart';

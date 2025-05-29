@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../providers/auth_providers.dart';
-import '../../../core/validators/validators.dart';
 
 /// Clean architecture login screen that uses Riverpod for state management
 class CleanLoginScreen extends ConsumerStatefulWidget {
@@ -21,7 +19,6 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = true; // Default to true
-  String? _loginError;
 
   @override
   void dispose() {
@@ -31,28 +28,29 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    // Watch auth state
-    final authState = ref.watch(authNotifierProvider);
+  void initState() {
+    super.initState();
 
-    // Check authentication status
-    if (authState.isAuthenticated) {
-      // If authenticated, navigate to home page on next frame
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.go('/home');
-      });
-    }
-
-    // Update login error if there's an error message in the state
-    if (authState.errorMessage != null && _loginError != authState.errorMessage) {
-      // Filter out the "No authenticated user found" error as it's not relevant for login
-      if (authState.errorMessage != "No authenticated user found") {
-        _loginError = authState.errorMessage;
-      } else {
-        // Clear the error if it's "No authenticated user found"
-        _loginError = null;
+    // Clear errors to prevent registration errors from appearing on login screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(authNotifierProvider.notifier).clearErrors();
+        debugPrint('LOGIN SCREEN: Cleared errors during initialization');
       }
-    }
+    });
+  }
+
+  // Flag to prevent multiple navigations
+  bool _isNavigating = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // UI/UX FIX: Only watch specific parts of the auth state
+    // This prevents unnecessary rebuilds that could cause infinite loops
+    final errorMessage = ref.watch(authErrorProvider);
+
+    // UI/UX FIX: Don't automatically navigate based on auth state
+    // We'll handle navigation explicitly in the login method
 
     return Scaffold(
       body: SafeArea(
@@ -73,10 +71,13 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
 
                 const SizedBox(height: 16),
 
-                // Error message
-                if (_loginError != null)
+                // Error message - CRITICAL FIX: Filter out cancellation errors
+                if (errorMessage != null &&
+                    errorMessage.isNotEmpty &&
+                    !errorMessage.contains('cancelled by user') &&
+                    !errorMessage.contains('UserCancellationException'))
                   Text(
-                    _loginError!,
+                    errorMessage,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                       fontSize: 14,
@@ -117,6 +118,11 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
 
                 // Register option
                 _buildRegisterOption(),
+
+                const SizedBox(height: 16),
+
+                // Skip button
+                _buildSkipButton(),
               ],
             ),
           ),
@@ -165,15 +171,8 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
               prefixIcon: Icon(Icons.email_outlined),
               border: OutlineInputBorder(),
             ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your email';
-              }
-              if (!isValidEmail(value)) {
-                return 'Please enter a valid email address';
-              }
-              return null;
-            },
+            // UI/UX FIX: Remove validator to prevent form clearing
+            // Validation is now done manually in _login() method
           ),
 
           const SizedBox(height: 16),
@@ -198,15 +197,8 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
               ),
               border: const OutlineInputBorder(),
             ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your password';
-              }
-              if (value.length < 6) {
-                return 'Password must be at least 6 characters';
-              }
-              return null;
-            },
+            // UI/UX FIX: Remove validator to prevent form clearing
+            // Validation is now done manually in _login() method
           ),
         ],
       ),
@@ -242,8 +234,8 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
         // Forgot Password button
         TextButton(
           onPressed: () {
-            // Navigate to forgot password screen
-            context.go('/reset-password');
+            // Navigate to forgot password screen with smooth transition
+            context.push('/reset-password');
           },
           child: const Text('Forgot Password?'),
         ),
@@ -252,10 +244,11 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
   }
 
   Widget _buildLoginButton() {
+    // Watch loading state for button-specific loading indicator
     final isLoading = ref.watch(authLoadingProvider);
 
     return ElevatedButton(
-      onPressed: isLoading ? null : _login,
+      onPressed: isLoading ? null : _login, // Disable button when loading
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
@@ -264,11 +257,11 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
       ),
       child: isLoading
           ? const SizedBox(
-              height: 20,
               width: 20,
+              height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
             )
           : const Text(
@@ -279,46 +272,132 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
   }
 
   Widget _buildGoogleSignInButton() {
-    return Column(
-      children: [
-        ElevatedButton.icon(
-          onPressed: null, // Disabled for now
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: BorderSide(color: Colors.grey.shade300),
-            ),
-          ),
-          icon: SvgPicture.asset(
-            'assets/images/google_logo.svg',
-            height: 24,
-            width: 24,
-          ),
-          label: const Text('Sign in with Google'),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.amber.shade50,
+    final isLoading = ref.watch(authLoadingProvider);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      child: ElevatedButton.icon(
+        onPressed: isLoading ? null : _handleGoogleSignIn,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.amber.shade200),
+            side: BorderSide(color: Colors.grey.shade300),
           ),
-          child: const Text(
-            'Google Sign-In is temporarily unavailable. Please use email/password instead.',
-            style: TextStyle(color: Colors.amber, fontSize: 12),
-            textAlign: TextAlign.center,
+          elevation: 1,
+          shadowColor: Colors.black.withValues(alpha: 0.1),
+        ),
+        icon: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                ),
+              )
+            : SvgPicture.asset(
+                'assets/images/google_logo.svg',
+                height: 24,
+                width: 24,
+              ),
+        label: Text(
+          isLoading ? 'Signing in...' : 'Sign in with Google',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
           ),
         ),
-      ],
+      ),
     );
   }
 
-  // Google Sign-In method is temporarily disabled
-  // Will be implemented in a future update
+  // Google Sign-In handler
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      debugPrint('🔄 Starting Google Sign-in from login screen');
+
+      // Use the auth provider to handle Google sign-in
+      await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+
+      // Check if sign-in was successful
+      final authState = ref.read(authNotifierProvider);
+      if (authState.isAuthenticated && authState.user != null) {
+        debugPrint('✅ Google Sign-in successful, navigating to home');
+
+        if (mounted) {
+          // Navigate to home screen
+          context.go('/home');
+        }
+      } else {
+        debugPrint('❌ Google Sign-in failed - user not authenticated');
+
+        // Check if there's an error message in the auth state
+        final authState = ref.read(authNotifierProvider);
+
+        // CRITICAL FIX: Don't show error for user cancellation
+        if (authState.errorMessage != null && authState.errorMessage!.isNotEmpty) {
+          // Check if it's a cancellation error
+          if (authState.errorMessage!.contains('cancelled by user') ||
+              authState.errorMessage!.contains('UserCancellationException')) {
+            debugPrint('🔍 User cancellation detected in auth state - handling silently');
+            // Clear the error from auth state
+            ref.read(authNotifierProvider.notifier).clearErrors();
+          } else {
+            // Show error for actual issues
+            if (mounted) {
+              _showErrorSnackBar('Google Sign-in Error: ${authState.errorMessage}');
+            }
+          }
+        } else {
+          // No error message means user likely cancelled - handle silently
+          debugPrint('🔍 No error message - likely user cancellation, handling silently');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error during Google Sign-in: $e');
+
+      // CRITICAL FIX: Handle user cancellation gracefully
+      if (e.toString().contains('UserCancellationException') ||
+          e.toString().contains('cancelled by user')) {
+        debugPrint('🔍 User cancelled Google Sign-in - handling silently');
+        // Don't show any error message for user cancellation
+        return;
+      }
+
+      // Provide more specific error messages for actual errors
+      String userFriendlyMessage;
+      if (e.toString().contains('ServerException')) {
+        userFriendlyMessage = 'Server configuration error. Please contact support.';
+      } else if (e.toString().contains('NetworkFailure')) {
+        userFriendlyMessage = 'Network error. Please check your internet connection.';
+      } else if (e.toString().contains('AuthException')) {
+        userFriendlyMessage = 'Authentication error. Please try again.';
+      } else {
+        userFriendlyMessage = 'Google sign-in failed: ${e.toString()}';
+      }
+
+      if (mounted) {
+        _showErrorSnackBar(userFriendlyMessage);
+      }
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
 
   Widget _buildRegisterOption() {
     return Row(
@@ -327,8 +406,8 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
         const Text("Don't have an account?"),
         TextButton(
           onPressed: () {
-            // Navigate to register screen
-            context.go('/signup');
+            // Navigate to register screen with smooth transition
+            context.push('/signup');
           },
           child: const Text('Sign Up'),
         ),
@@ -336,39 +415,128 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
     );
   }
 
+  Widget _buildSkipButton() {
+    return Center(
+      child: TextButton(
+        onPressed: _handleSkip,
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: Colors.grey.shade400, width: 1),
+          ),
+        ),
+        child: Text(
+          'Skip',
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
   void _login() async {
-    // Validate form
-    if (_formKey.currentState?.validate() == true) {
-      // Get form values
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
+    // Prevent multiple login attempts
+    if (_isNavigating) {
+      debugPrint('LOGIN: Already processing, ignoring duplicate request');
+      return;
+    }
 
-      debugPrint('Starting login process for $email');
+    // CRITICAL FIX: Capture form values immediately and never clear them during process
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final rememberMe = _rememberMe;
 
-      // Attempt login
+    debugPrint('LOGIN: Starting login for $email');
+
+    // Manual validation to prevent form clearing
+    String? emailError;
+    String? passwordError;
+
+    if (email.isEmpty) {
+      emailError = 'Please enter your email';
+    } else if (!isValidEmail(email)) {
+      emailError = 'Please enter a valid email address';
+    }
+
+    if (password.isEmpty) {
+      passwordError = 'Please enter your password';
+    } else if (password.length < 6) {
+      passwordError = 'Password must be at least 6 characters';
+    }
+
+    // Show validation errors without touching form fields
+    if (emailError != null || passwordError != null) {
+      final errorMessage = emailError ?? passwordError ?? 'Please check your input';
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Set navigating flag and clear previous errors
+    _isNavigating = true;
+    ref.read(authNotifierProvider.notifier).clearErrors();
+
+    try {
+      // Attempt login - DO NOT touch form fields during this process
       await ref.read(authNotifierProvider.notifier).login(
         email,
         password,
-        rememberMe: _rememberMe,
+        rememberMe: rememberMe,
       );
 
-      // Check if we're authenticated after login
+      // Check auth state after login attempt
       final authState = ref.read(authNotifierProvider);
-      debugPrint('Login complete. Auth state: isAuthenticated=${authState.isAuthenticated}, user=${authState.user != null}');
 
-      if (authState.isAuthenticated && authState.user != null) {
-        debugPrint('User authenticated in _login, navigating to home');
-        // If authenticated, navigate to home
-        if (mounted) {
-          final navigator = GoRouter.of(context);
-          // Use a slight delay to ensure the state is fully updated
-          Future.delayed(const Duration(milliseconds: 100), () {
-            if (mounted) {
-              navigator.go('/home');
-            }
-          });
-        }
+      if (authState.isAuthenticated && authState.user != null && mounted) {
+        debugPrint('LOGIN: Success! Navigating to home');
+
+        // CRITICAL FIX: Only clear form AFTER successful login
+        _emailController.clear();
+        _passwordController.clear();
+
+        // Navigate immediately - no delay needed since router is now stable
+        context.go('/home');
+      } else {
+        debugPrint('LOGIN: Failed - form fields preserved');
+        // Form fields are automatically preserved since we never touched them
       }
+    } catch (e) {
+      debugPrint('LOGIN: Error - $e');
+      // Form fields are automatically preserved since we never touched them
+    } finally {
+      // Reset navigating flag
+      _isNavigating = false;
+    }
+  }
+
+  // SKIP: Handle skip authentication
+  void _handleSkip() {
+    debugPrint('🎯 SKIP: User selected skip - bypassing authentication');
+    debugPrint('🎯 SKIP: Current route: ${GoRouterState.of(context).uri.path}');
+    debugPrint('🎯 SKIP: Attempting navigation to /home');
+
+    // Navigate directly to home screen without authentication
+    if (mounted) {
+      try {
+        context.go('/home');
+        debugPrint('✅ SKIP: Navigation to /home initiated successfully');
+      } catch (e) {
+        debugPrint('❌ SKIP: Navigation failed: $e');
+      }
+    } else {
+      debugPrint('❌ SKIP: Widget not mounted, cannot navigate');
     }
   }
 }

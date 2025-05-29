@@ -1,64 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../data/mock/mock_categories.dart';
 import '../../../domain/entities/category.dart';
 import '../../providers/cart_providers.dart';
+import '../../providers/category_providers_simple.dart';
 import '../../widgets/common/common_app_bar.dart';
 import '../../widgets/common/common_bottom_nav_bar.dart';
+import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/error_state.dart';
 import '../product/clean_product_listing_screen.dart';
 
-class CleanCategoriesScreen extends ConsumerStatefulWidget {
+class CleanCategoriesScreen extends ConsumerWidget {
   const CleanCategoriesScreen({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<CleanCategoriesScreen> createState() => _CleanCategoriesScreenState();
-}
-
-class _CleanCategoriesScreenState extends ConsumerState<CleanCategoriesScreen> {
-  late List<CategorySection> _categorySections;
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    // Load mock category sections
-    _loadCategorySections();
-  }
-
-  Future<void> _loadCategorySections() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      // Simulate network delay
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      // Load mock data
-      _categorySections = MockCategories.getCategorySections();
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Failed to load categories: ${e.toString()}';
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Watch cart item count for badge
     final cartItemCount = ref.watch(cartItemCountProvider);
+
+    // Watch categories async provider
+    final categoriesAsync = ref.watch(categoriesSimpleProvider);
 
     // Set the current index for the bottom navigation bar
     ref.read(bottomNavIndexProvider.notifier).state = 1; // 1 is for Categories
@@ -70,7 +31,14 @@ class _CleanCategoriesScreenState extends ConsumerState<CleanCategoriesScreen> {
         showShadow: false,
         elevation: 0,
       ),
-      body: _buildBody(),
+      body: categoriesAsync.when(
+        data: (categories) => _buildCategoriesList(context, ref, categories),
+        loading: () => const LoadingIndicator(message: 'Loading categories...'),
+        error: (error, stackTrace) => ErrorState(
+          message: error.toString(),
+          onRetry: () => ref.refresh(categoriesSimpleProvider),
+        ),
+      ),
       bottomNavigationBar: CommonBottomNavBar(
         currentIndex: 1, // Categories tab
         cartItemCount: cartItemCount,
@@ -78,90 +46,67 @@ class _CleanCategoriesScreenState extends ConsumerState<CleanCategoriesScreen> {
     );
   }
 
-  Widget _buildBody() {
-    // Show loading state
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+  Widget _buildCategoriesList(BuildContext context, WidgetRef ref, List<Category> categories) {
+    if (categories.isEmpty) {
+      return _buildEmptyState(ref);
     }
 
-    // Show error state
-    if (_errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Error: $_errorMessage',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadCategorySections,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Show empty state
-    if (_categorySections.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'No categories found',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadCategorySections,
-              child: const Text('Refresh'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Show category sections with subcategories
     return RefreshIndicator(
       onRefresh: () async {
-        await _loadCategorySections();
+        ref.refresh(categoriesSimpleProvider);
+        await ref.read(categoriesSimpleProvider.future);
       },
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 16.0),
-        itemCount: _categorySections.length,
+        itemCount: categories.length,
         itemBuilder: (context, index) {
-          final section = _categorySections[index];
-          return _buildCategorySection(context, section);
+          final category = categories[index];
+          return _buildCategorySection(context, category);
         },
       ),
     );
   }
 
-  Widget _buildCategorySection(BuildContext context, CategorySection section) {
+  Widget _buildEmptyState(WidgetRef ref) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.category_outlined, size: 48, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text(
+            'No categories available',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => ref.refresh(categoriesSimpleProvider),
+            child: const Text('Refresh'),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+  Widget _buildCategorySection(BuildContext context, Category category) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section header
+        // Category header
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Row(
             children: [
               Icon(
-                section.icon,
-                color: section.themeColor,
+                category.icon,
+                color: category.themeColor,
                 size: 24,
               ),
               const SizedBox(width: 8),
               Text(
-                section.name,
+                category.name,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -172,22 +117,31 @@ class _CleanCategoriesScreenState extends ConsumerState<CleanCategoriesScreen> {
         ),
 
         // Subcategories grid
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 0.8,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 12,
+        if (category.subCategories != null && category.subCategories!.isNotEmpty)
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 0.8,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: category.subCategories!.length,
+            itemBuilder: (context, index) {
+              final subcategory = category.subCategories![index];
+              return _buildSubcategoryCard(context, subcategory, category.themeColor);
+            },
+          )
+        else
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'No subcategories available',
+              style: TextStyle(color: Colors.grey),
+            ),
           ),
-          itemCount: section.subcategories.length,
-          itemBuilder: (context, index) {
-            final subcategory = section.subcategories[index];
-            return _buildSubcategoryCard(context, subcategory, section.themeColor);
-          },
-        ),
 
         // Add some spacing between sections
         const SizedBox(height: 24),
@@ -202,7 +156,23 @@ class _CleanCategoriesScreenState extends ConsumerState<CleanCategoriesScreen> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: InkWell(
-        onTap: () => _navigateToSubcategoryProducts(subcategory),
+        onTap: () {
+          // Navigate to product listing with subcategory filter
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CleanProductListingScreen(
+                subcategoryId: subcategory.id,
+              ),
+              // Pass the subcategory name as route arguments
+              settings: RouteSettings(
+                arguments: {
+                  'subcategoryName': subcategory.name,
+                },
+              ),
+            ),
+          );
+        },
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -258,20 +228,4 @@ class _CleanCategoriesScreenState extends ConsumerState<CleanCategoriesScreen> {
     );
   }
 
-  void _navigateToSubcategoryProducts(SubCategory subcategory) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CleanProductListingScreen(
-          subcategoryId: subcategory.id,
-        ),
-        // Pass the subcategory name as an argument to be used in the title
-        settings: RouteSettings(
-          arguments: {
-            'subcategoryName': subcategory.name,
-          },
-        ),
-      ),
-    );
-  }
 }

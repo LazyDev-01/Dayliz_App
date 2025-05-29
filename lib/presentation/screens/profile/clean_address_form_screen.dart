@@ -34,7 +34,6 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
   late TextEditingController _recipientNameController;
   String? _addressType;
   String? _addressTypeError;
-  late bool _isDefault;
 
   // Location data (temporarily disabled)
   double? _latitude;
@@ -68,7 +67,6 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
     _additionalInfoController = TextEditingController(text: widget.address?.additionalInfo ?? '');
     _recipientNameController = TextEditingController(text: widget.address?.recipientName ?? '');
     _addressType = widget.address?.addressType;
-    _isDefault = widget.address?.isDefault ?? false;
 
     // If editing, store the initial location data
     if (_isEditing) {
@@ -107,7 +105,10 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
       }
 
       final userId = currentUser.id;
-      final address = await ref.read(addressesNotifierProvider.notifier).getAddressById(userId, addressId);
+
+      // Check if the address service is available
+      final addressesNotifier = ref.read(addressesNotifierProvider.notifier);
+      final address = await addressesNotifier.getAddressById(userId, addressId);
 
       if (address != null) {
         setState(() {
@@ -123,7 +124,6 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
           _additionalInfoController.text = address.additionalInfo ?? '';
           _recipientNameController.text = address.recipientName ?? '';
           _addressType = address.addressType;
-          _isDefault = address.isDefault;
           _latitude = address.latitude;
           _longitude = address.longitude;
           _zoneId = address.zoneId;
@@ -142,12 +142,29 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
     } catch (e) {
       debugPrint('Error fetching address: $e');
       if (mounted) {
+        String errorMessage = 'Error loading address';
+
+        // Check if the error is related to repository registration
+        if (e.toString().contains('not registered') ||
+            e.toString().contains('Address service not initialized')) {
+          errorMessage = 'The address service is not available at this time. Please try again later.';
+
+          // Try to refresh the provider
+          final notifier = ref.refresh(addressesNotifierProvider);
+          debugPrint('Refreshed addressesNotifierProvider: ${notifier.hashCode}');
+        } else {
+          errorMessage = 'Error loading address: ${e.toString()}';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading address: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
           ),
         );
+
+        // Navigate back to the address list screen
+        Navigator.of(context).pop();
       }
     } finally {
       if (mounted) {
@@ -208,7 +225,7 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
         postalCode: _postalCodeController.text,
         country: _countryController.text,
         phoneNumber: _phoneNumberController.text.isEmpty ? null : _phoneNumberController.text,
-        isDefault: _isDefault,
+        isDefault: false, // Always false since we removed default functionality
         additionalInfo: null, // Field removed from UI
         landmark: _landmarkController.text.isEmpty ? null : _landmarkController.text,
         latitude: _latitude,
@@ -260,7 +277,15 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
         if (mounted) {
           String errorMessage = 'Error saving address';
 
-          if (e is PostgrestException) {
+          // Check if the error is related to repository registration
+          if (e.toString().contains('not registered') ||
+              e.toString().contains('Address service not initialized')) {
+            errorMessage = 'The address service is not available at this time. Please try again later.';
+
+            // Try to refresh the provider
+            final notifier = ref.refresh(addressesNotifierProvider);
+            debugPrint('Refreshed addressesNotifierProvider: ${notifier.hashCode}');
+          } else if (e is PostgrestException) {
             // Handle Supabase-specific errors
             if (e.code == '42501') {
               errorMessage = 'Permission denied. You may need to log in again.';
@@ -309,7 +334,7 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected ? theme.colorScheme.primary.withAlpha(26) : Colors.transparent,
+          color: isSelected ? theme.colorScheme.primary.withAlpha(26) : Colors.white,
           border: Border.all(
             color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outline,
             width: 1,
@@ -342,6 +367,7 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50], // Light grey background
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Address' : 'Add New Address'),
       ),
@@ -357,6 +383,8 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
                 labelText: 'Recipient Name',
                 hintText: 'Name of person receiving delivery',
                 border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
               ),
             ),
             const SizedBox(height: 16),
@@ -368,6 +396,8 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
                 labelText: 'Recipient Phone',
                 hintText: 'Phone number for delivery contact',
                 border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
               ),
               keyboardType: TextInputType.phone,
             ),
@@ -433,6 +463,8 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
                 labelText: 'House No/Building/Floor',
                 hintText: 'Enter flat number, building name, floor, etc.',
                 border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
               ),
             ),
             const SizedBox(height: 16),
@@ -444,6 +476,8 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
                 labelText: 'Area/Street',
                 hintText: 'Enter area and street name',
                 border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -461,6 +495,8 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
                 labelText: 'Landmark (Optional)',
                 hintText: 'E.g., Near Tura Bazaar',
                 border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
               ),
             ),
 
@@ -502,28 +538,6 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
                   ),
                 ],
               ),
-            ),
-            // Additional Information field removed
-            const SizedBox(height: 16),
-            // Temporarily disabled location functionality
-            ElevatedButton.icon(
-              onPressed: null, // Disabled
-              icon: const Icon(Icons.my_location),
-              label: const Text('Location functionality temporarily disabled'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: const Text('Set as Default Address'),
-              subtitle: const Text('Use this address as your default delivery address'),
-              value: _isDefault,
-              onChanged: (value) {
-                setState(() {
-                  _isDefault = value;
-                });
-              },
             ),
             const SizedBox(height: 24),
             ElevatedButton(

@@ -10,13 +10,13 @@ class CommonDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           _buildDrawerHeader(context),
-          
+
           // Main Navigation
           _buildSectionHeader(context, 'Main Navigation'),
           _buildDrawerItem(
@@ -43,9 +43,9 @@ class CommonDrawer extends ConsumerWidget {
             title: 'Orders',
             onTap: () => _navigateTo(context, '/clean/orders'),
           ),
-          
+
           const Divider(),
-          
+
           // User Account
           _buildSectionHeader(context, 'Your Account'),
           _buildDrawerItem(
@@ -69,12 +69,12 @@ class CommonDrawer extends ConsumerWidget {
           _buildDrawerItem(
             context,
             icon: Icons.payment_outlined,
-            title: 'Payment Methods',
-            onTap: () => _navigateTo(context, '/payment-methods'),
+            title: 'Payment Options',
+            onTap: () => _navigateTo(context, '/payment-options'),
           ),
-          
+
           const Divider(),
-          
+
           // Development & Testing
           _buildSectionHeader(context, 'Development & Testing'),
           _buildDrawerItem(
@@ -95,9 +95,9 @@ class CommonDrawer extends ConsumerWidget {
             title: 'Settings',
             onTap: () => _navigateTo(context, '/dev/settings'),
           ),
-          
+
           const Divider(),
-          
+
           // App Info
           _buildDrawerItem(
             context,

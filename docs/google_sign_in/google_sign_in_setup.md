@@ -90,7 +90,7 @@ To test Google Sign-In:
 If you encounter issues, check the logs for the following tags:
 
 - `[GoogleSignInService]`: Logs from the Google Sign-In service
-- `[AuthService]`: Logs from the authentication service
+- `[AuthSupabaseDataSource]`: Logs from the authentication data source
 - `GoogleRedirectActivity`: Logs from the Android redirect activity
 
 These logs will help identify where the authentication process is failing.

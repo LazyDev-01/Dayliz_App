@@ -10,7 +10,7 @@ class ProductHorizontalList extends StatelessWidget {
   final EdgeInsets padding;
   final VoidCallback? onSeeAllPressed;
   final String heroTagPrefix;
-  
+
   const ProductHorizontalList({
     Key? key,
     required this.products,
@@ -35,18 +35,18 @@ class ProductHorizontalList extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildProductItem(BuildContext context, int index) {
     final product = products[index];
-    final heroTag = heroTagPrefix.isEmpty 
-      ? 'product_${product.id}' 
+    final heroTag = heroTagPrefix.isEmpty
+      ? 'product_${product.id}'
       : '${heroTagPrefix}_${product.id}';
-    
+
     return Container(
       width: itemWidth,
       margin: const EdgeInsets.only(right: 16),
       child: GestureDetector(
-        onTap: () => context.go('/product/${product.id}', extra: product),
+        onTap: () => context.go('/clean/product/${product.id}', extra: product),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -62,7 +62,7 @@ class ProductHorizontalList extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildProductImage(Product product, String heroTag) {
     return Stack(
       children: [
@@ -103,7 +103,7 @@ class ProductHorizontalList extends StatelessWidget {
       ],
     );
   }
-  
+
   Widget _buildProductName(Product product) {
     return Text(
       product.name,
@@ -115,7 +115,7 @@ class ProductHorizontalList extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildPriceAndRating(BuildContext context, Product product) {
     return Row(
       children: [
@@ -160,4 +160,4 @@ class ProductHorizontalList extends StatelessWidget {
       ],
     );
   }
-} 
+}

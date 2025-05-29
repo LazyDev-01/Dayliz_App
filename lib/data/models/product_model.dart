@@ -43,26 +43,29 @@ class ProductModel extends Product {
         );
 
   /// Create a ProductModel from a Product entity
-  factory ProductModel.fromProduct(Product product) {
+  factory ProductModel.fromProduct(dynamic product) {
+    // Ensure we're working with a Product from domain/entities/product.dart
+    final domainProduct = product as Product;
+
     return ProductModel(
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      discountPercentage: product.discountPercentage,
-      rating: product.rating,
-      reviewCount: product.reviewCount,
-      mainImageUrl: product.mainImageUrl,
-      additionalImages: product.additionalImages,
-      inStock: product.inStock,
-      stockQuantity: product.stockQuantity,
-      categoryId: product.categoryId,
-      subcategoryId: product.subcategoryId,
-      brand: product.brand,
-      attributes: product.attributes,
-      tags: product.tags,
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt,
+      id: domainProduct.id,
+      name: domainProduct.name,
+      description: domainProduct.description,
+      price: domainProduct.price,
+      discountPercentage: domainProduct.discountPercentage,
+      rating: domainProduct.rating,
+      reviewCount: domainProduct.reviewCount,
+      mainImageUrl: domainProduct.mainImageUrl,
+      additionalImages: domainProduct.additionalImages,
+      inStock: domainProduct.inStock,
+      stockQuantity: domainProduct.stockQuantity,
+      categoryId: domainProduct.categoryId,
+      subcategoryId: domainProduct.subcategoryId,
+      brand: domainProduct.brand,
+      attributes: domainProduct.attributes,
+      tags: domainProduct.tags,
+      createdAt: domainProduct.createdAt,
+      updatedAt: domainProduct.updatedAt,
     );
   }
 

@@ -1,13 +1,15 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
+import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 
 import '../../core/errors/failures.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/network/network_info.dart';
-import '../../di/dependency_injection.dart' as di;
 import '../../domain/entities/user_profile.dart';
 import '../../domain/usecases/user_profile/get_user_profile_usecase.dart';
 import '../../domain/usecases/upload_profile_image_usecase.dart';
@@ -107,30 +109,103 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
     required this.ref,
   }) : super(const UserProfileState());
 
-  /// Load user profile
+  /// Reset loading state when needed
+  void resetLoadingState() {
+    debugPrint('UserProfileNotifier: Resetting loading state');
+    state = state.copyWith(isLoading: false);
+  }
+
+  /// NOTE: Manual profile creation removed as database trigger handles this automatically
+  /// The handle_new_user() trigger creates profiles when users sign up via Google Sign-In
+
+  /// Load user profile with timeout
   Future<void> loadUserProfile(String userId) async {
     debugPrint('UserProfileNotifier: Loading profile for user ID: $userId');
+    debugPrint('UserProfileNotifier: Current state - isLoading: ${state.isLoading}, hasProfile: ${state.profile != null}');
+
+    // If already loading, don't start another load operation
+    if (state.isLoading) {
+      debugPrint('UserProfileNotifier: Already loading, skipping duplicate load request');
+      return;
+    }
+
+    // Set loading state
     state = state.copyWith(isLoading: true, clearError: true);
 
-    final result = await getUserProfileUseCase(userId);
+    // Create a timeout to prevent infinite loading
+    bool hasCompleted = false;
+    Timer? timeoutTimer;
 
-    result.fold(
-      (failure) {
-        debugPrint('UserProfileNotifier: Failed to load profile: ${_mapFailureToMessage(failure)}');
+    timeoutTimer = Timer(const Duration(seconds: 10), () {
+      if (!hasCompleted) {
+        debugPrint('UserProfileNotifier: Loading profile timed out after 10 seconds');
         state = state.copyWith(
           isLoading: false,
-          errorMessage: _mapFailureToMessage(failure),
+          errorMessage: 'Loading profile timed out. Please try again.',
         );
-      },
-      (profile) {
-        debugPrint('UserProfileNotifier: Profile loaded successfully');
-        debugPrint('UserProfileNotifier: Profile data - fullName: ${profile.fullName}, gender: ${profile.gender}');
-        state = state.copyWith(
-          isLoading: false,
-          profile: profile,
-        );
-      },
-    );
+        hasCompleted = true;
+      }
+    });
+
+    try {
+      debugPrint('UserProfileNotifier: Calling getUserProfileUseCase');
+      final result = await getUserProfileUseCase(userId);
+
+      // Cancel timeout timer since we got a response
+      timeoutTimer.cancel();
+
+      // If the timeout already triggered, don't update state again
+      if (hasCompleted) {
+        debugPrint('UserProfileNotifier: Request completed but timeout already triggered, ignoring result');
+        return;
+      }
+
+      hasCompleted = true;
+      debugPrint('UserProfileNotifier: getUserProfileUseCase returned ${result.isRight() ? "Right" : "Left"}');
+
+      result.fold(
+        (failure) {
+          debugPrint('UserProfileNotifier: Failed to load profile: ${_mapFailureToMessage(failure)}');
+          debugPrint('UserProfileNotifier: Failure type: ${failure.runtimeType}');
+          debugPrint('UserProfileNotifier: Failure message: ${failure.message}');
+
+          state = state.copyWith(
+            isLoading: false,
+            errorMessage: _mapFailureToMessage(failure),
+          );
+        },
+        (profile) {
+          debugPrint('UserProfileNotifier: Profile loaded successfully');
+          debugPrint('UserProfileNotifier: Profile data - id: ${profile.id}, userId: ${profile.userId}');
+          debugPrint('UserProfileNotifier: Profile data - fullName: ${profile.fullName}, gender: ${profile.gender}');
+          debugPrint('UserProfileNotifier: Profile data - dateOfBirth: ${profile.dateOfBirth}, lastUpdated: ${profile.lastUpdated}');
+
+          state = state.copyWith(
+            isLoading: false,
+            profile: profile,
+          );
+
+          debugPrint('UserProfileNotifier: State updated with profile');
+        },
+      );
+    } catch (e, stackTrace) {
+      // Cancel timeout timer since we got an error
+      timeoutTimer.cancel();
+
+      // If the timeout already triggered, don't update state again
+      if (hasCompleted) return;
+
+      hasCompleted = true;
+      debugPrint('UserProfileNotifier: Unexpected error in loadUserProfile: $e');
+      debugPrint('UserProfileNotifier: Stack trace: $stackTrace');
+
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Unexpected error: $e',
+      );
+    }
+
+    debugPrint('UserProfileNotifier: loadUserProfile completed. isLoading: ${state.isLoading}, hasProfile: ${state.profile != null}');
   }
 
   /// Update user profile
@@ -381,26 +456,39 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
   String _mapFailureToMessage(Failure failure) {
     switch (failure.runtimeType) {
       case ServerFailure:
-        return failure.message ?? 'Server error occurred';
+        return failure.message.isNotEmpty ? failure.message : 'Server error occurred';
       case NetworkFailure:
         return 'Network connection error. Please check your internet connection.';
       case CacheFailure:
-        return failure.message ?? 'Cache error occurred';
+        return failure.message.isNotEmpty ? failure.message : 'Cache error occurred';
       default:
         return 'Unexpected error occurred';
     }
   }
 }
 
-/// Repository provider - temporary implementation for testing
-final userProfileRepositoryProvider = Provider<UserProfileRepository>(
-  (ref) => TempUserProfileRepositoryImpl(
-    remoteDataSource: ref.read(userProfileDataSourceProvider),
-    networkInfo: ref.read(networkInfoProvider),
-  ),
-);
+/// Repository provider - uses the properly registered repository from the service locator
+final userProfileRepositoryProvider = Provider<UserProfileRepository>((ref) {
+  try {
+    // Get the repository from the service locator
+    final repository = sl<UserProfileRepository>();
+    debugPrint('UserProfileRepositoryProvider: Successfully retrieved repository from service locator');
+    return repository;
+  } catch (e) {
+    // If there's an error getting the repository from the service locator,
+    // log it and fall back to a temporary implementation
+    debugPrint('UserProfileRepositoryProvider: Error retrieving repository from service locator: $e');
+    debugPrint('UserProfileRepositoryProvider: Falling back to temporary implementation');
+
+    return TempUserProfileRepositoryImpl(
+      remoteDataSource: ref.read(userProfileDataSourceProvider),
+      networkInfo: ref.read(networkInfoProvider),
+    );
+  }
+});
 
 /// A temporary repository implementation that doesn't rely on the local data source
+/// Only used as a fallback if the service locator fails
 class TempUserProfileRepositoryImpl implements UserProfileRepository {
   final UserProfileDataSource remoteDataSource;
   final NetworkInfo networkInfo;
@@ -412,15 +500,23 @@ class TempUserProfileRepositoryImpl implements UserProfileRepository {
 
   @override
   Future<Either<Failure, UserProfile>> getUserProfile(String userId) async {
+    debugPrint('TempUserProfileRepositoryImpl: Getting user profile for user ID: $userId');
     if (await networkInfo.isConnected) {
       try {
+        debugPrint('TempUserProfileRepositoryImpl: Network connected, fetching from remote data source');
         final userProfile = await remoteDataSource.getUserProfile(userId);
-        return Right(userProfile);
+        debugPrint('TempUserProfileRepositoryImpl: Successfully fetched user profile');
+        return Right(userProfile as UserProfile);
       } on ServerException catch (e) {
+        debugPrint('TempUserProfileRepositoryImpl: Server exception: ${e.message}');
         return Left(ServerFailure(message: e.message));
+      } catch (e) {
+        debugPrint('TempUserProfileRepositoryImpl: Unexpected error: $e');
+        return Left(ServerFailure(message: 'Unexpected error: $e'));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      debugPrint('TempUserProfileRepositoryImpl: No network connection');
+      return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -434,7 +530,7 @@ class TempUserProfileRepositoryImpl implements UserProfileRepository {
         return Left(ServerFailure(message: e.message));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -448,7 +544,7 @@ class TempUserProfileRepositoryImpl implements UserProfileRepository {
         return Left(ServerFailure(message: e.message));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -462,23 +558,11 @@ class TempUserProfileRepositoryImpl implements UserProfileRepository {
         return Left(ServerFailure(message: e.message));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
 
-  @override
-  Future<Either<Failure, bool>> deleteAddress(String userId, String addressId) async {
-    if (await networkInfo.isConnected) {
-      try {
-        final result = await remoteDataSource.deleteAddress(userId, addressId);
-        return Right(result);
-      } on ServerException catch (e) {
-        return Left(ServerFailure(message: e.message));
-      }
-    } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
-    }
-  }
+
 
   @override
   Future<Either<Failure, bool>> setDefaultAddress(String userId, String addressId) async {
@@ -490,7 +574,7 @@ class TempUserProfileRepositoryImpl implements UserProfileRepository {
         return Left(ServerFailure(message: e.message));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -511,7 +595,7 @@ class TempUserProfileRepositoryImpl implements UserProfileRepository {
         );
 
         final updatedProfile = await remoteDataSource.updateUserProfile(profileModel);
-        return Right(updatedProfile);
+        return Right(updatedProfile as UserProfile);
       } on ServerException catch (e) {
         return Left(ServerFailure(message: e.message));
       }
@@ -564,6 +648,121 @@ class TempUserProfileRepositoryImpl implements UserProfileRepository {
       return Left(const NetworkFailure(message: 'No internet connection'));
     }
   }
+
+  @override
+  Future<Either<Failure, bool>> deleteAddress(String userId, String addressId) async {
+    debugPrint('TempUserProfileRepositoryImpl: Deleting address $addressId for user $userId');
+    if (await networkInfo.isConnected) {
+      try {
+        debugPrint('TempUserProfileRepositoryImpl: Network connected, deleting from remote data source');
+
+        // First check if the address is referenced by any orders
+        try {
+          final client = Supabase.instance.client;
+
+          // Check if the address exists and belongs to the user
+          final addressResponse = await client
+              .from('addresses')
+              .select('id, is_default')
+              .eq('id', addressId)
+              .eq('user_id', userId)
+              .maybeSingle();
+
+          if (addressResponse == null) {
+            debugPrint('TempUserProfileRepositoryImpl: Address not found or does not belong to user');
+            return const Left(ServerFailure(message: 'Address not found or does not belong to user'));
+          }
+
+          // Try to check if the address is referenced by any orders
+          try {
+            // Check for references in shipping_address_id or billing_address_id
+            final ordersResponse = await client
+                .from('information_schema.columns')
+                .select('column_name')
+                .eq('table_name', 'orders')
+                .eq('table_schema', 'public');
+
+            debugPrint('TempUserProfileRepositoryImpl: Orders table columns: $ordersResponse');
+
+            final hasShippingAddressId =
+                (ordersResponse as List<dynamic>).any((col) => col['column_name'] == 'shipping_address_id');
+
+            final hasBillingAddressId =
+                ordersResponse.any((col) => col['column_name'] == 'billing_address_id');
+
+            if (hasShippingAddressId) {
+              final shippingOrdersResponse = await client
+                  .from('orders')
+                  .select('id')
+                  .eq('shipping_address_id', addressId)
+                  .limit(1);
+
+              if (shippingOrdersResponse.isNotEmpty) {
+                debugPrint('TempUserProfileRepositoryImpl: Cannot delete address: It is used as shipping address in orders');
+                return const Left(ServerFailure(
+                  message: 'Cannot delete this address because it is used as a shipping address in one or more orders.'
+                ));
+              }
+            }
+
+            if (hasBillingAddressId) {
+              final billingOrdersResponse = await client
+                  .from('orders')
+                  .select('id')
+                  .eq('billing_address_id', addressId)
+                  .limit(1);
+
+              if (billingOrdersResponse.isNotEmpty) {
+                debugPrint('TempUserProfileRepositoryImpl: Cannot delete address: It is used as billing address in orders');
+                return const Left(ServerFailure(
+                  message: 'Cannot delete this address because it is used as a billing address in one or more orders.'
+                ));
+              }
+            }
+
+            // Also check JSONB fields
+            try {
+              final jsonbOrdersResponse = await client
+                  .from('orders')
+                  .select('id')
+                  .or('shipping_address->id.eq.$addressId,billing_address->id.eq.$addressId')
+                  .limit(1);
+
+              if (jsonbOrdersResponse.isNotEmpty) {
+                debugPrint('TempUserProfileRepositoryImpl: Cannot delete address: It is used in orders JSONB fields');
+                return const Left(ServerFailure(
+                  message: 'Cannot delete this address because it is used in one or more orders.'
+                ));
+              }
+            } catch (e) {
+              debugPrint('TempUserProfileRepositoryImpl: Error checking JSONB fields: $e');
+              // Continue if JSONB check fails
+            }
+          } catch (e) {
+            debugPrint('TempUserProfileRepositoryImpl: Error checking orders table schema: $e');
+            // Continue if schema check fails
+          }
+        } catch (e) {
+          debugPrint('TempUserProfileRepositoryImpl: Error checking address references: $e');
+          // Continue with deletion attempt
+        }
+
+        // Now try to delete the address
+        final result = await remoteDataSource.deleteAddress(userId, addressId);
+        debugPrint('TempUserProfileRepositoryImpl: Successfully deleted address');
+        return Right(result);
+      } on ServerException catch (e) {
+        debugPrint('TempUserProfileRepositoryImpl: Server exception: ${e.message}');
+        return Left(ServerFailure(message: e.message));
+      } catch (e) {
+        debugPrint('TempUserProfileRepositoryImpl: Unexpected error: $e');
+        return Left(ServerFailure(message: 'Unexpected error: $e'));
+      }
+    } else {
+      debugPrint('TempUserProfileRepositoryImpl: No network connection');
+      return const Left(NetworkFailure(message: 'No internet connection'));
+    }
+  }
 }
 
 /// Data source provider
@@ -582,7 +781,7 @@ final updateUserProfileUseCaseProvider = Provider(
 );
 
 final uploadProfileImageUseCaseProvider = Provider(
-  (ref) => di.sl<UploadProfileImageUseCase>(),
+  (ref) => UploadProfileImageUseCase(ref.watch(userProfileRepositoryProvider)),
 );
 
 final getUserAddressesUseCaseProvider = Provider(
@@ -606,7 +805,7 @@ final setDefaultAddressUseCaseProvider = Provider(
 );
 
 final updatePreferencesUseCaseProvider = Provider(
-  (ref) => di.sl<UpdatePreferencesUseCase>(),
+  (ref) => UpdatePreferencesUseCase(ref.watch(userProfileRepositoryProvider)),
 );
 
 /// Main provider for user profile
@@ -650,19 +849,52 @@ final defaultAddressProvider = Provider<Address?>(
 /// Auto-load user profile when authenticated
 final autoLoadUserProfileProvider = Provider<void>(
   (ref) {
-    final authState = ref.watch(authStateProvider);
+    debugPrint('autoLoadUserProfileProvider: Initializing');
+    final authState = ref.watch(authNotifierProvider);
 
-    ref.listen(authStateProvider, (previous, current) {
+    debugPrint('autoLoadUserProfileProvider: Current auth state - isAuthenticated: ${authState.isAuthenticated}, hasUser: ${authState.user != null}');
+
+    // Listen for changes in auth state
+    ref.listen(authNotifierProvider, (previous, current) {
+      debugPrint('autoLoadUserProfileProvider: Auth state changed');
+      debugPrint('autoLoadUserProfileProvider: Previous state - isAuthenticated: ${previous?.isAuthenticated}, hasUser: ${previous?.user != null}');
+      debugPrint('autoLoadUserProfileProvider: Current state - isAuthenticated: ${current.isAuthenticated}, hasUser: ${current.user != null}');
+
+      // If user just became authenticated, load their profile
       if (current.isAuthenticated && current.user != null &&
           (previous == null || !previous.isAuthenticated || previous.user == null)) {
+        debugPrint('autoLoadUserProfileProvider: User just authenticated, loading profile for user ID: ${current.user!.id}');
+
+        // Check if we're already loading
+        final profileState = ref.read(userProfileNotifierProvider);
+        if (profileState.isLoading) {
+          debugPrint('autoLoadUserProfileProvider: Already loading, resetting state first');
+          ref.read(userProfileNotifierProvider.notifier).resetLoadingState();
+        }
+
+        // Load profile
         ref.read(userProfileNotifierProvider.notifier).loadUserProfile(current.user!.id);
       }
     });
 
+    // If already authenticated, load profile
     if (authState.isAuthenticated && authState.user != null) {
-      Future.microtask(() {
+      debugPrint('autoLoadUserProfileProvider: User already authenticated, scheduling profile load for user ID: ${authState.user!.id}');
+
+      // Use a delayed future to avoid conflicts with other initialization
+      Future.delayed(const Duration(milliseconds: 500), () {
+        // Check if we're already loading
+        final profileState = ref.read(userProfileNotifierProvider);
+        if (profileState.isLoading) {
+          debugPrint('autoLoadUserProfileProvider: Already loading, resetting state first');
+          ref.read(userProfileNotifierProvider.notifier).resetLoadingState();
+        }
+
+        debugPrint('autoLoadUserProfileProvider: Loading profile for user ID: ${authState.user!.id}');
         ref.read(userProfileNotifierProvider.notifier).loadUserProfile(authState.user!.id);
       });
+    } else {
+      debugPrint('autoLoadUserProfileProvider: User not authenticated, skipping profile load');
     }
 
     return;

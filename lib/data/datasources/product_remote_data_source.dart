@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/product_model.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/constants/api_constants.dart';
-import '../mock/mock_products.dart';
+
 
 /// Interface for the remote data source for product data
 abstract class ProductRemoteDataSource {
@@ -157,15 +158,17 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   @override
   Future<ProductModel> getProductById(String id) async {
     try {
-      // For now, return a mock product
-      debugPrint('ProductRemoteDataSourceImpl: Returning mock product for ID: $id');
-      final mockProducts = MockProducts.getMockProducts();
-      final product = mockProducts.firstWhere(
-        (p) => p.id == id,
-        orElse: () => mockProducts.first, // Fallback to first product if ID not found
-      );
+      debugPrint('ProductRemoteDataSourceImpl: Fetching product by ID from Supabase: $id');
 
-      return ProductModel.fromProduct(product);
+      // Query Supabase for the specific product
+      final response = await Supabase.instance.client
+          .from('products')
+          .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)')
+          .eq('id', id)
+          .single();
+
+      // Convert the response to ProductModel
+      return ProductModel.fromJson(response);
     } catch (e) {
       throw ServerException(
         message: 'Failed to fetch product details: ${e.toString()}',
@@ -235,13 +238,24 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     int? limit,
   }) async {
     try {
-      // For now, return mock data
-      debugPrint('ProductRemoteDataSourceImpl: Returning mock related products for ID: $productId');
-      return MockProducts.getMockProducts()
-        .where((p) => p.id != productId) // Exclude the current product
-        .take(limit ?? 4)
-        .map((product) => ProductModel.fromProduct(product))
-        .toList();
+      debugPrint('ProductRemoteDataSourceImpl: Fetching related products from Supabase for ID: $productId');
+
+      // Get the current product to find its category/subcategory
+      final currentProduct = await Supabase.instance.client
+          .from('products')
+          .select('category_id, subcategory_id')
+          .eq('id', productId)
+          .single();
+
+      // Get related products from the same subcategory, excluding the current product
+      final response = await Supabase.instance.client
+          .from('products')
+          .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)')
+          .eq('subcategory_id', currentProduct['subcategory_id'])
+          .neq('id', productId)
+          .limit(limit ?? 4);
+
+      return response.map((data) => ProductModel.fromJson(data)).toList();
     } catch (e) {
       throw ServerException(
         message: 'Failed to fetch related products: ${e.toString()}',

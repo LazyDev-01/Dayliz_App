@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
-import '../../core/error/exceptions.dart';
+import 'package:flutter/foundation.dart';
+import '../../core/errors/exceptions.dart';
 import '../../core/errors/failures.dart';
 import '../../core/network/network_info.dart';
 import '../../domain/entities/user.dart' as domain;
@@ -7,12 +8,7 @@ import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_data_source.dart';
 import '../datasources/auth_local_data_source.dart';
 
-// Add a class for the missing AuthException
-class AuthException implements Exception {
-  final String message;
 
-  AuthException(this.message);
-}
 
 /// Implementation of [AuthRepository] that manages the authentication process
 class AuthRepositoryImpl implements AuthRepository {
@@ -34,6 +30,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     if (await networkInfo.isConnected) {
       try {
+        debugPrint('🔄 [AuthRepository] Attempting login for email: $email');
         // Note: We're not passing rememberMe to the data source yet
         // This would require updating the data source interface
         final user = await remoteDataSource.login(email, password);
@@ -43,14 +40,21 @@ class AuthRepositoryImpl implements AuthRepository {
           await localDataSource.cacheUser(user);
         }
 
+        debugPrint('✅ [AuthRepository] Login successful');
         return Right(user);
+      } on AuthException catch (e) {
+        debugPrint('🔍 [AuthRepository] Caught AuthException: ${e.message}');
+        return Left(AuthFailure(message: e.message));
       } on ServerException catch (e) {
+        debugPrint('🔍 [AuthRepository] Caught ServerException: ${e.message}');
         return Left(ServerFailure(message: e.message));
       } catch (e) {
+        debugPrint('🔍 [AuthRepository] Caught generic exception: ${e.toString()}');
+        debugPrint('🔍 [AuthRepository] Exception type: ${e.runtimeType}');
         return Left(ServerFailure(message: e.toString()));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return const Left(NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -64,13 +68,18 @@ class AuthRepositoryImpl implements AuthRepository {
         await localDataSource.cacheUser(user);
 
         return Right(user);
+      } on UserCancellationException catch (e) {
+        // CRITICAL FIX: Handle user cancellation gracefully
+        return Left(UserCancellationFailure(message: e.message));
+      } on AuthException catch (e) {
+        return Left(AuthFailure(message: e.message));
       } on ServerException catch (e) {
         return Left(ServerFailure(message: e.message));
       } catch (e) {
         return Left(ServerFailure(message: e.toString()));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return const Left(NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -81,42 +90,24 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
     String? phone,
   }) async {
-    print('AuthRepositoryImpl: Starting registration for $email');
-    print('AuthRepositoryImpl: remoteDataSource = $remoteDataSource');
-    print('AuthRepositoryImpl: localDataSource = $localDataSource');
-    print('AuthRepositoryImpl: networkInfo = $networkInfo');
-
-    final isConnected = await networkInfo.isConnected;
-    print('AuthRepositoryImpl: Network is connected: $isConnected');
-
-    if (isConnected) {
+    if (await networkInfo.isConnected) {
       try {
-        print('AuthRepositoryImpl: Calling remoteDataSource.register');
         final user = await remoteDataSource.register(email, password, name, phone: phone);
-        print('AuthRepositoryImpl: Registration successful, user ID: ${user.id}');
-        print('AuthRepositoryImpl: User details: email=${user.email}, name=${user.name}');
 
         // Cache user locally if remote registration was successful
         if (localDataSource is AuthLocalDataSourceImpl) {
-          print('AuthRepositoryImpl: Caching user locally');
           await (localDataSource as AuthLocalDataSourceImpl).cacheUser(user);
-          print('AuthRepositoryImpl: User cached successfully');
-        } else {
-          print('AuthRepositoryImpl: localDataSource is not AuthLocalDataSourceImpl, skipping caching');
         }
         return Right(user);
-      } on ServerException catch (e, stackTrace) {
-        print('AuthRepositoryImpl: ServerException: ${e.message}');
-        print('AuthRepositoryImpl: Stack trace: $stackTrace');
+      } on AuthException catch (e) {
+        return Left(AuthFailure(message: e.message));
+      } on ServerException catch (e) {
         return Left(ServerFailure(message: e.message));
-      } catch (e, stackTrace) {
-        print('AuthRepositoryImpl: Unexpected error: ${e.toString()}');
-        print('AuthRepositoryImpl: Stack trace: $stackTrace');
+      } catch (e) {
         return Left(ServerFailure(message: e.toString()));
       }
     } else {
-      print('AuthRepositoryImpl: No internet connection');
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return const Left(NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -153,7 +144,7 @@ class AuthRepositoryImpl implements AuthRepository {
       }
 
       // No user found, throw error
-      return Left(AuthFailure(message: "No authenticated user found"));
+      return const Left(AuthFailure(message: "No authenticated user found"));
     } on CacheException catch (e) {
       return Left(CacheFailure(message: e.message));
     } on ServerException catch (e) {
@@ -190,13 +181,33 @@ class AuthRepositoryImpl implements AuthRepository {
       try {
         await remoteDataSource.forgotPassword(email);
         return const Right(true);
+      } on AuthException catch (e) {
+        return Left(AuthFailure(message: e.message));
       } on ServerException catch (e) {
         return Left(ServerFailure(message: e.message));
       } catch (e) {
         return Left(ServerFailure(message: e.toString()));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return const Left(NetworkFailure(message: 'No internet connection'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> checkEmailExists({required String email}) async {
+    if (await networkInfo.isConnected) {
+      try {
+        final exists = await remoteDataSource.checkEmailExists(email);
+        return Right(exists);
+      } on AuthException catch (e) {
+        return Left(AuthFailure(message: e.message));
+      } on ServerException catch (e) {
+        return Left(ServerFailure(message: e.message));
+      } catch (e) {
+        return Left(ServerFailure(message: e.toString()));
+      }
+    } else {
+      return const Left(NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -212,13 +223,15 @@ class AuthRepositoryImpl implements AuthRepository {
           newPassword: newPassword,
         );
         return Right(result);
+      } on AuthException catch (e) {
+        return Left(AuthFailure(message: e.message));
       } on ServerException catch (e) {
         return Left(ServerFailure(message: e.message));
       } catch (e) {
         return Left(ServerFailure(message: e.toString()));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return const Left(NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -242,7 +255,7 @@ class AuthRepositoryImpl implements AuthRepository {
         return Left(ServerFailure(message: e.toString()));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return const Left(NetworkFailure(message: 'No internet connection'));
     }
   }
 
@@ -260,7 +273,7 @@ class AuthRepositoryImpl implements AuthRepository {
         return Left(ServerFailure(message: e.toString()));
       }
     } else {
-      return Left(NetworkFailure(message: 'No internet connection'));
+      return const Left(NetworkFailure(message: 'No internet connection'));
     }
   }
 }

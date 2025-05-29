@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 
-import '../../core/error/exceptions.dart';
+import '../../core/errors/exceptions.dart';
 import '../models/category_model.dart';
 import '../../core/constants/api_endpoints.dart';
 
@@ -130,4 +130,4 @@ class CategoryRemoteDataSourceImpl implements CategoryRemoteDataSource {
       ),
     ];
   }
-} 
+}

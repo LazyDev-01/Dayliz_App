@@ -100,86 +100,90 @@ class _CleanPreferencesScreenState extends ConsumerState<CleanPreferencesScreen>
 
   Widget _buildPreferencesContent(UserProfileState state) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Notifications Section
           _buildSectionHeader('Notifications'),
-          _buildSwitchTile(
-            title: 'Push Notifications',
-            subtitle: 'Receive push notifications for important updates',
-            value: _pushNotifications,
-            onChanged: (value) {
-              setState(() {
-                _pushNotifications = value;
-                _changesMade();
-              });
-            },
-          ),
-          _buildSwitchTile(
-            title: 'Email Notifications',
-            subtitle: 'Receive email notifications for account updates',
-            value: _emailNotifications,
-            onChanged: (value) {
-              setState(() {
-                _emailNotifications = value;
-                _changesMade();
-              });
-            },
-          ),
-          _buildSwitchTile(
-            title: 'Order Updates',
-            subtitle: 'Get notified about status changes to your orders',
-            value: _orderUpdates,
-            onChanged: (value) {
-              setState(() {
-                _orderUpdates = value;
-                _changesMade();
-              });
-            },
-          ),
-          _buildSwitchTile(
-            title: 'Promotional Notifications',
-            subtitle: 'Receive notifications about deals and offers',
-            value: _promotionalNotifications,
-            onChanged: (value) {
-              setState(() {
-                _promotionalNotifications = value;
-                _changesMade();
-              });
-            },
-          ),
-          // Hidden fields to maintain functionality
-          Visibility(
-            visible: false,
-            maintainState: true,
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 0),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Column(
               children: [
-                _buildDropdownTile(
-                  title: 'Language',
-                  value: _selectedLanguage,
-                  items: const ['English', 'Spanish', 'French', 'German', 'Arabic'],
+                _buildSwitchTile(
+                  title: 'Push Notifications',
+                  subtitle: 'Receive push notifications for important updates',
+                  value: _pushNotifications,
                   onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedLanguage = value;
-                        _changesMade();
-                      });
-                    }
+                    setState(() {
+                      _pushNotifications = value;
+                      _changesMade();
+                    });
                   },
                 ),
-                _buildDropdownTile(
-                  title: 'Theme',
-                  value: _selectedTheme,
-                  items: const ['System Default', 'Light', 'Dark'],
+                _buildSwitchTile(
+                  title: 'Email Notifications',
+                  subtitle: 'Receive email notifications for account updates',
+                  value: _emailNotifications,
                   onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedTheme = value;
-                        _changesMade();
-                      });
-                    }
+                    setState(() {
+                      _emailNotifications = value;
+                      _changesMade();
+                    });
                   },
+                ),
+                _buildSwitchTile(
+                  title: 'Order Updates',
+                  subtitle: 'Get notified about status changes to your orders',
+                  value: _orderUpdates,
+                  onChanged: (value) {
+                    setState(() {
+                      _orderUpdates = value;
+                      _changesMade();
+                    });
+                  },
+                ),
+                _buildSwitchTile(
+                  title: 'Promotional Notifications',
+                  subtitle: 'Receive notifications about deals and offers',
+                  value: _promotionalNotifications,
+                  onChanged: (value) {
+                    setState(() {
+                      _promotionalNotifications = value;
+                      _changesMade();
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Display Section
+          _buildSectionHeader('Display'),
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 0),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text('Language'),
+                  subtitle: Text(_selectedLanguage),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _showLanguageDialog,
+                ),
+                ListTile(
+                  title: const Text('Theme'),
+                  subtitle: Text(_selectedTheme),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _showThemeDialog,
                 ),
               ],
             ),
@@ -191,10 +195,10 @@ class _CleanPreferencesScreenState extends ConsumerState<CleanPreferencesScreen>
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 8.0),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
       ),
@@ -221,28 +225,139 @@ class _CleanPreferencesScreenState extends ConsumerState<CleanPreferencesScreen>
     );
   }
 
-  Widget _buildDropdownTile({
-    required String title,
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return ListTile(
-      title: Text(title),
-      trailing: DropdownButton<String>(
-        value: value,
-        onChanged: onChanged,
-        underline: const SizedBox(),
-        items: items.map((String item) {
-          return DropdownMenuItem<String>(
-            value: item,
-            child: Text(item),
-          );
-        }).toList(),
+  void _showLanguageDialog() {
+    String tempSelectedLanguage = _selectedLanguage;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Language'),
+        content: StatefulBuilder(
+          builder: (context, setState) {
+            return SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<String>(
+                    title: const Text('English'),
+                    value: 'English',
+                    groupValue: tempSelectedLanguage,
+                    onChanged: (value) {
+                      setState(() => tempSelectedLanguage = value!);
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Spanish'),
+                    value: 'Spanish',
+                    groupValue: tempSelectedLanguage,
+                    onChanged: (value) {
+                      setState(() => tempSelectedLanguage = value!);
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('French'),
+                    value: 'French',
+                    groupValue: tempSelectedLanguage,
+                    onChanged: (value) {
+                      setState(() => tempSelectedLanguage = value!);
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Arabic'),
+                    value: 'Arabic',
+                    groupValue: tempSelectedLanguage,
+                    onChanged: (value) {
+                      setState(() => tempSelectedLanguage = value!);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _selectedLanguage = tempSelectedLanguage;
+                _changesMade();
+              });
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }
 
+  void _showThemeDialog() {
+    String tempSelectedTheme = _selectedTheme;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Theme'),
+        content: StatefulBuilder(
+          builder: (context, setState) {
+            return SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<String>(
+                    title: const Text('Light'),
+                    value: 'Light',
+                    groupValue: tempSelectedTheme,
+                    onChanged: (value) {
+                      setState(() => tempSelectedTheme = value!);
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Dark'),
+                    value: 'Dark',
+                    groupValue: tempSelectedTheme,
+                    onChanged: (value) {
+                      setState(() => tempSelectedTheme = value!);
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('System Default'),
+                    value: 'System Default',
+                    groupValue: tempSelectedTheme,
+                    onChanged: (value) {
+                      setState(() => tempSelectedTheme = value!);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _selectedTheme = tempSelectedTheme;
+                _changesMade();
+              });
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
 
 
   Future<void> _savePreferences() async {

@@ -43,6 +43,12 @@ abstract class AuthRepository {
     required String email,
   });
 
+  /// Check if an email already exists in the system
+  /// Returns a [Either] with a [Failure] or a [bool] indicating if email exists
+  Future<Either<Failure, bool>> checkEmailExists({
+    required String email,
+  });
+
   /// Reset password with token
   /// Returns a [Either] with a [Failure] or a [bool] indicating success
   Future<Either<Failure, bool>> resetPassword({

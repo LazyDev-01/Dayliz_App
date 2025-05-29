@@ -71,16 +71,33 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
         _errorMessage = null;
       });
 
-      // Fetch products from Supabase
-      final response = await Supabase.instance.client
+      // Build query with proper filtering
+      var query = Supabase.instance.client
           .from('products')
-          .select('*, categories(*), subcategories(*)')
-          .limit(20);
+          .select('*, categories(*), subcategories(*)');
 
-      // Debug the response
-      if (response.isEmpty) {
-        throw Exception('No products returned from Supabase');
+      // Apply subcategory filter if provided
+      if (widget.subcategoryId != null) {
+        debugPrint('CleanProductListingScreen: Filtering by subcategory ID: ${widget.subcategoryId}');
+        query = query.eq('subcategory_id', widget.subcategoryId!);
       }
+
+      // Apply category filter if provided (and no subcategory filter)
+      else if (widget.categoryId != null) {
+        debugPrint('CleanProductListingScreen: Filtering by category ID: ${widget.categoryId}');
+        query = query.eq('category_id', widget.categoryId!);
+      }
+
+      // Apply search filter if provided
+      if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
+        debugPrint('CleanProductListingScreen: Filtering by search query: ${widget.searchQuery}');
+        query = query.ilike('name', '%${widget.searchQuery}%');
+      }
+
+      // Execute the query with limit
+      final response = await query.limit(20);
+
+      debugPrint('CleanProductListingScreen: Query returned ${response.length} products');
 
       // Convert to Product entities
       final products = response.map((data) {
@@ -107,6 +124,13 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
         if (product.categoryName != null && product.categoryName!.isNotEmpty && categoryTitle == 'Products') {
           categoryTitle = product.categoryName!;
         }
+      }
+
+      // Set the selected subcategory if we're filtering by subcategory
+      if (widget.subcategoryId != null && products.isNotEmpty && mounted) {
+        final routeArgs = ModalRoute.of(context)?.settings.arguments;
+        final subcategoryName = (routeArgs as Map<String, dynamic>?)?['subcategoryName'] as String?;
+        _selectedSubcategory = subcategoryName ?? products.first.subcategoryName;
       }
 
       if (mounted) {
@@ -334,19 +358,9 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
       );
     }
 
-    // Filter products by selected subcategory
-    final filteredProducts = _selectedSubcategory == null
-        ? _products
-        : _products.where((p) => p.subcategoryName == _selectedSubcategory).toList();
-
-    if (filteredProducts.isEmpty) {
-      return Center(
-        child: Text('No products found in $_selectedSubcategory'),
-      );
-    }
-
+    // Products are already filtered at the database level, no need for client-side filtering
     return CleanProductGrid(
-      products: filteredProducts,
+      products: _products,
       padding: const EdgeInsets.all(16),
     );
   }

@@ -34,8 +34,6 @@ class Address extends Equatable {
   /// Whether this is the default address
   final bool isDefault;
 
-  // Label field removed
-
   /// Type of address (e.g., "home", "work", "other")
   final String? addressType;
 

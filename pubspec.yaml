@@ -84,10 +84,12 @@ dependencies:
   flutter_dotenv: ^5.1.0      # Environment variables
   uuid: ^3.0.7                # UUID generation
   connectivity_plus: ^4.0.2   # Network connectivity
+  package_info_plus: ^4.2.0   # Package information
 
-  # Location dependencies - temporarily disabled
-  # geolocator: ^11.0.0         # Geolocation
-  # geocoding: ^3.0.0           # Geocoding
+  # Location dependencies - Temporarily disabled due to compatibility issues
+  # geolocator: ^8.2.1           # Geolocation (stable version)
+  # geocoding: ^2.0.5            # Geocoding (stable version)
+  # Using enhanced mock implementation for now
 
   flutter_secure_storage: ^8.0.0 # Secure storage
   url_launcher: ^6.1.14       # URL launcher
@@ -96,8 +98,7 @@ dependencies:
   image_picker: ^1.1.2
   google_sign_in: ^6.1.5      # Google Sign-In
 
-  # Temporarily comment out permission handler until we need it
-  # permission_handler: ^10.4.5 # Permission handling
+  permission_handler: ^11.0.1 # Permission handling
 
   # Maps and Location
   # Temporarily comment out Google Maps until we need it

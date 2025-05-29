@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dayliz_app/domain/entities/user_profile.dart';
 
 /// Model class for [UserProfile] with additional functionality for the data layer
@@ -24,6 +25,25 @@ class UserProfileModel extends UserProfile {
 
   /// Factory constructor to create a [UserProfileModel] from a map (JSON)
   factory UserProfileModel.fromMap(Map<String, dynamic> map) {
+    // Handle preferences field properly
+    Map<String, dynamic>? preferences;
+    try {
+      final prefsValue = map['preferences'];
+      if (prefsValue is String) {
+        // If it's a JSON string, parse it
+        preferences = prefsValue.isEmpty ? {} : json.decode(prefsValue);
+      } else if (prefsValue is Map<String, dynamic>) {
+        // If it's already a map, use it directly
+        preferences = prefsValue;
+      } else {
+        // Default to empty map
+        preferences = {};
+      }
+    } catch (e) {
+      // If parsing fails, use empty map
+      preferences = {};
+    }
+
     return UserProfileModel(
       id: map['id'],
       userId: map['user_id'],
@@ -36,7 +56,7 @@ class UserProfileModel extends UserProfile {
       lastUpdated: map['last_updated'] != null
           ? DateTime.parse(map['last_updated'])
           : null,
-      preferences: map['preferences'],
+      preferences: preferences,
     );
   }
 

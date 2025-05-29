@@ -100,29 +100,9 @@ class CleanAddressSelectionWidget extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              address.recipientName ?? 'Recipient',
-                              style: theme.textTheme.titleMedium,
-                            ),
-                            const SizedBox(width: 8),
-                            if (address.isDefault)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'Default',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                          ],
+                        Text(
+                          address.recipientName ?? 'Recipient',
+                          style: theme.textTheme.titleMedium,
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -162,14 +142,13 @@ class CleanAddressSelectionWidget extends ConsumerWidget {
                     child: const Text('Edit'),
                   ),
                   const SizedBox(width: 8),
-                  if (!address.isDefault)
-                    TextButton(
-                      onPressed: () => _confirmDeleteAddress(context, ref, address),
-                      child: const Text('Delete'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: theme.colorScheme.error,
-                      ),
+                  TextButton(
+                    onPressed: () => _confirmDeleteAddress(context, ref, address),
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.colorScheme.error,
                     ),
+                    child: const Text('Delete'),
+                  ),
                 ],
               ),
             ],
@@ -207,19 +186,79 @@ class CleanAddressSelectionWidget extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.error,
             ),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
 
     if (result == true) {
-      final userId = ref.read(currentUserIdProvider);
-      if (userId != null) {
+      // Store context for later use
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+      // Show loading indicator
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Deleting address...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      try {
+        final userId = ref.read(currentUserIdProvider);
+        if (userId == null) {
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('You must be logged in to delete addresses'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
+        // Attempt to delete the address
         await ref.read(addressesNotifierProvider.notifier).deleteAddress(userId, address.id);
+
+        // If we get here, the deletion was successful
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Address deleted successfully'),
+          ),
+        );
+      } catch (e) {
+        debugPrint('Error deleting address: $e');
+        String errorMessage = 'Error deleting address';
+
+        // Check if the error is related to repository registration
+        if (e.toString().contains('not registered') ||
+            e.toString().contains('Address service not initialized')) {
+          errorMessage = 'The address service is not available at this time. Please try again later.';
+
+          // Try to refresh the provider
+          final notifier = ref.refresh(addressesNotifierProvider);
+          debugPrint('Refreshed addressesNotifierProvider: ${notifier.hashCode}');
+        } else if (e.toString().contains('Permission denied')) {
+          errorMessage = 'Permission denied. You may need to log in again.';
+        } else if (e.toString().contains('not found')) {
+          errorMessage = 'Address not found. It may have been already deleted.';
+          // Refresh the addresses
+          ref.read(addressesNotifierProvider.notifier).refreshAddresses();
+        } else if (e.toString().contains('used as a shipping address') ||
+                   e.toString().contains('used as a billing address')) {
+          errorMessage = 'This address cannot be deleted because it is used in one or more orders.';
+        } else {
+          errorMessage = 'Error deleting address: ${e.toString()}';
+        }
+
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }

@@ -1,7 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/address.dart';
 
@@ -30,6 +30,28 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
           .eq('user_id', userId)
           .single();
 
+      // Handle preferences field properly for Google Sign-In users
+      Map<String, dynamic>? preferences;
+      try {
+        final prefsValue = response['preferences'];
+        if (prefsValue is String) {
+          // If it's a JSON string (common for Google Sign-In users), parse it
+          preferences = prefsValue.isEmpty ? {} : json.decode(prefsValue);
+          debugPrint('UserProfileSupabaseAdapter: Parsed preferences from JSON string: $preferences');
+        } else if (prefsValue is Map<String, dynamic>) {
+          // If it's already a map, use it directly
+          preferences = prefsValue;
+          debugPrint('UserProfileSupabaseAdapter: Using preferences as map: $preferences');
+        } else {
+          // Default to empty map
+          preferences = {};
+          debugPrint('UserProfileSupabaseAdapter: Using default empty preferences');
+        }
+      } catch (e) {
+        debugPrint('UserProfileSupabaseAdapter: Error parsing preferences, using empty map: $e');
+        preferences = {};
+      }
+
       return UserProfileModel(
         id: response['id'],
         userId: response['user_id'],
@@ -42,7 +64,7 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
         lastUpdated: response['updated_at'] != null
             ? DateTime.parse(response['updated_at'])
             : null,
-        preferences: response['preferences'],
+        preferences: preferences,
       );
     } catch (e) {
       throw ServerException(message: e.toString());
@@ -292,42 +314,98 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
       if (!_isValidUuid(userId)) {
         throw ServerException(message: 'Invalid user ID format. Must be a valid UUID.');
       }
-      // Check if the address is the default one
-      final addressResponse = await client
-          .from('addresses')
-          .select('is_default')
-          .eq('id', addressId)
-          .eq('user_id', userId)
-          .single();
 
-      final isDefault = addressResponse['is_default'] ?? false;
+      debugPrint('Deleting address: $addressId for user: $userId');
 
-      // Delete the address
-      await client
-          .from('addresses')
-          .delete()
-          .eq('id', addressId)
-          .eq('user_id', userId);
+      // First, let's create the safe_delete_address function if it doesn't exist
+      try {
+        const createFunctionSQL = '''
+        -- Function to safely delete an address
+        CREATE OR REPLACE FUNCTION safe_delete_address(
+          address_id_param UUID,
+          user_id_param UUID
+        )
+        RETURNS BOOLEAN
+        LANGUAGE plpgsql
+        SECURITY DEFINER -- This makes the function run with the privileges of the creator
+        AS \$\$
+        DECLARE
+          is_default BOOLEAN;
+          remaining_address_id UUID;
+        BEGIN
+          -- Check if the address exists and belongs to the user
+          SELECT is_default INTO is_default
+          FROM addresses
+          WHERE id = address_id_param AND user_id = user_id_param;
 
-      // If the deleted address was the default one, set a new default address
-      if (isDefault) {
-        final remainingAddresses = await client
-            .from('addresses')
-            .select('id')
-            .eq('user_id', userId)
-            .limit(1);
+          IF is_default IS NULL THEN
+            RAISE EXCEPTION 'Address not found or does not belong to user';
+            RETURN FALSE;
+          END IF;
 
-        if (remainingAddresses.isNotEmpty) {
-          await client
-              .from('addresses')
-              .update({'is_default': true})
-              .eq('id', remainingAddresses[0]['id'])
-              .eq('user_id', userId);
-        }
+          -- Check if the address is referenced by any orders
+          IF EXISTS (
+            SELECT 1 FROM orders
+            WHERE (
+              shipping_address_id = address_id_param
+              OR billing_address_id = address_id_param
+              OR shipping_address->>'id' = address_id_param::TEXT
+              OR billing_address->>'id' = address_id_param::TEXT
+            )
+            LIMIT 1
+          ) THEN
+            RAISE EXCEPTION 'Cannot delete this address because it is used in one or more orders.';
+            RETURN FALSE;
+          END IF;
+
+          -- Delete the address
+          DELETE FROM addresses
+          WHERE id = address_id_param AND user_id = user_id_param;
+
+          -- If the deleted address was the default one, set a new default address
+          IF is_default THEN
+            SELECT id INTO remaining_address_id
+            FROM addresses
+            WHERE user_id = user_id_param
+            LIMIT 1;
+
+            IF remaining_address_id IS NOT NULL THEN
+              UPDATE addresses
+              SET is_default = TRUE
+              WHERE id = remaining_address_id;
+            END IF;
+          END IF;
+
+          RETURN TRUE;
+        END;
+        \$\$;
+
+        -- Grant execute permission to authenticated users
+        GRANT EXECUTE ON FUNCTION safe_delete_address(UUID, UUID) TO authenticated;
+        ''';
+
+        // Create the function
+        await client.rpc('execute_sql', params: {'sql': createFunctionSQL});
+        debugPrint('Created safe_delete_address function');
+      } catch (e) {
+        // Function might already exist, which is fine
+        debugPrint('Note: Function creation error (may already exist): $e');
       }
 
+      // Now call the function to safely delete the address
+      final result = await client.rpc('safe_delete_address', params: {
+        'address_id_param': addressId,
+        'user_id_param': userId
+      });
+
+      if (result == null || result == false) {
+        throw ServerException(message: 'Failed to delete address');
+      }
+
+      debugPrint('Address deleted successfully using safe_delete_address function');
       return true;
     } catch (e) {
+      debugPrint('Exception in deleteAddress: $e');
       throw ServerException(message: e.toString());
     }
   }
@@ -367,6 +445,28 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
           .select()
           .single();
 
+      // Handle preferences field properly for Google Sign-In users
+      Map<String, dynamic>? updatePreferences;
+      try {
+        final prefsValue = response['preferences'];
+        if (prefsValue is String) {
+          // If it's a JSON string (common for Google Sign-In users), parse it
+          updatePreferences = prefsValue.isEmpty ? {} : json.decode(prefsValue);
+          debugPrint('UserProfileSupabaseAdapter: Parsed update preferences from JSON string: $updatePreferences');
+        } else if (prefsValue is Map<String, dynamic>) {
+          // If it's already a map, use it directly
+          updatePreferences = prefsValue;
+          debugPrint('UserProfileSupabaseAdapter: Using update preferences as map: $updatePreferences');
+        } else {
+          // Default to empty map
+          updatePreferences = {};
+          debugPrint('UserProfileSupabaseAdapter: Using default empty update preferences');
+        }
+      } catch (e) {
+        debugPrint('UserProfileSupabaseAdapter: Error parsing update preferences, using empty map: $e');
+        updatePreferences = {};
+      }
+
       return UserProfileModel(
         id: response['id'],
         userId: response['user_id'],
@@ -379,7 +479,7 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
         lastUpdated: response['updated_at'] != null
             ? DateTime.parse(response['updated_at'])
             : null,
-        preferences: response['preferences'],
+        preferences: updatePreferences,
       );
     } catch (e) {
       throw ServerException(message: e.toString());

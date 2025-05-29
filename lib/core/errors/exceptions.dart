@@ -98,4 +98,14 @@ class PermissionException extends AppException {
   }) : super(
           message: message,
         );
-} 
+}
+
+/// User cancellation exception for when user cancels an operation
+/// This should be handled silently without showing error messages
+class UserCancellationException extends AppException {
+  UserCancellationException({
+    String message = 'Operation cancelled by user',
+  }) : super(
+          message: message,
+        );
+}

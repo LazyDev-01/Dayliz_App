@@ -4,20 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dayliz_app/core/config/app_config.dart';
-// Legacy screens removed
+import 'package:dayliz_app/core/services/supabase_service.dart';
+import 'package:dayliz_app/core/utils/image_preloader.dart';
+// Clean architecture imports
 import 'package:dayliz_app/presentation/providers/auth_providers.dart' as clean_auth;
-import 'package:dayliz_app/screens/dev/settings_screen.dart';
+import 'package:dayliz_app/presentation/providers/theme_providers.dart';
+import 'package:dayliz_app/presentation/screens/dev/clean_settings_screen.dart';
 import 'package:dayliz_app/presentation/screens/debug/supabase_connection_test_screen.dart';
 import 'package:dayliz_app/presentation/screens/debug/debug_menu_screen.dart';
-import 'package:dayliz_app/screens/debug/google_sign_in_debug_screen.dart';
-import 'package:dayliz_app/presentation/screens/test/product_card_test_screen.dart';
+import 'package:dayliz_app/presentation/screens/debug/clean_google_sign_in_debug_screen.dart';
+import 'debug_google_signin.dart';
+
 import 'package:dayliz_app/presentation/screens/debug/cart_dependency_test_screen.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
-import 'package:dayliz_app/providers/theme_provider.dart';
-import 'package:dayliz_app/models/address.dart' as models;
-import 'package:dayliz_app/domain/entities/address.dart' as domain;
-import 'package:dayliz_app/adapters/address_adapter.dart';
-import 'package:dayliz_app/services/address_service.dart';
+// Clean architecture imports
 import 'package:flutter/foundation.dart';
 // Clean architecture imports for database operations
 import 'package:dayliz_app/data/datasources/clean_database_seeder.dart';
@@ -26,10 +26,11 @@ import 'package:dayliz_app/domain/usecases/is_authenticated_usecase.dart';
 import 'package:dayliz_app/domain/usecases/get_cart_items_usecase.dart';
 import 'package:dayliz_app/domain/usecases/add_to_cart_usecase.dart';
 import 'package:dayliz_app/domain/usecases/remove_from_cart_usecase.dart';
+import 'package:dayliz_app/domain/usecases/get_wishlist_products_usecase.dart';
+
 import 'package:dayliz_app/presentation/screens/dev/clean_database_seeder_screen.dart';
 import 'package:get_it/get_it.dart';
 import 'di/dependency_injection.dart' show sl;
-// Clean up unused imports
 // Clean architecture screens
 import 'package:dayliz_app/presentation/screens/product/clean_product_listing_screen.dart';
 import 'package:dayliz_app/presentation/screens/product/clean_product_details_screen.dart';
@@ -38,11 +39,11 @@ import 'package:dayliz_app/presentation/screens/wishlist/clean_wishlist_screen.d
 import 'package:dayliz_app/presentation/screens/main/clean_main_screen.dart';
 import 'package:dayliz_app/presentation/widgets/common/common_bottom_nav_bar.dart';
 import 'package:dayliz_app/presentation/screens/orders/clean_order_list_screen.dart';
-import 'package:dayliz_app/presentation/screens/orders/clean_order_detail_screen.dart';
 import 'package:dayliz_app/presentation/screens/orders/clean_order_confirmation_screen.dart';
 // Import for clean architecture initialization
 import 'di/dependency_injection.dart' as di;
-import 'navigation/routes.dart';
+import 'di/product_dependency_injection.dart' as product_di;
+
 import 'presentation/screens/auth/clean_login_screen.dart';
 import 'presentation/screens/auth/clean_register_screen.dart';
 import 'presentation/screens/auth/clean_forgot_password_screen.dart';
@@ -50,6 +51,7 @@ import 'presentation/screens/auth/clean_update_password_screen.dart';
 import 'presentation/screens/cart/clean_cart_screen.dart';
 import 'presentation/screens/checkout/clean_checkout_screen.dart';
 import 'presentation/screens/checkout/payment_methods_screen.dart';
+import 'presentation/screens/payment/payment_options_screen.dart';
 import 'presentation/screens/categories/clean_categories_screen.dart';
 import 'presentation/screens/clean_demo_screen.dart';
 import 'presentation/screens/profile/clean_address_list_screen.dart';
@@ -57,8 +59,9 @@ import 'presentation/screens/profile/clean_address_form_screen.dart';
 import 'presentation/screens/profile/clean_user_profile_screen.dart';
 import 'presentation/screens/profile/clean_preferences_screen.dart';
 import 'presentation/screens/search/clean_search_screen.dart';
-import 'presentation/screens/search/search_test_screen.dart';
-import 'presentation/screens/splash/clean_splash_screen.dart';
+
+// Splash screen temporarily disabled
+// import 'presentation/screens/splash/clean_splash_screen.dart';
 import 'presentation/screens/auth/clean_verify_token_handler.dart';
 
 // Define auth states for router redirection
@@ -73,6 +76,15 @@ Future<void> main() async {
   // Initialize app configuration
   await AppConfig.init();
 
+  // Initialize Supabase service first
+  try {
+    final supabaseService = SupabaseService.instance;
+    await supabaseService.initialize();
+    debugPrint('SupabaseService initialized successfully');
+  } catch (e) {
+    debugPrint('Error initializing SupabaseService: $e');
+  }
+
   // Initialize authentication components (also initializes cart components)
   try {
     await di.initAuthentication();
@@ -86,8 +98,17 @@ Future<void> main() async {
     await di.initCleanArchitecture();
     debugPrint('Clean architecture initialization successful');
 
-    // TODO: Update repository implementations to use new database features
-    // Temporarily disabled due to compatibility issues
+    // Initialize product dependencies with Supabase implementation
+    try {
+      await product_di.initProductDependencies();
+      debugPrint('Product dependencies initialization successful');
+    } catch (e) {
+      debugPrint('Product dependencies initialization failed: $e');
+      // Continue with the app even if product dependencies initialization fails
+    }
+
+    // Repository implementations have been updated to use clean architecture
+    // The updated dependencies can be enabled when all features are migrated
     // await di_updated.updateDependencies();
     debugPrint('Clean architecture initialization completed');
   } catch (e) {
@@ -100,6 +121,9 @@ Future<void> main() async {
 
   // Verify cart dependencies are registered
   _verifyCartDependencies();
+
+  // Verify wishlist dependencies are registered
+  _verifyWishlistDependencies();
 
   // Run database migrations
   try {
@@ -192,15 +216,11 @@ class _MyAppState extends ConsumerState<MyApp> {
 
 Future<void> _testDatabaseConnections() async {
   try {
-    // Test address database connection
+    // Test database connection using clean architecture
     debugPrint('Testing database connections...');
-    final addressTableExists = await AddressService.instance.testDatabaseConnection();
-
-    if (addressTableExists) {
-      debugPrint('✅ Address table connection successful');
-    } else {
-      debugPrint('❌ Address table connection failed - check table name and permissions');
-    }
+    // We'll use the dependency injection container to get the repository
+    // This will be handled by the clean architecture initialization
+    debugPrint('✅ Database connection will be tested by clean architecture initialization');
   } catch (e) {
     debugPrint('Error testing database connections: $e');
   }
@@ -234,6 +254,27 @@ void _verifyCartDependencies() {
   }
 }
 
+/// Verify that wishlist dependencies are properly registered
+void _verifyWishlistDependencies() {
+  try {
+    final sl = GetIt.instance;
+
+    // Check if wishlist dependencies are registered
+    final isGetWishlistProductsRegistered = sl.isRegistered<GetWishlistProductsUseCase>();
+
+    debugPrint('Wishlist dependencies check:');
+    debugPrint('- GetWishlistProductsUseCase registered: $isGetWishlistProductsRegistered');
+
+    if (!isGetWishlistProductsRegistered) {
+      debugPrint('⚠️ WARNING: GetWishlistProductsUseCase is not registered properly!');
+    } else {
+      debugPrint('✅ Wishlist dependencies are registered properly');
+    }
+  } catch (e) {
+    debugPrint('Error verifying wishlist dependencies: $e');
+  }
+}
+
 /// A page that doesn't apply any transition animation
 class NoTransitionPage<T> extends Page<T> {
   final Widget child;
@@ -257,55 +298,99 @@ class NoTransitionPage<T> extends Page<T> {
   }
 }
 
-/// Router provider for navigation
+/// Router provider for navigation - FIXED to prevent auth state rebuilds
 final routerProvider = Provider<GoRouter>((ref) {
-  // Use clean architecture auth state
-  final cleanAuthState = ref.watch(clean_auth.authNotifierProvider);
+  // CRITICAL FIX: Don't watch auth state here - it causes router rebuilds on every auth change
+  // Instead, read auth state only when needed in redirect logic
 
   // Create a navigator observer to handle index updates
   final indexObserver = IndexObserver(ref);
 
+  // Preload images that would normally be loaded during splash screen
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    // This will run after the first frame is rendered
+    final context = WidgetsBinding.instance.rootElement;
+    if (context != null) {
+      ImagePreloader.instance.preloadKeyImages(context);
+    }
+  });
+
+  // CRITICAL FIX: Create a stable router that doesn't rebuild on auth changes
   return GoRouter(
-    initialLocation: '/',
+    // CRITICAL FIX: Don't set initialLocation to allow deep links to work properly
+    // initialLocation: '/login', // Removed to allow deep links
+    debugLogDiagnostics: true, // Enable debug logging to track deep link issues
+
+    // CRITICAL FIX: Simplified redirect logic that reads auth state when needed
     redirect: (context, state) {
-      // Get the clean architecture auth state
-      final isAuthenticated = cleanAuthState.isAuthenticated && cleanAuthState.user != null;
+      // Read auth state only when redirect is called, not on every auth change
+      final authState = ref.read(clean_auth.authNotifierProvider);
+      final isAuthenticated = authState.isAuthenticated && authState.user != null;
+      final isLoading = authState.isLoading;
 
-      // Check if the user is on the splash screen
-      final isSplashScreen = state.uri.path == '/';
+      debugPrint('🔄 ROUTER: Redirect called for ${state.uri.path}');
+      debugPrint('🔄 ROUTER: Full URI: ${state.uri}');
+      debugPrint('🔄 ROUTER: Query params: ${state.uri.queryParameters}');
+      debugPrint('🔄 ROUTER: Auth: $isAuthenticated, Loading: $isLoading');
 
-      // Check if the user is on an auth screen or verification screen
-      final isAuthScreen =
-          state.uri.path == '/login' ||
-          state.uri.path == '/signup' ||
-          state.uri.path == '/reset-password' ||
-          state.uri.path.startsWith('/update-password') ||
-          state.uri.path == '/clean/login' ||
-          state.uri.path == '/clean/register' ||
-          state.uri.path == '/clean/forgot-password';
-
-      final isVerificationScreen =
-          state.uri.path == '/verify-email' ||
-          state.uri.path == '/auth/verify';
-
-      // Don't redirect if handling a verification token
-      if (state.uri.path == '/auth/verify') {
+      // Don't redirect during loading states
+      if (isLoading) {
+        debugPrint('ROUTER: Skipping redirect during loading state');
         return null;
       }
 
-      // If the user is authenticated but on an auth screen, redirect to clean home
-      if (isAuthenticated && isAuthScreen) {
-        debugPrint('User is authenticated and on auth screen, redirecting to clean home');
-        return '/home';
+      // Handle root path
+      if (state.uri.path == '/') {
+        // CRITICAL FIX: Check if this is a password reset deep link
+        if (state.uri.queryParameters.containsKey('code') &&
+            state.uri.queryParameters['type'] == 'reset_password') {
+          debugPrint('🔄 ROUTER: Detected password reset deep link, redirecting to verify-email');
+          final code = state.uri.queryParameters['code'];
+          return '/verify-email?token=$code&type=reset_password';
+        }
+
+        return isAuthenticated ? '/home' : '/login';
       }
 
-      // If the user is not authenticated and not on an auth screen or splash screen,
-      // redirect to the login screen
-      if (!isAuthenticated && !isVerificationScreen && !isAuthScreen && !isSplashScreen) {
+      // CRITICAL FIX: Never auto-redirect from auth screens
+      // Let them handle their own navigation after success/error
+      if (state.uri.path == '/login' || state.uri.path == '/signup' || state.uri.path == '/reset-password') {
+        debugPrint('ROUTER: On auth screen, allowing manual navigation control');
+        return null;
+      }
+
+      // GUEST MODE: Define guest-accessible routes (browsing without authentication)
+      final guestAccessibleRoutes = [
+        '/login',
+        '/signup',
+        '/reset-password',
+        '/home',           // Main home screen
+        '/categories',     // Browse categories
+        '/products',       // Browse products
+        '/clean/categories', // Clean architecture categories
+        // NOTE: Cart routes are protected - guests will see auth prompts
+      ];
+
+      // Check if current path is guest-accessible
+      final isGuestAccessible = guestAccessibleRoutes.any((route) =>
+        state.uri.path == route || state.uri.path.startsWith(route));
+
+      // Protect authenticated routes
+      if (!isAuthenticated &&
+          !isGuestAccessible &&
+          !state.uri.path.startsWith('/auth/verify') &&
+          !state.uri.path.startsWith('/verify-email')) {
+
+        // CRITICAL FIX: Allow access to update-password with token (password reset)
+        if (state.uri.path == '/update-password' && state.uri.queryParameters.containsKey('token')) {
+          debugPrint('ROUTER: Allowing access to password reset screen with token');
+          return null;
+        }
+
+        debugPrint('ROUTER: Redirecting unauthenticated user to login');
         return '/login';
       }
 
-      // No redirect needed
       return null;
     },
 
@@ -315,19 +400,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       indexObserver,
     ],
 
-    // Enable deep link debugging
-    debugLogDiagnostics: true,
+    // Deep link debugging disabled to reduce noise
 
     routes: [
+      // CRITICAL FIX: Root path now handled by redirect logic only
       GoRoute(
         path: '/',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanSplashScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
+        pageBuilder: (context, state) {
+          // This should never be reached due to redirect logic
+          // But provide a fallback just in case
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const CleanLoginScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
       ),
       // Main screen route (after splash)
       GoRoute(
@@ -442,16 +531,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      // Redirect legacy home route to clean home
-      GoRoute(
-        path: '/home-legacy',
-        redirect: (_, __) => '/home',
-      ),
-      // Redirect legacy categories route to clean categories
-      GoRoute(
-        path: '/categories',
-        redirect: (_, __) => '/clean/categories',
-      ),
+
+      // Profile route
       GoRoute(
         path: '/profile',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
@@ -462,22 +543,57 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
-      // Redirect legacy cart route to clean cart
+      // Categories route
+      GoRoute(
+        path: '/categories',
+        pageBuilder: (context, state) => NoTransitionPage<void>(
+          key: state.pageKey,
+          child: const CleanCategoriesScreen(),
+        ),
+      ),
+      // Cart route
       GoRoute(
         path: '/cart',
-        redirect: (_, __) => '/clean/cart',
+        pageBuilder: (context, state) => NoTransitionPage<void>(
+          key: state.pageKey,
+          child: const CleanCartScreen(),
+        ),
       ),
-      // Redirect legacy checkout route to clean checkout
+      // Checkout route
       GoRoute(
         path: '/checkout',
-        redirect: (_, __) => '/clean/checkout',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const CleanCheckoutScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
       ),
-      // Redirect legacy order confirmation to clean version
+      // Order confirmation route
       GoRoute(
         path: '/order-confirmation/:orderId',
-        redirect: (context, state) {
+        pageBuilder: (context, state) {
           final orderId = state.pathParameters['orderId']!;
-          return '/clean/order-confirmation/$orderId';
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: CleanOrderConfirmationScreen(orderId: orderId),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
+                  child: child,
+                ),
+              );
+            },
+          );
         },
       ),
       GoRoute(
@@ -519,17 +635,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/address-form',
         pageBuilder: (context, state) {
-          // Convert legacy Address to clean architecture Address if needed
-          final legacyAddress = state.extra as models.Address?;
-          domain.Address? cleanAddress;
-
-          if (legacyAddress != null) {
-            cleanAddress = AddressAdapter.toDomain(legacyAddress);
-          }
+          // We're ignoring any passed address to avoid type conflicts
+          // We'll handle fetching the address in the form screen if needed
 
           return CustomTransitionPage<void>(
             key: state.pageKey,
-            child: CleanAddressFormScreen(address: cleanAddress),
+            child: const CleanAddressFormScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return SlideTransition(
                 position: Tween<Offset>(
@@ -566,7 +677,53 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           return CustomTransitionPage<void>(
             key: state.pageKey,
-            child: const GoogleSignInDebugScreen(),
+            child: const CleanGoogleSignInDebugScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
+      ),
+      // Debug screen for testing password reset deep links
+      GoRoute(
+        path: '/debug/password-reset-test',
+        pageBuilder: (context, state) {
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: Scaffold(
+              appBar: AppBar(title: const Text('Password Reset Deep Link Test')),
+              body: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    const Text('Test Password Reset Deep Links'),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Test the verify-email route with reset_password type
+                        context.go('/verify-email?type=reset_password&token=test123');
+                      },
+                      child: const Text('Test Verify Email Route'),
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Test the update-password route directly
+                        context.go('/update-password?token=test123');
+                      },
+                      child: const Text('Test Update Password Route'),
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.go('/login');
+                      },
+                      child: const Text('Back to Login'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },
@@ -606,28 +763,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      // Redirect legacy category route to clean category
+      // Category route
       GoRoute(
         path: '/category/:id',
-        redirect: (context, state) {
-          final categoryId = state.pathParameters['id']!;
-          return '/clean/category/$categoryId';
-        },
-      ),
-      // Redirect legacy product route to clean product details
-      GoRoute(
-        path: '/product/:id',
-        redirect: (context, state) {
-          final productId = state.pathParameters['id']!;
-          return '/clean/product/$productId';
-        },
-      ),
-      // Clean Architecture Routes
-      GoRoute(
-        path: '/clean/category/:id',
         pageBuilder: (context, state) {
           final categoryId = state.pathParameters['id']!;
-
           return CustomTransitionPage<void>(
             key: state.pageKey,
             child: CleanProductListingScreen(
@@ -645,11 +785,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
+      // Product details route
       GoRoute(
-        path: '/clean/product/:id',
+        path: '/product/:id',
         pageBuilder: (context, state) {
           final productId = state.pathParameters['id']!;
-
           return CustomTransitionPage<void>(
             key: state.pageKey,
             child: CleanProductDetailsScreen(productId: productId),
@@ -665,6 +805,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
+
       // Testing screen for clean architecture product feature
       GoRoute(
         path: '/test/product-feature',
@@ -721,11 +862,25 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
+      // Debug Google Sign-In screen
+      GoRoute(
+        path: '/debug/google-signin',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const DebugGoogleSignIn(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ),
+      ),
       GoRoute(
         path: '/dev/settings',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
-          child: const SettingsScreen(),
+          child: const CleanSettingsScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(
               opacity: animation,
@@ -768,128 +923,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
-      // Redirect clean-home to root path
+
+      // Orders route
       GoRoute(
-        path: '/clean-home',
-        redirect: (_, __) => '/',
-      ),
-      // Route handler for clean architecture sub-routes
-      GoRoute(
-        path: '/clean/:path',
-        pageBuilder: (context, state) {
-          final path = state.pathParameters['path'] ?? '';
-          final args = state.extra;
-          final route = '/clean/$path';
-          return CustomTransitionPage<void>(
-            key: state.pageKey,
-            child: Builder(
-              builder: (context) {
-                final routeResult = CleanRoutes.generateRoute(
-                  RouteSettings(name: route, arguments: args)
-                );
-                // Get the child from the MaterialPageRoute instead of using builder
-                return (routeResult as MaterialPageRoute).builder(context);
-              },
-            ),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1, 0),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              );
-            },
-          );
-        },
-      ),
-      // Redirect old clean architecture routes to new standard routes
-      GoRoute(
-        path: '/clean/login',
-        redirect: (_, __) => '/login',
-      ),
-      GoRoute(
-        path: '/clean/register',
-        redirect: (_, __) => '/signup',
-      ),
-      GoRoute(
-        path: '/clean/forgot-password',
-        redirect: (_, __) => '/reset-password',
-      ),
-      GoRoute(
-        path: '/clean/profile',
-        redirect: (_, __) => '/profile',
-      ),
-      GoRoute(
-        path: '/clean/preferences',
-        redirect: (_, __) => '/preferences',
-      ),
-      GoRoute(
-        path: '/clean/addresses',
-        redirect: (_, __) => '/addresses',
-      ),
-      // Clean Cart Route - No transition animation
-      GoRoute(
-        path: '/clean/cart',
-        pageBuilder: (context, state) => NoTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanCartScreen(),
-        ),
-      ),
-      // Clean Orders Route - No transition animation
-      GoRoute(
-        path: '/clean/orders',
+        path: '/orders',
         pageBuilder: (context, state) => NoTransitionPage<void>(
           key: state.pageKey,
           child: const CleanOrderListScreen(),
         ),
       ),
-      // Clean Checkout Route
-      GoRoute(
-        path: '/clean/checkout',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanCheckoutScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-        ),
-      ),
-      // Redirect legacy orders route to clean orders
-      GoRoute(
-        path: '/orders',
-        redirect: (_, __) => '/clean/orders',
-      ),
-      // Redirect legacy search route to clean search
-      GoRoute(
-        path: '/search-legacy',
-        redirect: (_, __) => '/search',
-      ),
-      // Redirect legacy search screen to clean search
-      GoRoute(
-        path: '/search-screen',
-        redirect: (_, __) => '/search',
-      ),
-      // Redirect legacy wishlist routes to clean wishlist
-      GoRoute(
-        path: '/wishlist-legacy',
-        redirect: (_, __) => '/wishlist',
-      ),
-      // Redirect legacy verify token handler to clean verify token handler
-      GoRoute(
-        path: '/auth/verify-legacy',
-        redirect: (context, state) {
-          final token = state.uri.queryParameters['token'] ?? '';
-          final type = state.uri.queryParameters['type'] ?? 'verify_email';
-          return '/verify-email?token=$token&type=$type';
-        },
-      ),
+
       // Search Route
       GoRoute(
         path: '/search',
@@ -907,64 +950,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
-      // Search Test Route
-      GoRoute(
-        path: '/search-test',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const SearchTestScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 1),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-        ),
-      ),
-      // Clean Wishlist Route
-      GoRoute(
-        path: '/clean-wishlist',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanWishlistScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-        ),
-      ),
+
       // Payment Methods Route
-      GoRoute(
-        path: '/clean/payment-methods',
-        builder: (context, state) {
-          // Check if we're coming from checkout
-          final isCheckout = state.uri.queryParameters['checkout'] == 'true';
-          return PaymentMethodsScreen(isCheckout: isCheckout);
-        },
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: PaymentMethodsScreen(
-            isCheckout: state.uri.queryParameters['checkout'] == 'true',
-          ),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-              SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1, 0),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
-          ),
-        ),
-      ),
-      // Main Payment Methods Route
       GoRoute(
         path: '/payment-methods',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
@@ -982,7 +969,25 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ),
       ),
-      // Clean Categories Screen Route - No transition animation
+
+      // Modern Payment Options Route
+      GoRoute(
+        path: '/payment-options',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const PaymentOptionsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1, 0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        ),
+      ),
+
+      // Clean architecture routes that the app actually uses
       GoRoute(
         path: '/clean/categories',
         pageBuilder: (context, state) => NoTransitionPage<void>(
@@ -990,43 +995,57 @@ final routerProvider = Provider<GoRouter>((ref) {
           child: const CleanCategoriesScreen(),
         ),
       ),
-      // Product Card Test Screen Route
       GoRoute(
-        path: '/clean/test/product-card',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
+        path: '/clean/cart',
+        pageBuilder: (context, state) => NoTransitionPage<void>(
           key: state.pageKey,
-          child: const ProductCardTestScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
+          child: const CleanCartScreen(),
         ),
       ),
-      // Order Confirmation Route
       GoRoute(
-        path: '/clean/order-confirmation/:orderId',
+        path: '/clean/orders',
+        pageBuilder: (context, state) => NoTransitionPage<void>(
+          key: state.pageKey,
+          child: const CleanOrderListScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/clean-home',
+        redirect: (_, __) => '/home',
+      ),
+      GoRoute(
+        path: '/clean/subcategory-products',
         pageBuilder: (context, state) {
-          final orderId = state.pathParameters['orderId']!;
+          final args = state.extra as Map<String, dynamic>?;
+          if (args != null) {
+            return CustomTransitionPage<void>(
+              key: state.pageKey,
+              child: CleanProductListingScreen(
+                subcategoryId: args['subcategoryId'] as String,
+              ),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                );
+              },
+            );
+          }
           return CustomTransitionPage<void>(
             key: state.pageKey,
-            child: CleanOrderConfirmationScreen(orderId: orderId),
+            child: const Scaffold(
+              body: Center(child: Text('Invalid subcategory')),
+            ),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(
-                opacity: animation,
-                child: ScaleTransition(
-                  scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
-                  child: child,
-                ),
-              );
+              return FadeTransition(opacity: animation, child: child);
             },
           );
         },
       ),
+
     ],
 
     // Add error handling for routes

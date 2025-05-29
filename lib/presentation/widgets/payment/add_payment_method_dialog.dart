@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../models/payment_method.dart';
+import '../../../domain/entities/payment_method.dart';
 
 class AddPaymentMethodDialog extends StatefulWidget {
   final Function(PaymentMethod) onAddPaymentMethod;
 
   const AddPaymentMethodDialog({
-    Key? key, 
+    Key? key,
     required this.onAddPaymentMethod,
   }) : super(key: key);
 
@@ -16,19 +16,19 @@ class AddPaymentMethodDialog extends StatefulWidget {
 
 class _AddPaymentMethodDialogState extends State<AddPaymentMethodDialog> {
   final _formKey = GlobalKey<FormState>();
-  
+
   String _selectedType = 'credit_card';
-  
+
   // Credit card fields
   final _cardNumberController = TextEditingController();
   final _cardHolderNameController = TextEditingController();
   final _expiryDateController = TextEditingController();
   final _cardTypeController = TextEditingController(text: 'visa');
   final _nickNameController = TextEditingController();
-  
+
   // UPI field
   final _upiIdController = TextEditingController();
-  
+
   bool _isDefault = false;
 
   @override
@@ -285,40 +285,61 @@ class _AddPaymentMethodDialogState extends State<AddPaymentMethodDialog> {
   }
 
   PaymentMethod _createPaymentMethod() {
+    final nickName = _nickNameController.text.isNotEmpty
+        ? _nickNameController.text
+        : _getDefaultNickName();
+
     switch (_selectedType) {
       case 'credit_card':
         return PaymentMethod(
+          id: DateTime.now().millisecondsSinceEpoch.toString(), // Temporary ID
           userId: 'temp-user-id', // This will be replaced by the actual user ID
-          type: _selectedType,
-          cardNumber: _cardNumberController.text,
-          cardHolderName: _cardHolderNameController.text,
-          expiryDate: _expiryDateController.text,
-          cardType: _cardTypeController.text,
+          type: PaymentMethod.typeCreditCard,
+          name: nickName,
           isDefault: _isDefault,
-          nickName: _nickNameController.text.isNotEmpty 
-              ? _nickNameController.text 
-              : null,
+          details: {
+            'cardNumber': _cardNumberController.text,
+            'cardHolderName': _cardHolderNameController.text,
+            'expiryDate': _expiryDateController.text,
+            'cardType': _cardTypeController.text,
+            'last4': _cardNumberController.text,
+            'brand': _cardTypeController.text,
+          },
         );
       case 'upi':
         return PaymentMethod(
+          id: DateTime.now().millisecondsSinceEpoch.toString(), // Temporary ID
           userId: 'temp-user-id', // This will be replaced by the actual user ID
-          type: _selectedType,
-          upiId: _upiIdController.text,
+          type: PaymentMethod.typeUpi,
+          name: nickName,
           isDefault: _isDefault,
-          nickName: _nickNameController.text.isNotEmpty 
-              ? _nickNameController.text 
-              : null,
+          details: {
+            'upiId': _upiIdController.text,
+          },
         );
       case 'cod':
       default:
         return PaymentMethod(
+          id: DateTime.now().millisecondsSinceEpoch.toString(), // Temporary ID
           userId: 'temp-user-id', // This will be replaced by the actual user ID
-          type: _selectedType,
+          type: PaymentMethod.typeCod,
+          name: nickName,
           isDefault: _isDefault,
-          nickName: _nickNameController.text.isNotEmpty 
-              ? _nickNameController.text 
-              : null,
+          details: {},
         );
+    }
+  }
+
+  String _getDefaultNickName() {
+    switch (_selectedType) {
+      case 'credit_card':
+        return '${_cardTypeController.text.toUpperCase()} Card';
+      case 'upi':
+        return 'UPI Payment';
+      case 'cod':
+        return 'Cash on Delivery';
+      default:
+        return 'Payment Method';
     }
   }
 }
@@ -330,7 +351,7 @@ class _ExpiryDateInputFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     var text = newValue.text;
-    
+
     if (newValue.selection.baseOffset == 0) {
       return newValue;
     }
@@ -350,4 +371,4 @@ class _ExpiryDateInputFormatter extends TextInputFormatter {
       selection: TextSelection.collapsed(offset: string.length),
     );
   }
-} 
+}

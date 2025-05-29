@@ -13,7 +13,7 @@ class ProductGrid extends StatelessWidget {
   final bool shrinkWrap;
   final ScrollPhysics? physics;
   final String heroTagPrefix;
-  
+
   const ProductGrid({
     Key? key,
     required this.products,
@@ -45,12 +45,12 @@ class ProductGrid extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildProductCard(BuildContext context, int index) {
     final product = products[index];
     return ProductCard(
       product: product,
-      onTap: () => context.go('/product/${product.id}', extra: product),
+      onTap: () => context.go('/clean/product/${product.id}', extra: product),
       onAddToCart: () {
         // TODO: Implement add to cart
         ScaffoldMessenger.of(context).showSnackBar(
@@ -62,4 +62,4 @@ class ProductGrid extends StatelessWidget {
       },
     );
   }
-} 
+}

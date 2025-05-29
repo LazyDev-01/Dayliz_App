@@ -1,0 +1,13 @@
+{
+  "name": "dayliz-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for Dayliz App database management",
+  "main": "mcp_server.js",
+  "scripts": {
+    "migrate": "node run_migration.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.7"
+  }
+}

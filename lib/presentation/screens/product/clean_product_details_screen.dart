@@ -6,10 +6,12 @@ import '../../../domain/entities/product.dart';
 import '../../providers/product_providers.dart';
 import '../../providers/cart_providers.dart';
 import '../../providers/wishlist_providers.dart';
+import '../../providers/auth_providers.dart';
+import '../../widgets/auth/auth_guard.dart';
 
 class CleanProductDetailsScreen extends ConsumerWidget {
   final String productId;
-  
+
   const CleanProductDetailsScreen({
     Key? key,
     required this.productId,
@@ -19,13 +21,13 @@ class CleanProductDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch the product state
     final productState = ref.watch(productByIdNotifierProvider(productId));
-    
+
     // Watch related products state
     final relatedProductsState = ref.watch(relatedProductsNotifierProvider(productId));
-    
+
     // Watch if product is in cart
     final isInCartFuture = ref.watch(isProductInCartProvider(productId));
-    
+
     // Watch if product is in wishlist
     final isInWishlistFuture = ref.watch(isProductInWishlistProvider(productId));
 
@@ -37,7 +39,7 @@ class CleanProductDetailsScreen extends ConsumerWidget {
           Consumer(
             builder: (context, ref, child) {
               final isInWishlist = ref.watch(isProductInWishlistProvider(productId));
-              
+
               return isInWishlist.when(
                 data: (isInWishlist) => IconButton(
                   icon: Icon(
@@ -73,9 +75,9 @@ class CleanProductDetailsScreen extends ConsumerWidget {
   void _toggleWishlist(BuildContext context, WidgetRef ref) async {
     final product = ref.read(productByIdNotifierProvider(productId)).product;
     if (product == null) return;
-    
+
     final isInWishlist = await ref.read(wishlistNotifierProvider.notifier).isInWishlist(productId);
-    
+
     if (isInWishlist) {
       await ref.read(wishlistNotifierProvider.notifier).removeFromWishlist(productId);
       _showSnackBar(context, '${product.name} removed from wishlist');
@@ -84,7 +86,7 @@ class CleanProductDetailsScreen extends ConsumerWidget {
       _showSnackBar(context, '${product.name} added to wishlist');
     }
   }
-  
+
   void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -99,9 +101,9 @@ class CleanProductDetailsScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-    BuildContext context, 
+    BuildContext context,
     WidgetRef ref,
-    ProductState productState, 
+    ProductState productState,
     RelatedProductsState relatedProductsState,
     AsyncValue<bool> isInCartFuture
   ) {
@@ -171,7 +173,7 @@ class CleanProductDetailsScreen extends ConsumerWidget {
                   )
                 : null,
           ),
-          
+
           // Product information
           Padding(
             padding: const EdgeInsets.all(16),
@@ -183,9 +185,9 @@ class CleanProductDetailsScreen extends ConsumerWidget {
                   product.name,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 // Price
                 Row(
                   children: [
@@ -209,9 +211,9 @@ class CleanProductDetailsScreen extends ConsumerWidget {
                       ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Rating
                 Row(
                   children: [
@@ -230,9 +232,9 @@ class CleanProductDetailsScreen extends ConsumerWidget {
                     ],
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Description
                 Text(
                   'Description',
@@ -245,9 +247,9 @@ class CleanProductDetailsScreen extends ConsumerWidget {
                   product.description,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Add to cart button
                 SizedBox(
                   width: double.infinity,
@@ -277,7 +279,7 @@ class CleanProductDetailsScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                
+
                 // Wishlist & Share buttons
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -311,7 +313,7 @@ class CleanProductDetailsScreen extends ConsumerWidget {
               ],
             ),
           ),
-          
+
           // Related products
           if (relatedProductsState.products.isNotEmpty) ...[
             const Divider(),
@@ -332,7 +334,7 @@ class CleanProductDetailsScreen extends ConsumerWidget {
                 itemCount: relatedProductsState.products.length,
                 itemBuilder: (context, index) {
                   return _buildRelatedProductCard(
-                    context, 
+                    context,
                     relatedProductsState.products[index],
                   );
                 },
@@ -347,26 +349,50 @@ class CleanProductDetailsScreen extends ConsumerWidget {
 
   void _handleAddToCart(BuildContext context, WidgetRef ref, Product product, bool isInCart) {
     if (isInCart) {
-      // Navigate to cart screen
-      context.push('/cart');
-    } else {
-      // Add to cart
-      ref.read(cartNotifierProvider.notifier).addToCart(
-        product: product,
-        quantity: 1,
+      // CART PROTECTION: Check auth before viewing cart
+      final isAllowed = AuthGuardService.checkAuthAndPrompt(
+        context: context,
+        ref: ref,
+        action: 'view_cart',
+        onAuthRequired: () {
+          debugPrint('🔒 CART PROTECTION: Guest user tried to view cart');
+        },
       );
 
-      // Show snackbar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${product.name} added to cart'),
-          duration: const Duration(seconds: 2),
-          action: SnackBarAction(
-            label: 'View Cart',
-            onPressed: () => context.push('/cart'),
-          ),
-        ),
+      if (isAllowed) {
+        // Navigate to cart screen
+        context.push('/clean/cart');
+      }
+    } else {
+      // CART PROTECTION: Check auth before adding to cart
+      final isAllowed = AuthGuardService.checkAuthAndPrompt(
+        context: context,
+        ref: ref,
+        action: 'add_to_cart',
+        onAuthRequired: () {
+          debugPrint('🔒 CART PROTECTION: Guest user tried to add ${product.name} to cart');
+        },
       );
+
+      if (isAllowed) {
+        // Add to cart
+        ref.read(cartNotifierProvider.notifier).addToCart(
+          product: product,
+          quantity: 1,
+        );
+
+        // Show snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${product.name} added to cart'),
+            duration: const Duration(seconds: 2),
+            action: SnackBarAction(
+              label: 'View Cart',
+              onPressed: () => context.push('/clean/cart'),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -383,7 +409,7 @@ class CleanProductDetailsScreen extends ConsumerWidget {
           onTap: () {
             // Navigate to the product details
             Navigator.pushReplacement(
-              context, 
+              context,
               MaterialPageRoute(
                 builder: (context) => CleanProductDetailsScreen(productId: product.id),
               ),
@@ -403,7 +429,7 @@ class CleanProductDetailsScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              
+
               // Product info
               Padding(
                 padding: const EdgeInsets.all(8),
@@ -417,9 +443,9 @@ class CleanProductDetailsScreen extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    
+
                     const SizedBox(height: 4),
-                    
+
                     // Price
                     Text(
                       '₹${product.discountedPrice.toStringAsFixed(2)}',
@@ -437,4 +463,4 @@ class CleanProductDetailsScreen extends ConsumerWidget {
       ),
     );
   }
-} 
+}

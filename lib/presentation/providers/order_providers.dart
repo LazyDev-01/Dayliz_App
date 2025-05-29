@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_it/get_it.dart';
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../core/errors/failures.dart';
 import '../../domain/entities/order.dart' as domain;
@@ -10,6 +11,11 @@ import '../../domain/usecases/orders/create_order_usecase.dart';
 import '../../domain/usecases/orders/cancel_order_usecase.dart';
 import '../../domain/usecases/orders/get_orders_by_status_usecase.dart';
 import '../../core/usecases/usecase.dart';
+import '../../domain/repositories/order_repository.dart';
+import '../../data/repositories/order_repository_impl.dart';
+import '../../data/datasources/order_remote_data_source.dart';
+import '../../data/datasources/order_local_data_source.dart';
+import '../../core/network/network_info.dart';
 
 // Access to the service locator
 final sl = GetIt.instance;
@@ -18,19 +24,19 @@ final sl = GetIt.instance;
 class OrdersState {
   /// List of all user's orders
   final List<domain.Order>? orders;
-  
+
   /// Currently selected/viewed order
   final domain.Order? selectedOrder;
-  
+
   /// Loading state
   final bool isLoading;
-  
+
   /// Error message if any
   final String? errorMessage;
-  
+
   /// Filter by status (if any)
   final String? statusFilter;
-  
+
   /// Order tracking information (for selected order)
   final Map<String, dynamic>? trackingInfo;
 
@@ -88,9 +94,9 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
   /// Get all orders for the current user
   Future<List<domain.Order>> getOrders() async {
     state = state.copyWith(isLoading: true, clearError: true);
-    
+
     final result = await _getOrdersUseCase(NoParams());
-    
+
     return result.fold(
       (failure) {
         state = state.copyWith(
@@ -112,9 +118,9 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
   /// Get a specific order by its ID
   Future<domain.Order?> getOrderById(String orderId) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    
+
     final result = await _getOrderByIdUseCase(GetOrderByIdParams(orderId: orderId));
-    
+
     return result.fold(
       (failure) {
         state = state.copyWith(
@@ -136,9 +142,9 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
   /// Filter orders by status
   Future<List<domain.Order>> getOrdersByStatus(String status) async {
     state = state.copyWith(isLoading: true, clearError: true, statusFilter: status);
-    
+
     final result = await _getOrdersByStatusUseCase(GetOrdersByStatusParams(status: status));
-    
+
     return result.fold(
       (failure) {
         state = state.copyWith(
@@ -160,9 +166,9 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
   /// Create a new order
   Future<Either<Failure, domain.Order>> createOrder(domain.Order order) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    
+
     final result = await _createOrderUseCase(CreateOrderParams(order: order));
-    
+
     result.fold(
       (failure) => state = state.copyWith(
         errorMessage: _mapFailureToMessage(failure),
@@ -170,10 +176,10 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
       ),
       (createdOrder) {
         // If we already have orders, add the new one to the list
-        final updatedOrders = state.orders != null 
+        final updatedOrders = state.orders != null
             ? [...state.orders!, createdOrder]
             : [createdOrder];
-            
+
         state = state.copyWith(
           orders: updatedOrders,
           selectedOrder: createdOrder,
@@ -181,7 +187,7 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
         );
       },
     );
-    
+
     return result;
   }
 
@@ -203,9 +209,9 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
   /// Cancel an order
   Future<Either<Failure, bool>> cancelOrder(String orderId) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    
+
     final result = await _cancelOrderUseCase(CancelOrderParams(orderId: orderId));
-    
+
     result.fold(
       (failure) {
         state = state.copyWith(
@@ -222,7 +228,7 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
             }
             return order;
           }).toList();
-          
+
           // If this is the currently selected order, update it too
           domain.Order? updatedSelectedOrder;
           if (state.selectedOrder != null && state.selectedOrder!.id == orderId) {
@@ -230,7 +236,7 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
               status: domain.Order.statusCancelled
             );
           }
-          
+
           state = state.copyWith(
             orders: updatedOrders,
             selectedOrder: updatedSelectedOrder ?? state.selectedOrder,
@@ -241,7 +247,7 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
         }
       },
     );
-    
+
     return result;
   }
 
@@ -264,13 +270,32 @@ class OrdersNotifier extends StateNotifier<OrdersState> {
 
 /// Provider for the orders notifier
 final ordersNotifierProvider = StateNotifierProvider<OrdersNotifier, OrdersState>((ref) {
-  return OrdersNotifier(
-    getOrdersUseCase: sl<GetOrdersUseCase>(),
-    getOrderByIdUseCase: sl<GetOrderByIdUseCase>(),
-    createOrderUseCase: sl<CreateOrderUseCase>(),
-    getOrdersByStatusUseCase: sl<GetOrdersByStatusUseCase>(),
-    cancelOrderUseCase: sl<CancelOrderUseCase>(),
-  );
+  try {
+    // Check if the required use cases are registered
+    if (!sl.isRegistered<GetOrdersUseCase>()) {
+      // Register order-related dependencies if they're not registered
+      _registerOrderDependencies();
+    }
+
+    return OrdersNotifier(
+      getOrdersUseCase: sl<GetOrdersUseCase>(),
+      getOrderByIdUseCase: sl<GetOrderByIdUseCase>(),
+      createOrderUseCase: sl<CreateOrderUseCase>(),
+      getOrdersByStatusUseCase: sl<GetOrdersByStatusUseCase>(),
+      cancelOrderUseCase: sl<CancelOrderUseCase>(),
+    );
+  } catch (e) {
+    // If there's an error, register the dependencies and try again
+    _registerOrderDependencies();
+
+    return OrdersNotifier(
+      getOrdersUseCase: sl<GetOrdersUseCase>(),
+      getOrderByIdUseCase: sl<GetOrderByIdUseCase>(),
+      createOrderUseCase: sl<CreateOrderUseCase>(),
+      getOrdersByStatusUseCase: sl<GetOrdersByStatusUseCase>(),
+      cancelOrderUseCase: sl<CancelOrderUseCase>(),
+    );
+  }
 });
 
 /// Provider for order loading state
@@ -303,7 +328,7 @@ final userOrdersProvider = FutureProvider.autoDispose<List<domain.Order>>((ref) 
   ref.onDispose(() {
     // Clean up any resources if needed
   });
-  
+
   // Return an empty list initially
   return <domain.Order>[];
 });
@@ -312,10 +337,10 @@ final userOrdersProvider = FutureProvider.autoDispose<List<domain.Order>>((ref) 
 void fetchOrders(WidgetRef ref) {
   // Get the orders notifier manually
   final ordersNotifier = ref.read(ordersNotifierProvider.notifier);
-  
+
   // Create a new FutureProvider that will fetch orders when called
-  ref.refresh(userOrdersProvider);
-  
+  final _ = ref.refresh(userOrdersProvider);
+
   // Schedule a microtask to avoid modifying providers during build
   Future.microtask(() async {
     await ordersNotifier.getOrders();
@@ -329,7 +354,7 @@ final orderDetailProvider = FutureProvider.autoDispose.family<domain.Order?, Str
   if (currentOrder != null && currentOrder.id == orderId) {
     return currentOrder;
   }
-  
+
   // Return null initially, and provide a way to fetch order details manually
   return null;
 });
@@ -338,10 +363,10 @@ final orderDetailProvider = FutureProvider.autoDispose.family<domain.Order?, Str
 void fetchOrderDetails(WidgetRef ref, String orderId) {
   // Get the orders notifier manually
   final ordersNotifier = ref.read(ordersNotifierProvider.notifier);
-  
+
   // Create a new FutureProvider that will fetch order details when called
-  ref.refresh(orderDetailProvider(orderId));
-  
+  final _ = ref.refresh(orderDetailProvider(orderId));
+
   // Schedule a microtask to avoid modifying providers during build
   Future.microtask(() async {
     await ordersNotifier.getOrderById(orderId);
@@ -358,12 +383,81 @@ final ordersByStatusProvider = FutureProvider.autoDispose.family<List<domain.Ord
 void fetchOrdersByStatus(WidgetRef ref, String status) {
   // Get the orders notifier manually
   final ordersNotifier = ref.read(ordersNotifierProvider.notifier);
-  
+
   // Create a new FutureProvider that will fetch orders by status when called
-  ref.refresh(ordersByStatusProvider(status));
-  
+  final _ = ref.refresh(ordersByStatusProvider(status));
+
   // Schedule a microtask to avoid modifying providers during build
   Future.microtask(() async {
     await ordersNotifier.getOrdersByStatus(status);
   });
+}
+
+/// Register order-related dependencies if they're not already registered
+void _registerOrderDependencies() {
+  debugPrint('Registering order dependencies...');
+
+  try {
+    // Register OrderRepository if not already registered
+    if (!sl.isRegistered<OrderRepository>()) {
+      // Make sure NetworkInfo is registered
+      if (!sl.isRegistered<NetworkInfo>()) {
+        sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
+      }
+
+      // Register OrderRemoteDataSource if not already registered
+      if (!sl.isRegistered<OrderRemoteDataSource>()) {
+        sl.registerLazySingleton<OrderRemoteDataSource>(
+          () => OrderRemoteDataSource(
+            client: sl(),
+            baseUrl: 'https://api.dayliz.com', // Use your actual API URL
+          ),
+        );
+      }
+
+      // Register OrderLocalDataSource if not already registered
+      if (!sl.isRegistered<OrderLocalDataSource>()) {
+        sl.registerLazySingleton<OrderLocalDataSource>(
+          () => OrderLocalDataSource(
+            sharedPreferences: sl(),
+          ),
+        );
+      }
+
+      // Register OrderRepository
+      sl.registerLazySingleton<OrderRepository>(
+        () => OrderRepositoryImpl(
+          remoteDataSource: sl<OrderRemoteDataSource>(),
+          localDataSource: sl<OrderLocalDataSource>(),
+          networkInfo: sl<NetworkInfo>(),
+        ),
+      );
+    }
+
+    // Register Order Use Cases
+    if (!sl.isRegistered<GetOrdersUseCase>()) {
+      sl.registerLazySingleton(() => GetOrdersUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<GetOrderByIdUseCase>()) {
+      sl.registerLazySingleton(() => GetOrderByIdUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<CreateOrderUseCase>()) {
+      sl.registerLazySingleton(() => CreateOrderUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<GetOrdersByStatusUseCase>()) {
+      sl.registerLazySingleton(() => GetOrdersByStatusUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<CancelOrderUseCase>()) {
+      sl.registerLazySingleton(() => CancelOrderUseCase(sl()));
+    }
+
+    debugPrint('Order dependencies registered successfully');
+  } catch (e) {
+    debugPrint('Error registering order dependencies: $e');
+    rethrow;
+  }
 }

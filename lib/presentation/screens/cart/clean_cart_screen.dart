@@ -255,6 +255,6 @@ class CleanCartScreen extends ConsumerWidget {
 
   void _proceedToCheckout(BuildContext context) {
     // Navigate to checkout
-    context.push('/clean/checkout');
+    context.push('/checkout');
   }
 }

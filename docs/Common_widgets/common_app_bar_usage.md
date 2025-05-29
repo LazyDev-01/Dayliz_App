@@ -133,7 +133,7 @@ appBar: CommonAppBars.withCartAndSearch(
   title: 'Dayliz',
   onSearchPressed: () => context.go('/search'),
   onCartPressed: () => context.go('/cart'),
-  cartItemCount: ref.watch(cartProvider).length,
+  cartItemCount: ref.watch(cartItemCountProvider),
 ),
 ```
 
