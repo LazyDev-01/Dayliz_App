@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Clean architecture service for Supabase initialization and management
 class SupabaseService {
@@ -53,6 +54,16 @@ class SupabaseService {
       } catch (e) {
         // Supabase not initialized yet, initialize it
         debugPrint('SupabaseService: Supabase not initialized yet, initializing now');
+
+        // CRITICAL FIX: Ensure SharedPreferences is available for Supabase
+        try {
+          // Try to initialize SharedPreferences to ensure it's available for Supabase
+          await SharedPreferences.getInstance();
+          debugPrint('SupabaseService: SharedPreferences verified for Supabase');
+        } catch (e) {
+          debugPrint('SupabaseService: Warning - SharedPreferences not available: $e');
+        }
+
         await Supabase.initialize(
           url: dotenv.env['SUPABASE_URL'] ?? '',
           anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
@@ -65,7 +76,7 @@ class SupabaseService {
       debugPrint('SupabaseService: Supabase client obtained');
       _secureStorage = const FlutterSecureStorage();
       _isInitialized = true;
-      
+
       debugPrint('SupabaseService: Initialization completed successfully');
     } catch (e) {
       debugPrint('SupabaseService: Error initializing Supabase: $e');
@@ -94,7 +105,7 @@ class SupabaseService {
   /// Check if session is valid and not expired
   bool isSessionValid() {
     if (!_isInitialized) return false;
-    
+
     final session = getCurrentSession();
     if (session == null) return false;
 
@@ -106,7 +117,7 @@ class SupabaseService {
   /// Refresh the current session
   Future<AuthResponse?> refreshSession() async {
     if (!_isInitialized) return null;
-    
+
     try {
       final response = await _client.auth.refreshSession();
       debugPrint('SupabaseService: Session refreshed successfully');
@@ -120,7 +131,7 @@ class SupabaseService {
   /// Save session data to secure storage
   Future<void> saveSession(Session? session) async {
     if (!_isInitialized || session == null) return;
-    
+
     try {
       await _secureStorage.write(key: 'refresh_token', value: session.refreshToken);
       await _secureStorage.write(key: 'access_token', value: session.accessToken);
@@ -135,7 +146,7 @@ class SupabaseService {
   /// Clear session data from secure storage
   Future<void> clearSession() async {
     if (!_isInitialized) return;
-    
+
     try {
       await _secureStorage.delete(key: 'refresh_token');
       await _secureStorage.delete(key: 'access_token');
@@ -150,7 +161,7 @@ class SupabaseService {
   /// Update last activity timestamp
   Future<void> updateLastActivity() async {
     if (!_isInitialized) return;
-    
+
     try {
       await _secureStorage.write(key: 'last_activity', value: DateTime.now().toIso8601String());
     } catch (e) {
@@ -161,7 +172,7 @@ class SupabaseService {
   /// Check if user has been inactive for too long
   Future<bool> checkInactivity({int inactivityTimeoutDays = 7}) async {
     if (!_isInitialized) return false;
-    
+
     try {
       final lastActivityStr = await _secureStorage.read(key: 'last_activity');
       if (lastActivityStr == null) {

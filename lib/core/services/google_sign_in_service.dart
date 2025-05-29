@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -51,13 +52,13 @@ class GoogleSignInService {
         );
         debugPrint('🔍 [GoogleSignInService] Configured for Web with client ID');
       } else {
-        // For Android, try using the web client ID to fix ApiException: 10
-        // Sometimes this resolves token exchange issues
+        // CRITICAL FIX: For Android, use serverClientId instead of clientId to avoid warning
+        // This resolves the "clientId is not supported on Android" warning
         googleSignIn = GoogleSignIn(
           scopes: ['email', 'profile', 'openid'],
-          clientId: webClientId, // Use web client ID for Android too
+          serverClientId: webClientId, // Use serverClientId for Android
         );
-        debugPrint('🔍 [GoogleSignInService] Configured for Android using WEB client ID: ${webClientId != null ? 'Present' : 'Missing'}');
+        debugPrint('🔍 [GoogleSignInService] Configured for Android using serverClientId: ${webClientId != null ? 'Present' : 'Missing'}');
         debugPrint('🔍 [GoogleSignInService] Android Client ID from env: ${androidClientId != null ? 'Available but not used' : 'Not found'}');
       }
 
@@ -83,13 +84,9 @@ class GoogleSignInService {
         throw ServerException(message: 'Supabase configuration is incomplete');
       }
 
-      // First, ensure we're signed out from any previous sessions
-      try {
-        await _supabaseClient.auth.signOut();
-        debugPrint('🔍 [GoogleSignInService] Signed out from previous Supabase session');
-      } catch (e) {
-        debugPrint('🔍 [GoogleSignInService] No previous Supabase session to sign out from');
-      }
+      // CRITICAL FIX: Don't sign out from Supabase during Google Sign-in
+      // This was causing immediate logout after starting the sign-in process
+      debugPrint('🔍 [GoogleSignInService] Proceeding with Google Sign-in without Supabase logout');
 
       // CRITICAL FIX: Force account selection by signing out from Google first
       if (forceAccountSelection) {
@@ -161,6 +158,7 @@ class GoogleSignInService {
       debugPrint('🔄 [GoogleSignInService] Starting getGoogleAuthToken');
 
       // CRITICAL FIX: Force account selection by signing out from Google first
+      // Only sign out from Google, not from Supabase
       if (forceAccountSelection) {
         try {
           await _googleSignIn.signOut();
@@ -227,16 +225,25 @@ class GoogleSignInService {
     try {
       debugPrint('🔄 [GoogleSignInService] Starting complete logout');
 
-      // Sign out from Supabase first
+      // Sign out from Supabase first with timeout to prevent hanging
       try {
-        await _supabaseClient.auth.signOut();
+        debugPrint('🔄 [GoogleSignInService] Signing out from Supabase with timeout');
+        await _supabaseClient.auth.signOut().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            debugPrint('⚠️ [GoogleSignInService] Supabase logout timed out after 10 seconds');
+            throw TimeoutException('Supabase logout timed out', const Duration(seconds: 10));
+          },
+        );
         debugPrint('✅ [GoogleSignInService] Signed out from Supabase');
       } catch (e) {
         debugPrint('⚠️ [GoogleSignInService] Error signing out from Supabase: $e');
+        // Continue with Google logout even if Supabase logout fails
       }
 
       // Sign out from Google to clear cached account
       try {
+        debugPrint('🔄 [GoogleSignInService] Signing out from Google');
         await _googleSignIn.signOut();
         debugPrint('✅ [GoogleSignInService] Signed out from Google');
       } catch (e) {

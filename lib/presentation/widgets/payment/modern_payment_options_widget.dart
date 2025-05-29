@@ -140,7 +140,7 @@ class _ModernPaymentOptionsWidgetState extends State<ModernPaymentOptionsWidget>
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -163,7 +163,7 @@ class _ModernPaymentOptionsWidgetState extends State<ModernPaymentOptionsWidget>
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: icon != null

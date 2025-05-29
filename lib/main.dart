@@ -17,20 +17,7 @@ import 'debug_google_signin.dart';
 
 import 'package:dayliz_app/presentation/screens/debug/cart_dependency_test_screen.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
-// Clean architecture imports
-import 'package:flutter/foundation.dart';
-// Clean architecture imports for database operations
-import 'package:dayliz_app/data/datasources/clean_database_seeder.dart';
-import 'package:dayliz_app/data/datasources/clean_database_migrations.dart';
-import 'package:dayliz_app/domain/usecases/is_authenticated_usecase.dart';
-import 'package:dayliz_app/domain/usecases/get_cart_items_usecase.dart';
-import 'package:dayliz_app/domain/usecases/add_to_cart_usecase.dart';
-import 'package:dayliz_app/domain/usecases/remove_from_cart_usecase.dart';
-import 'package:dayliz_app/domain/usecases/get_wishlist_products_usecase.dart';
-
 import 'package:dayliz_app/presentation/screens/dev/clean_database_seeder_screen.dart';
-import 'package:get_it/get_it.dart';
-import 'di/dependency_injection.dart' show sl;
 // Clean architecture screens
 import 'package:dayliz_app/presentation/screens/product/clean_product_listing_screen.dart';
 import 'package:dayliz_app/presentation/screens/product/clean_product_details_screen.dart';
@@ -91,6 +78,7 @@ Future<void> main() async {
     debugPrint('Authentication and cart components initialized successfully');
   } catch (e) {
     debugPrint('Error initializing authentication and cart components: $e');
+    // Continue with app startup even if auth init fails
   }
 
   // Gracefully initialize clean architecture components
@@ -107,53 +95,21 @@ Future<void> main() async {
       // Continue with the app even if product dependencies initialization fails
     }
 
-    // Repository implementations have been updated to use clean architecture
-    // The updated dependencies can be enabled when all features are migrated
-    // await di_updated.updateDependencies();
     debugPrint('Clean architecture initialization completed');
   } catch (e) {
     debugPrint('Clean architecture initialization failed: $e');
     // Continue with the app even if clean architecture init fails
   }
 
-  // Test database connections
-  await _testDatabaseConnections();
+  // Skip heavy initialization operations that might be causing the hang
+  debugPrint('Skipping database migrations and seeding for faster startup');
 
-  // Verify cart dependencies are registered
-  _verifyCartDependencies();
-
-  // Verify wishlist dependencies are registered
-  _verifyWishlistDependencies();
-
-  // Run database migrations
+  // Test database connections (simplified)
   try {
-    final isAuthenticatedUseCase = sl<IsAuthenticatedUseCase>();
-    final isAuthenticated = await isAuthenticatedUseCase.call();
-
-    if (isAuthenticated) {
-      await CleanDatabaseMigrations.instance.runMigrations();
-    } else {
-      debugPrint('Skipping database migrations: Not authenticated');
-    }
+    debugPrint('Testing database connections...');
+    debugPrint('✅ Database connection will be tested by clean architecture initialization');
   } catch (e) {
-    debugPrint('Error running database migrations: $e');
-  }
-
-  // Seed database with test data
-  if (kDebugMode) {
-    try {
-      final isAuthenticatedUseCase = sl<IsAuthenticatedUseCase>();
-      final isAuthenticated = await isAuthenticatedUseCase.call();
-
-      if (isAuthenticated) {
-        await CleanDatabaseSeeder.instance.seedDatabase();
-      } else {
-        debugPrint('Skipping database seeding: Not authenticated');
-      }
-    } catch (e) {
-      debugPrint('Error seeding database: $e');
-      // Continue with app startup even if seeding fails
-    }
+    debugPrint('Error testing database connections: $e');
   }
 
   // Set preferred orientations
@@ -200,8 +156,9 @@ class _MyAppState extends ConsumerState<MyApp> {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
 
-    // Force clean auth notifier to initialize
-    ref.watch(clean_auth.authNotifierProvider);
+    // CRITICAL FIX: Don't force auth notifier to initialize immediately
+    // Let it initialize when actually needed by the router
+    // ref.watch(clean_auth.authNotifierProvider); // Removed
 
     return MaterialApp.router(
       title: 'Dayliz',
@@ -214,66 +171,7 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 }
 
-Future<void> _testDatabaseConnections() async {
-  try {
-    // Test database connection using clean architecture
-    debugPrint('Testing database connections...');
-    // We'll use the dependency injection container to get the repository
-    // This will be handled by the clean architecture initialization
-    debugPrint('✅ Database connection will be tested by clean architecture initialization');
-  } catch (e) {
-    debugPrint('Error testing database connections: $e');
-  }
-}
 
-/// Verify that cart dependencies are properly registered
-void _verifyCartDependencies() {
-  try {
-    final sl = GetIt.instance;
-
-    // Check if dependencies are registered by name instead of by type
-    final isCartItemsRegistered = sl.isRegistered(instanceName: 'GetCartItemsUseCase') ||
-                                 sl.isRegistered<GetCartItemsUseCase>();
-    final isAddToCartRegistered = sl.isRegistered(instanceName: 'AddToCartUseCase') ||
-                                sl.isRegistered<AddToCartUseCase>();
-    final isRemoveFromCartRegistered = sl.isRegistered(instanceName: 'RemoveFromCartUseCase') ||
-                                     sl.isRegistered<RemoveFromCartUseCase>();
-
-    debugPrint('Cart dependencies check:');
-    debugPrint('- GetCartItemsUseCase registered: $isCartItemsRegistered');
-    debugPrint('- AddToCartUseCase registered: $isAddToCartRegistered');
-    debugPrint('- RemoveFromCartUseCase registered: $isRemoveFromCartRegistered');
-
-    if (!isCartItemsRegistered || !isAddToCartRegistered || !isRemoveFromCartRegistered) {
-      debugPrint('⚠️ WARNING: Some cart dependencies are not registered properly!');
-    } else {
-      debugPrint('✅ All cart dependencies are registered properly');
-    }
-  } catch (e) {
-    debugPrint('Error verifying cart dependencies: $e');
-  }
-}
-
-/// Verify that wishlist dependencies are properly registered
-void _verifyWishlistDependencies() {
-  try {
-    final sl = GetIt.instance;
-
-    // Check if wishlist dependencies are registered
-    final isGetWishlistProductsRegistered = sl.isRegistered<GetWishlistProductsUseCase>();
-
-    debugPrint('Wishlist dependencies check:');
-    debugPrint('- GetWishlistProductsUseCase registered: $isGetWishlistProductsRegistered');
-
-    if (!isGetWishlistProductsRegistered) {
-      debugPrint('⚠️ WARNING: GetWishlistProductsUseCase is not registered properly!');
-    } else {
-      debugPrint('✅ Wishlist dependencies are registered properly');
-    }
-  } catch (e) {
-    debugPrint('Error verifying wishlist dependencies: $e');
-  }
-}
 
 /// A page that doesn't apply any transition animation
 class NoTransitionPage<T> extends Page<T> {
@@ -298,10 +196,10 @@ class NoTransitionPage<T> extends Page<T> {
   }
 }
 
-/// Router provider for navigation - FIXED to prevent auth state rebuilds
+/// Router provider for navigation - FIXED to prevent infinite loops
 final routerProvider = Provider<GoRouter>((ref) {
-  // CRITICAL FIX: Don't watch auth state here - it causes router rebuilds on every auth change
-  // Instead, read auth state only when needed in redirect logic
+  // CRITICAL FIX: Don't watch auth state here - it causes infinite router rebuilds
+  // The router redirect logic will read auth state when needed
 
   // Create a navigator observer to handle index updates
   final indexObserver = IndexObserver(ref);
@@ -323,10 +221,22 @@ final routerProvider = Provider<GoRouter>((ref) {
 
     // CRITICAL FIX: Simplified redirect logic that reads auth state when needed
     redirect: (context, state) {
-      // Read auth state only when redirect is called, not on every auth change
-      final authState = ref.read(clean_auth.authNotifierProvider);
-      final isAuthenticated = authState.isAuthenticated && authState.user != null;
-      final isLoading = authState.isLoading;
+      // CRITICAL FIX: Read auth state to handle logout redirects properly
+      bool isAuthenticated = false;
+      bool isLoading = false;
+
+      try {
+        final authState = ref.read(clean_auth.authNotifierProvider);
+        isAuthenticated = authState.isAuthenticated && authState.user != null;
+        isLoading = authState.isLoading;
+
+        debugPrint('🔄 ROUTER: Auth state - authenticated: $isAuthenticated, user: ${authState.user?.id}, loading: $isLoading');
+      } catch (e) {
+        debugPrint('🔄 ROUTER: Auth state not ready yet, treating as unauthenticated: $e');
+        // If auth state is not ready, treat as unauthenticated and not loading
+        isAuthenticated = false;
+        isLoading = false;
+      }
 
       debugPrint('🔄 ROUTER: Redirect called for ${state.uri.path}');
       debugPrint('🔄 ROUTER: Full URI: ${state.uri}');

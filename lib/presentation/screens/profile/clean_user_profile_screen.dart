@@ -921,15 +921,42 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
   }
 
   Future<void> _handleSignOut() async {
-    await ref.read(authNotifierProvider.notifier).logout();
-    if (mounted) {
-      // Use a separate method to navigate after async operation
-      _navigateToLogin();
-    }
-  }
+    try {
+      debugPrint('🔄 PROFILE: Starting logout process');
+      final result = await ref.read(authNotifierProvider.notifier).logout();
 
-  void _navigateToLogin() {
-    context.go('/login');
+      result.fold(
+        (failure) {
+          debugPrint('❌ PROFILE: Logout failed: ${failure.message}');
+          // Show error message to user
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Logout failed: ${failure.message}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        (success) {
+          debugPrint('✅ PROFILE: Logout successful, navigating to login');
+          // CRITICAL FIX: Navigate to login after successful logout
+          if (mounted) {
+            context.go('/login');
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('❌ PROFILE: Logout error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Logout error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _pickAndUploadImage() async {

@@ -287,7 +287,7 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
             side: BorderSide(color: Colors.grey.shade300),
           ),
           elevation: 1,
-          shadowColor: Colors.black.withValues(alpha: 0.1),
+          shadowColor: Colors.black.withOpacity(0.1),
         ),
         icon: isLoading
             ? const SizedBox(

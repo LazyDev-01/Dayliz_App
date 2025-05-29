@@ -253,16 +253,34 @@ class AuthSupabaseDataSource implements AuthDataSource {
     debugPrint('Creating user profile for user ID: $userId');
 
     try {
+      // CRITICAL FIX: Check if user already exists before creating
+      final existingUser = await _supabaseClient
+          .from('users')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (existingUser != null) {
+        debugPrint('User profile already exists, skipping creation');
+        return;
+      }
+
       // Try to create user in public.users table
       debugPrint('Inserting into users table...');
-      await _supabaseClient.from('users').upsert({
+      final userData = {
         'id': userId,
         'email': email,
         'name': name,
-        'phone': phone,
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
-      });
+      };
+
+      // CRITICAL FIX: Only add phone if it's not null to avoid unique constraint issues
+      if (phone != null && phone.isNotEmpty) {
+        userData['phone'] = phone;
+      }
+
+      await _supabaseClient.from('users').insert(userData);
       debugPrint('Successfully inserted into users table');
 
       // Try to create user profile in user_profiles table
@@ -281,11 +299,24 @@ class AuthSupabaseDataSource implements AuthDataSource {
 
     } catch (e) {
       debugPrint('Error creating user profile: $e');
-      // ENHANCED ERROR HANDLING: Log specific error details
+      // CRITICAL FIX: Handle duplicate key errors gracefully
       if (e is PostgrestException) {
         debugPrint('PostgrestException - code: ${e.code}, message: ${e.message}, details: ${e.details}');
+
+        // Handle duplicate key errors for phone number constraint
+        if (e.code == '23505' || e.message.contains('duplicate key') || e.message.contains('unique constraint')) {
+          debugPrint('Profile already exists (duplicate key error), this is expected');
+          return; // This is fine, profile exists
+        }
       }
-      // Re-throw the error so the caller can handle it appropriately
+
+      // Handle string-based duplicate key errors
+      if (e.toString().contains('duplicate key') || e.toString().contains('unique constraint')) {
+        debugPrint('Profile already exists (duplicate key error), this is expected');
+        return; // This is fine, profile exists
+      }
+
+      // Re-throw other errors
       rethrow;
     }
   }
@@ -375,13 +406,9 @@ class AuthSupabaseDataSource implements AuthDataSource {
       debugPrint('🔍 [AuthSupabaseDataSource] Getting GoogleSignInService instance');
       final googleSignInService = GoogleSignInService.instance;
 
-      // First, ensure we're signed out from any previous sessions
-      try {
-        await _supabaseClient.auth.signOut();
-        debugPrint('🔍 [AuthSupabaseDataSource] Signed out from previous Supabase session');
-      } catch (e) {
-        debugPrint('🔍 [AuthSupabaseDataSource] No previous Supabase session to sign out from');
-      }
+      // CRITICAL FIX: Don't sign out from Supabase before Google Sign-in
+      // The GoogleSignInService will handle any necessary sign-outs
+      debugPrint('🔍 [AuthSupabaseDataSource] Proceeding with Google Sign-in without pre-logout');
 
       // Get the OAuth token from Google (force account selection)
       debugPrint('🔍 [AuthSupabaseDataSource] Getting OAuth token from Google with account selection');

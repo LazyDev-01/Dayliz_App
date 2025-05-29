@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import '../../../core/services/location_service.dart';
 
 class LocationSearchScreen extends StatefulWidget {
   final Function(Map<String, String>) onLocationSelected;
@@ -14,18 +16,22 @@ class LocationSearchScreen extends StatefulWidget {
 
 class _LocationSearchScreenState extends State<LocationSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final LocationService _locationService = LocationService();
+
+  // Sample search results - in a real app, this would come from a places API
   final List<Map<String, String>> _searchResults = [
-    {'name': 'Tura Market', 'address': 'Main Market Road, Tura', 'area': 'Commercial Area'},
-    {'name': 'Tura Civil Hospital', 'address': 'Hospital Road, Tura', 'area': 'Medical District'},
-    {'name': 'Tura Government College', 'address': 'College Road, Tura', 'area': 'Educational Zone'},
-    {'name': 'Tura Bus Stand', 'address': 'Transport Hub, Tura', 'area': 'Transport Area'},
-    {'name': 'Tura Police Station', 'address': 'Police Line, Tura', 'area': 'Administrative Area'},
-    {'name': 'Tura Stadium', 'address': 'Sports Complex, Tura', 'area': 'Sports Zone'},
-    {'name': 'Tura Post Office', 'address': 'Main Post Office, Tura', 'area': 'Postal Area'},
-    {'name': 'Tura Railway Station', 'address': 'Railway Complex, Tura', 'area': 'Transport Hub'},
+    {'name': 'Market Area', 'address': 'Main Market Road', 'area': 'Commercial Area'},
+    {'name': 'Hospital Area', 'address': 'Hospital Road', 'area': 'Medical District'},
+    {'name': 'College Area', 'address': 'College Road', 'area': 'Educational Zone'},
+    {'name': 'Bus Stand', 'address': 'Transport Hub', 'area': 'Transport Area'},
+    {'name': 'Police Station', 'address': 'Police Line', 'area': 'Administrative Area'},
+    {'name': 'Stadium', 'address': 'Sports Complex', 'area': 'Sports Zone'},
+    {'name': 'Post Office', 'address': 'Main Post Office', 'area': 'Postal Area'},
+    {'name': 'Railway Station', 'address': 'Railway Complex', 'area': 'Transport Hub'},
   ];
 
   List<Map<String, String>> _filteredResults = [];
+  bool _isGettingLocation = false;
 
   @override
   void initState() {
@@ -64,12 +70,49 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
     Navigator.pop(context);
   }
 
-  void _useCurrentLocation() {
-    widget.onLocationSelected({
-      'address': 'Current GPS Location',
-      'area': 'GPS detected',
+  Future<void> _useCurrentLocation() async {
+    setState(() {
+      _isGettingLocation = true;
     });
-    Navigator.pop(context);
+
+    try {
+      // Get current location with address
+      LocationData? locationData = await _locationService.getCurrentLocationWithAddress();
+
+      if (locationData != null && mounted) {
+        widget.onLocationSelected({
+          'address': locationData.address ?? 'GPS Location Detected',
+          'area': '${locationData.city ?? ''}, ${locationData.state ?? ''}'.trim(),
+        });
+        Navigator.pop(context);
+      } else {
+        // Show error if location detection failed
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unable to detect current location. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting current location: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location detection failed. Please check GPS settings.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGettingLocation = false;
+        });
+      }
+    }
   }
 
   @override
@@ -94,14 +137,23 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
         centerTitle: false,
         actions: [
           TextButton(
-            onPressed: _useCurrentLocation,
-            child: const Text(
-              'Use Current',
-              style: TextStyle(
-                color: Colors.green,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            onPressed: _isGettingLocation ? null : _useCurrentLocation,
+            child: _isGettingLocation
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.green,
+                    ),
+                  )
+                : const Text(
+                    'Use Current',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -136,7 +188,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
               ),
             ),
           ),
-          
+
           // Results header
           if (_filteredResults.isNotEmpty)
             Padding(
@@ -154,7 +206,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                 ],
               ),
             ),
-          
+
           // Search results
           Expanded(
             child: _filteredResults.isEmpty
@@ -205,7 +257,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.1),
+                              color: Colors.green.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Icon(

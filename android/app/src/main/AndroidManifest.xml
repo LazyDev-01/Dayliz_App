@@ -69,7 +69,7 @@
         <!-- Google Sign-In Activity -->
         <activity
             android:name="io.flutter.plugins.googlesignin.GoogleSignInActivity"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@android:style/Theme.Light.NoTitleBar"
             android:exported="true">
         </activity>
 

@@ -361,8 +361,8 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
             boxShadow: [
               BoxShadow(
                 color: isFocused
-                    ? const Color(0xFF4CAF50).withValues(alpha: 0.1)
-                    : Colors.black.withValues(alpha: 0.02),
+                    ? const Color(0xFF4CAF50).withOpacity(0.1)
+                    : Colors.black.withOpacity(0.02),
                 blurRadius: isFocused ? 8 : 4,
                 offset: const Offset(0, 2),
               ),
@@ -511,7 +511,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
               elevation: 2,
-              shadowColor: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+              shadowColor: const Color(0xFF4CAF50).withOpacity(0.3),
               minimumSize: const Size(double.infinity, 52),
             ),
             child: isLoading
@@ -671,7 +671,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
             borderRadius: BorderRadius.circular(12),
           ),
           elevation: 2,
-          shadowColor: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+          shadowColor: const Color(0xFF4CAF50).withOpacity(0.3),
           minimumSize: const Size(double.infinity, 52),
         ),
         child: _isCheckingEmail
@@ -1177,7 +1177,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
             side: BorderSide(color: Colors.grey.shade300),
           ),
           elevation: 1,
-          shadowColor: Colors.black.withValues(alpha: 0.1),
+          shadowColor: Colors.black.withOpacity(0.1),
         ),
         icon: isLoading
             ? const SizedBox(
@@ -1352,7 +1352,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Colors.black.withOpacity(0.1),
                       blurRadius: 10,
                       spreadRadius: 2,
                     ),

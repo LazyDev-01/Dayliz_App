@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,16 +26,19 @@ class AppConfig {
     // Load environment variables
     await dotenv.load();
 
-    // Initialize shared preferences
-    _prefs = await SharedPreferences.getInstance();
+    // CRITICAL FIX: Skip SharedPreferences initialization to prevent blocking
+    // We'll initialize it later when actually needed
+    debugPrint('Skipping SharedPreferences in AppConfig to prevent blocking');
 
     // Load configuration from environment
     _fastApiBaseUrl = dotenv.env['FASTAPI_BASE_URL'] ?? 'http://localhost:8000';
     _supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
     _supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
 
-    // Load feature flags from shared preferences
-    _useFastAPI = _prefs.getBool(_useFastAPIKey) ?? false;
+    // CRITICAL FIX: Use default value for feature flags instead of reading from SharedPreferences
+    _useFastAPI = false; // Default to false, will be loaded later when SharedPreferences is fixed
+
+    debugPrint('AppConfig initialized successfully (without SharedPreferences)');
   }
 
   /// Whether to use FastAPI backend instead of Supabase

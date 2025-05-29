@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// Temporarily comment out geolocator import
-// import 'package:geolocator/geolocator.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../../domain/entities/address.dart';
+import '../../../core/services/location_service.dart';
 import '../../providers/user_providers.dart';
 
 class CleanAddressFormScreen extends ConsumerStatefulWidget {
@@ -35,13 +35,15 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
   String? _addressType;
   String? _addressTypeError;
 
-  // Location data (temporarily disabled)
+  // Location data (real GPS integration)
   double? _latitude;
   double? _longitude;
   String? _zoneId;
+  final LocationService _locationService = LocationService();
 
   bool _isEditing = false;
   bool _isLoading = false;
+  bool _isLoadingLocation = false;
 
   @override
   void initState() {
@@ -55,18 +57,25 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
       });
     }
 
-    // Label controller removed
+    // Initialize controllers
     _addressLine1Controller = TextEditingController(text: widget.address?.addressLine1 ?? '');
     _addressLine2Controller = TextEditingController(text: widget.address?.addressLine2 ?? '');
-    _cityController = TextEditingController(text: widget.address?.city ?? 'Tura');
-    _stateController = TextEditingController(text: widget.address?.state ?? 'Meghalaya');
-    _postalCodeController = TextEditingController(text: widget.address?.postalCode ?? '794101');
+    _cityController = TextEditingController(text: widget.address?.city ?? '');
+    _stateController = TextEditingController(text: widget.address?.state ?? '');
+    _postalCodeController = TextEditingController(text: widget.address?.postalCode ?? '');
     _countryController = TextEditingController(text: widget.address?.country ?? 'India');
     _phoneNumberController = TextEditingController(text: widget.address?.phoneNumber ?? '');
     _landmarkController = TextEditingController(text: widget.address?.landmark ?? '');
     _additionalInfoController = TextEditingController(text: widget.address?.additionalInfo ?? '');
     _recipientNameController = TextEditingController(text: widget.address?.recipientName ?? '');
     _addressType = widget.address?.addressType;
+
+    // Auto-populate location data from GPS if this is a new address
+    if (!_isEditing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _getCurrentLocationAndPopulateFields();
+      });
+    }
 
     // If editing, store the initial location data
     if (_isEditing) {
@@ -175,7 +184,78 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
     }
   }
 
-  // Location functionality temporarily disabled
+  /// Get current location and auto-populate city, state, postal code fields
+  Future<void> _getCurrentLocationAndPopulateFields() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      // Get current location with address
+      LocationData? locationData = await _locationService.getCurrentLocationWithAddress();
+
+      if (locationData != null && mounted) {
+        setState(() {
+          // Store coordinates
+          _latitude = locationData.latitude;
+          _longitude = locationData.longitude;
+
+          // Auto-populate fields if they're empty
+          if (_cityController.text.isEmpty && locationData.city != null) {
+            _cityController.text = locationData.city!;
+          }
+          if (_stateController.text.isEmpty && locationData.state != null) {
+            _stateController.text = locationData.state!;
+          }
+          if (_postalCodeController.text.isEmpty && locationData.postalCode != null) {
+            _postalCodeController.text = locationData.postalCode!;
+          }
+          if (_countryController.text.isEmpty && locationData.country != null) {
+            _countryController.text = locationData.country!;
+          }
+        });
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Location detected: ${locationData.city}, ${locationData.state}'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // Show error message if location detection failed
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unable to detect location. Please enter manually.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting location: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location detection failed. Please enter manually.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
+    }
+  }
 
   Future<void> _saveAddress() async {
     if (_isLoading) return;
@@ -499,6 +579,52 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
                 fillColor: Colors.white,
               ),
             ),
+            const SizedBox(height: 16),
+
+            // GPS Location Detection Button
+            OutlinedButton.icon(
+              onPressed: _isLoadingLocation ? null : _getCurrentLocationAndPopulateFields,
+              icon: _isLoadingLocation
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.my_location, size: 18),
+              label: Text(_isLoadingLocation ? 'Detecting Location...' : 'Detect My Location'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                side: BorderSide(color: Theme.of(context).colorScheme.primary),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Location info text
+            if (_latitude != null && _longitude != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Location detected: ${_cityController.text}, ${_stateController.text}',
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             // Hidden fields for City, State, Postal Code, and Country
             // These fields are not displayed to the user but still stored in the database

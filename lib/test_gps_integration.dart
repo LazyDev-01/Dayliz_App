@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'core/services/location_service.dart';
 
 /// Test screen to verify GPS integration functionality
@@ -35,7 +36,7 @@ class _TestGPSIntegrationScreenState extends State<TestGPSIntegrationScreen> {
       _serviceEnabled = await _locationService.isLocationServiceEnabled();
 
       // Check permission status
-      MockLocationPermission permission = await _locationService.checkLocationPermission();
+      LocationPermission permission = await _locationService.checkLocationPermission();
       _permissionStatus = permission.toString();
 
       setState(() {
@@ -59,7 +60,7 @@ class _TestGPSIntegrationScreenState extends State<TestGPSIntegrationScreen> {
     });
 
     try {
-      MockLocationPermission permission = await _locationService.requestLocationPermission();
+      LocationPermission permission = await _locationService.requestLocationPermission();
       setState(() {
         _permissionStatus = permission.toString();
         _status = 'Permission request completed';

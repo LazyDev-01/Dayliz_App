@@ -97,6 +97,80 @@ import '../domain/usecases/payment_method/get_payment_methods_usecase.dart';
 import '../domain/usecases/payment_method/add_payment_method_usecase.dart';
 import '../domain/usecases/payment_method/set_default_payment_method_usecase.dart';
 
+/// Mock SharedPreferences implementation to prevent crashes when real SharedPreferences fails
+class _MockSharedPreferences implements SharedPreferences {
+  final Map<String, Object> _data = {};
+
+  @override
+  Future<bool> clear() async => true;
+
+  @override
+  Future<bool> commit() async => true;
+
+  @override
+  bool containsKey(String key) => _data.containsKey(key);
+
+  @override
+  Object? get(String key) => _data[key];
+
+  @override
+  bool? getBool(String key) => _data[key] as bool?;
+
+  @override
+  double? getDouble(String key) => _data[key] as double?;
+
+  @override
+  int? getInt(String key) => _data[key] as int?;
+
+  @override
+  Set<String> getKeys() => _data.keys.toSet();
+
+  @override
+  String? getString(String key) => _data[key] as String?;
+
+  @override
+  List<String>? getStringList(String key) => _data[key] as List<String>?;
+
+  @override
+  Future<void> reload() async {}
+
+  @override
+  Future<bool> remove(String key) async {
+    _data.remove(key);
+    return true;
+  }
+
+  @override
+  Future<bool> setBool(String key, bool value) async {
+    _data[key] = value;
+    return true;
+  }
+
+  @override
+  Future<bool> setDouble(String key, double value) async {
+    _data[key] = value;
+    return true;
+  }
+
+  @override
+  Future<bool> setInt(String key, int value) async {
+    _data[key] = value;
+    return true;
+  }
+
+  @override
+  Future<bool> setString(String key, String value) async {
+    _data[key] = value;
+    return true;
+  }
+
+  @override
+  Future<bool> setStringList(String key, List<String> value) async {
+    _data[key] = value;
+    return true;
+  }
+}
+
 /// Global service locator for clean architecture components
 final sl = GetIt.instance;
 
@@ -125,10 +199,31 @@ Future<void> initCleanArchitecture() async {
     sl.registerLazySingleton(() => InternetConnectionChecker());
   }
 
-  // Register SharedPreferences only if not already registered
+  // CRITICAL FIX: Register SharedPreferences with error handling
   if (!sl.isRegistered<SharedPreferences>()) {
-    final sharedPreferences = await SharedPreferences.getInstance();
-    sl.registerLazySingleton(() => sharedPreferences);
+    try {
+      debugPrint('Attempting to initialize SharedPreferences...');
+      final sharedPreferences = await SharedPreferences.getInstance();
+      sl.registerLazySingleton(() => sharedPreferences);
+      debugPrint('SharedPreferences initialized successfully');
+    } catch (e) {
+      debugPrint('Error initializing SharedPreferences: $e');
+      debugPrint('Creating fallback SharedPreferences...');
+
+      // Create a fallback implementation that doesn't crash the app
+      try {
+        // Try to clear corrupted data and reinitialize
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear();
+        sl.registerLazySingleton(() => prefs);
+        debugPrint('SharedPreferences cleared and re-initialized successfully');
+      } catch (e2) {
+        debugPrint('Failed to recover SharedPreferences: $e2');
+        // Register a mock implementation to prevent crashes
+        sl.registerLazySingleton<SharedPreferences>(() => _MockSharedPreferences());
+        debugPrint('Registered mock SharedPreferences to prevent crashes');
+      }
+    }
   }
 
   // Register Supabase client only if not already registered

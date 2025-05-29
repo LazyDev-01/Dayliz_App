@@ -1,7 +1,8 @@
-// Enhanced mock GPS location service implementation
-// This provides realistic GPS simulation until real GPS integration is ready
-import 'dart:math';
+// Real GPS location service implementation using geolocator plugin
+// This provides actual GPS functionality with Flutter 3.22.3 compatibility
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class LocationData {
   final double latitude;
@@ -32,113 +33,56 @@ class LocationData {
   }
 }
 
-// Mock permission enum
-enum MockLocationPermission {
-  denied,
-  deniedForever,
-  whileInUse,
-  always,
-}
-
-// Mock position class
-class MockPosition {
-  final double latitude;
-  final double longitude;
-  final double accuracy;
-  final DateTime timestamp;
-
-  MockPosition({
-    required this.latitude,
-    required this.longitude,
-    this.accuracy = 10.0,
-    DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
-}
+// Real GPS location service using geolocator plugin
+// No need for mock classes - using real geolocator types
 
 class LocationService {
   static final LocationService _instance = LocationService._internal();
   factory LocationService() => _instance;
   LocationService._internal();
 
-  // Enhanced mock data for different locations
-  final List<Map<String, dynamic>> _mockLocations = [
-    {
-      'name': 'Tura, Meghalaya',
-      'lat': 25.5138,
-      'lng': 90.2172,
-      'address': 'Main Market Road, Tura',
-      'city': 'Tura',
-      'state': 'Meghalaya',
-      'postalCode': '794101',
-      'country': 'India',
-      'locality': 'Main Market Area',
-      'subLocality': 'Commercial District',
-    },
-    {
-      'name': 'Shillong, Meghalaya',
-      'lat': 25.5788,
-      'lng': 91.8933,
-      'address': 'Police Bazar, Shillong',
-      'city': 'Shillong',
-      'state': 'Meghalaya',
-      'postalCode': '793001',
-      'country': 'India',
-      'locality': 'Police Bazar',
-      'subLocality': 'East Khasi Hills',
-    },
-    {
-      'name': 'Guwahati, Assam',
-      'lat': 26.1445,
-      'lng': 91.7362,
-      'address': 'Fancy Bazar, Guwahati',
-      'city': 'Guwahati',
-      'state': 'Assam',
-      'postalCode': '781001',
-      'country': 'India',
-      'locality': 'Fancy Bazar',
-      'subLocality': 'Kamrup Metropolitan',
-    },
-  ];
-
-  int _currentLocationIndex = 0;
-
-  /// Check if location services are enabled (enhanced mock)
+  /// Check if location services are enabled
   Future<bool> isLocationServiceEnabled() async {
-    // Simulate checking device location services
-    await Future.delayed(const Duration(milliseconds: 500));
-    // Mock: Return true most of the time, occasionally false for testing
-    return Random().nextDouble() > 0.1; // 90% chance of being enabled
-  }
-
-  /// Check location permission status (enhanced mock)
-  Future<MockLocationPermission> checkLocationPermission() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    // Mock: Return granted most of the time for testing
-    final random = Random().nextDouble();
-    if (random > 0.8) return MockLocationPermission.denied;
-    if (random > 0.9) return MockLocationPermission.deniedForever;
-    return MockLocationPermission.whileInUse;
-  }
-
-  /// Request location permission (enhanced mock)
-  Future<MockLocationPermission> requestLocationPermission() async {
-    MockLocationPermission permission = await checkLocationPermission();
-
-    if (permission == MockLocationPermission.denied) {
-      // Simulate user granting permission
-      await Future.delayed(const Duration(milliseconds: 800));
-      permission = MockLocationPermission.whileInUse;
+    try {
+      return await Geolocator.isLocationServiceEnabled();
+    } catch (e) {
+      debugPrint('Error checking location service: $e');
+      return false;
     }
+  }
 
-    if (permission == MockLocationPermission.deniedForever) {
+  /// Check location permission status
+  Future<LocationPermission> checkLocationPermission() async {
+    try {
+      return await Geolocator.checkPermission();
+    } catch (e) {
+      debugPrint('Error checking location permission: $e');
+      return LocationPermission.denied;
+    }
+  }
+
+  /// Request location permission
+  Future<LocationPermission> requestLocationPermission() async {
+    try {
+      LocationPermission permission = await checkLocationPermission();
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw LocationPermissionDeniedException();
+      }
+
+      return permission;
+    } catch (e) {
+      debugPrint('Error requesting location permission: $e');
       throw LocationPermissionDeniedException();
     }
-
-    return permission;
   }
 
-  /// Get current position with error handling (enhanced mock)
-  Future<MockPosition?> getCurrentPosition() async {
+  /// Get current position with error handling
+  Future<Position?> getCurrentPosition() async {
     try {
       // Check if location services are enabled
       bool serviceEnabled = await isLocationServiceEnabled();
@@ -147,75 +91,48 @@ class LocationService {
       }
 
       // Check and request permission
-      MockLocationPermission permission = await requestLocationPermission();
+      LocationPermission permission = await requestLocationPermission();
 
-      if (permission == MockLocationPermission.denied ||
-          permission == MockLocationPermission.deniedForever) {
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
         throw LocationPermissionDeniedException();
       }
 
-      // Simulate GPS detection delay
-      await Future.delayed(const Duration(seconds: 2));
-
-      // Get current mock location (rotate through different locations for testing)
-      final location = _mockLocations[_currentLocationIndex % _mockLocations.length];
-      _currentLocationIndex++;
-
-      // Add some random variation to coordinates for realism
-      final random = Random();
-      final latVariation = (random.nextDouble() - 0.5) * 0.001; // ~100m variation
-      final lngVariation = (random.nextDouble() - 0.5) * 0.001;
-
-      MockPosition position = MockPosition(
-        latitude: location['lat'] + latVariation,
-        longitude: location['lng'] + lngVariation,
-        accuracy: 5.0 + random.nextDouble() * 10.0, // 5-15m accuracy
+      // Get current position with high accuracy
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
 
       return position;
     } catch (e) {
-      // Use logger in production
       debugPrint('Error getting current position: $e');
       return null;
     }
   }
 
-  /// Convert coordinates to address using reverse geocoding (enhanced mock)
+  /// Convert coordinates to address using reverse geocoding
   Future<LocationData?> getAddressFromCoordinates(double latitude, double longitude) async {
     try {
-      // Simulate reverse geocoding delay
-      await Future.delayed(const Duration(milliseconds: 1500));
+      List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
 
-      // Find the closest mock location to the provided coordinates
-      Map<String, dynamic>? closestLocation;
-      double minDistance = double.infinity;
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks.first;
 
-      for (final location in _mockLocations) {
-        final distance = _calculateDistance(
-          latitude, longitude,
-          location['lat'], location['lng']
-        );
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestLocation = location;
-        }
-      }
-
-      if (closestLocation != null) {
         return LocationData(
           latitude: latitude,
           longitude: longitude,
-          address: closestLocation['address'],
-          city: closestLocation['city'],
-          state: closestLocation['state'],
-          postalCode: closestLocation['postalCode'],
-          country: closestLocation['country'],
-          locality: closestLocation['locality'],
-          subLocality: closestLocation['subLocality'],
+          address: '${place.street ?? ''}, ${place.locality ?? ''}',
+          city: place.locality ?? place.administrativeArea ?? 'Unknown City',
+          state: place.administrativeArea ?? 'Unknown State',
+          postalCode: place.postalCode ?? '000000',
+          country: place.country ?? 'India',
+          locality: place.locality ?? 'Unknown Locality',
+          subLocality: place.subLocality ?? place.subAdministrativeArea ?? 'Unknown Area',
         );
       }
 
-      // Fallback for unknown coordinates
+      // Fallback for when no placemark is found
       return LocationData(
         latitude: latitude,
         longitude: longitude,
@@ -233,31 +150,10 @@ class LocationService {
     }
   }
 
-  /// Calculate distance between two coordinates (Haversine formula)
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371; // Earth's radius in kilometers
-
-    final double dLat = _degreesToRadians(lat2 - lat1);
-    final double dLon = _degreesToRadians(lon2 - lon1);
-
-    final double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degreesToRadians(lat1)) * cos(_degreesToRadians(lat2)) *
-        sin(dLon / 2) * sin(dLon / 2);
-
-    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-    return earthRadius * c;
-  }
-
-  /// Convert degrees to radians
-  double _degreesToRadians(double degrees) {
-    return degrees * (pi / 180);
-  }
-
   /// Get current location with full address details
   Future<LocationData?> getCurrentLocationWithAddress() async {
     try {
-      MockPosition? position = await getCurrentPosition();
+      Position? position = await getCurrentPosition();
       if (position == null) return null;
 
       LocationData? locationData = await getAddressFromCoordinates(
@@ -272,23 +168,19 @@ class LocationService {
     }
   }
 
-  /// Open location settings (mock implementation)
+  /// Open location settings
   Future<void> openLocationSettings() async {
     try {
-      // Mock: Simulate opening location settings
-      await Future.delayed(const Duration(milliseconds: 500));
-      debugPrint('Mock: Opening location settings...');
+      await Geolocator.openLocationSettings();
     } catch (e) {
       debugPrint('Error opening location settings: $e');
     }
   }
 
-  /// Open app settings for permissions (mock implementation)
+  /// Open app settings for permissions
   Future<void> openAppSettings() async {
     try {
-      // Mock: Simulate opening app settings
-      await Future.delayed(const Duration(milliseconds: 500));
-      debugPrint('Mock: Opening app settings...');
+      await Geolocator.openAppSettings();
     } catch (e) {
       debugPrint('Error opening app settings: $e');
     }

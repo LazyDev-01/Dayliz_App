@@ -188,29 +188,43 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<Either<Failure, bool>> logout() async {
     try {
+      debugPrint('🔄 [AuthNotifier] Starting logout process');
+      debugPrint('🔄 [AuthNotifier] Current state before logout - isAuthenticated: ${state.isAuthenticated}, user: ${state.user?.id}');
+
       state = state.copyWith(isLoading: true, clearError: true);
+      debugPrint('🔄 [AuthNotifier] Calling logoutUseCase');
       final result = await logoutUseCase();
+      debugPrint('🔄 [AuthNotifier] LogoutUseCase completed');
+
       state = state.copyWith(isLoading: false);
 
       return result.fold(
         (failure) {
+          debugPrint('❌ [AuthNotifier] Logout failed: ${failure.message}');
           state = state.copyWith(
             errorMessage: _mapFailureToMessage(failure),
             isAuthenticated: true,
           );
+          debugPrint('🔄 [AuthNotifier] State after logout failure - isAuthenticated: ${state.isAuthenticated}, user: ${state.user?.id}');
           return Left(failure);
         },
         (success) {
+          debugPrint('✅ [AuthNotifier] Logout successful: $success');
           if (success) {
+            debugPrint('🔄 [AuthNotifier] Updating state to logged out');
             state = state.copyWith(
               isAuthenticated: false,
               user: null,
             );
+            debugPrint('✅ [AuthNotifier] State updated - isAuthenticated: ${state.isAuthenticated}, user: ${state.user?.id}');
+          } else {
+            debugPrint('⚠️ [AuthNotifier] Logout returned false, not updating state');
           }
           return Right(success);
         },
       );
     } catch (e) {
+      debugPrint('❌ [AuthNotifier] Logout exception: $e');
       state = state.copyWith(
         errorMessage: e.toString(),
         isLoading: false,
@@ -474,9 +488,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-/// Auth notifier provider
+/// Auth notifier provider - CRITICAL FIX: Lazy initialization to prevent early dependency access
 final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier.fromServiceLocator();
+  try {
+    return AuthNotifier.fromServiceLocator();
+  } catch (e) {
+    debugPrint('🔄 [AuthProvider] Dependencies not ready yet, will retry later: $e');
+    // Rethrow the error to prevent the provider from being created with invalid state
+    // The router will handle this gracefully by treating as unauthenticated
+    rethrow;
+  }
 });
 
 /// Convenience providers for specific auth states

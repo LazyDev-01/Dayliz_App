@@ -114,10 +114,19 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, bool>> logout() async {
     try {
+      debugPrint('🔄 [AuthRepositoryImpl] Starting logout process');
+      debugPrint('🔄 [AuthRepositoryImpl] Calling remote data source logout');
       await remoteDataSource.logout();
+      debugPrint('✅ [AuthRepositoryImpl] Remote logout successful');
+
+      debugPrint('🔄 [AuthRepositoryImpl] Calling local data source logout');
       await localDataSource.logout();
+      debugPrint('✅ [AuthRepositoryImpl] Local logout successful');
+
+      debugPrint('✅ [AuthRepositoryImpl] Logout completed successfully, returning true');
       return const Right(true);
     } catch (e) {
+      debugPrint('❌ [AuthRepositoryImpl] Logout failed: $e');
       return Left(ServerFailure(message: e.toString()));
     }
   }

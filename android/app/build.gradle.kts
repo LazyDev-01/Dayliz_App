@@ -28,8 +28,8 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = flutter.versionCode()
+        versionName = flutter.versionName()
 
         // Google Sign-In configuration
         manifestPlaceholders["com.google.android.gms.client_id"] = "@string/web_client_id"
