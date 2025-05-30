@@ -1,0 +1,64 @@
+{
+  "name": "Dayliz Monorepo",
+  "version": "1.0.0",
+  "description": "Q-Commerce grocery delivery platform monorepo",
+  "workspaces": {
+    "apps": [
+      "apps/mobile",
+      "apps/web-dashboard",
+      "apps/vendor-portal",
+      "apps/delivery-app"
+    ],
+    "services": [
+      "services/api"
+    ],
+    "packages": [
+      "packages/shared-types",
+      "packages/ui-components", 
+      "packages/business-logic",
+      "packages/utils"
+    ],
+    "infrastructure": [
+      "infrastructure/database"
+    ]
+  },
+  "scripts": {
+    "mobile:dev": "cd apps/mobile && flutter run",
+    "mobile:build": "cd apps/mobile && flutter build apk",
+    "mobile:test": "cd apps/mobile && flutter test",
+    "api:dev": "cd services/api && uvicorn app.main:app --reload",
+    "api:test": "cd services/api && pytest",
+    "docs:serve": "cd docs && python -m http.server 8080",
+    "setup:mobile": "cd apps/mobile && flutter pub get",
+    "setup:api": "cd services/api && pip install -r requirements.txt",
+    "lint:mobile": "cd apps/mobile && flutter analyze",
+    "format:mobile": "cd apps/mobile && dart format .",
+    "clean:mobile": "cd apps/mobile && flutter clean && flutter pub get",
+    "build:all": "npm run mobile:build",
+    "test:all": "npm run mobile:test && npm run api:test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LazyDev-01/Dayliz_App.git"
+  },
+  "author": "Dayliz Team",
+  "license": "PROPRIETARY",
+  "engines": {
+    "node": ">=16.0.0",
+    "flutter": ">=3.32.0",
+    "python": ">=3.8.0"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "cross-env": "^7.0.3"
+  },
+  "keywords": [
+    "monorepo",
+    "flutter",
+    "fastapi",
+    "supabase",
+    "q-commerce",
+    "grocery-delivery",
+    "india"
+  ]
+}
