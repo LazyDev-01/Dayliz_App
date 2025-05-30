@@ -1,0 +1,86 @@
+# Project Details
+- The user is working solo with one or two team members on the Dayliz App project (Dayliz App).
+- The Dayliz App is a q-commerce grocery delivery application with a zone-based delivery system.
+- The user prefers to have implementation strategies documented in markdown files in the docs directory of their codebase.
+- The user prefers to have implementation strategies discussed and planned before actual code changes are made.
+- The user wants to ensure that code changes are made to the clean architecture implementation and not to the legacy app.
+- The user wants to ensure that the legacy app code remains untouched while making changes to the clean architecture implementation.
+- The user prefers not to touch legacy code while implementing clean architecture changes.
+- The user wants to maintain documentation of clean architecture migration progress in the migration plan file.
+- The Dayliz_app root folder has redundant nested folders with the same names.
+- The user wants to build an admin/vendor panel website for their Dayliz App and is considering technology stack options and integration approaches, aiming for a single unified site.
+- The user prefers to remove legacy screens one by one.
+- The user prefers to strictly follow clean architecture and doesn't want to maintain legacy implementations.
+
+# Project Analysis
+- The user has a backend directory in their project that needs to be analyzed.
+- User wants to focus on analyzing the Profile screen's alignment with Supabase database before implementation.
+
+# Technology Stack & Architecture
+- The user has decided to implement both FastAPI and Supabase in their Dayliz App project.
+- The user is using FastAPI for business logic operations and Supabase as database, but is currently focusing on implementing Supabase directly while keeping FastAPI as feature-ready.
+- The user plans to integrate FastAPI and is questioning if this post-launch integration approach is the right decision.
+- The user is questioning the necessity of migrating from Flutter to React Native, suggesting they prefer to continue with Flutter.
+- The user's clean architecture implementation is still in early stages, with no established database connections to Supabase and incomplete mapping of the legacy codebase.
+- The user is considering whether to prioritize completing clean architecture migration or implementing the dual backend strategy.
+- The user is considering whether to preserve the design and layout from legacy screens during migration or adopt new designs with clean architecture.
+- The user is considering whether database schema enhancements should be implemented now or can be deferred to a later stage.
+- The user wants to focus on aligning database schemas between the clean architecture implementation and Supabase before implementing features.
+
+# Backend Strategy
+- The user plans to implement a dual backend strategy with FastAPI alongside Supabase, testing FastAPI features before launch but keeping it disabled initially, then gradually enabling FastAPI features 2-3 months after launch.
+- The user prefers to start with lower risk tasks before addressing higher risk ones.
+
+# Supabase Database Schema & Data Handling Preferences
+- The user's Supabase database schema includes tables for users, user_profiles, products, categories, subcategories, orders, order_items, addresses, cart_items, wishlists, and other entities with specific column names and data types that need to be reflected in the codebase.
+- The user wants to completely remove product attributes from the clean architecture implementation. This includes ProductColor and ProductSize entities and their references.
+- The team prefers proper fromJson/toJson methods for snake_case to camelCase conversion.
+- The team prefers documentation of queries for derived properties.
+- The team prefers examples of complex queries for operations like fetching orders with items.
+- The user is considering whether to standardize on Decimal or double for numeric values in their codebase and wants a recommendation.
+- The user is trying to add Supabase MCP server in settings and needs guidance on environment variables.
+- The user has configured Supabase MCP server in Augment settings.
+- The user's app requires addresses to have landmark fields, zone_id for vendor assignment, and geolocation support, with a specific UI flow requiring minimal fields and consideration for Tura's informal addressing system.
+- The user prefers using separate latitude/longitude fields instead of a coordinates JSON field for simplicity in the initial launch of the Dayliz app.
+- The user prefers to optimize database schema by questioning if all three location fields (coordinates, latitude, longitude) are necessary.
+- The user prefers to disable legacy address functionality to focus exclusively on the clean architecture implementation.
+- The user prefers to make the clean address screen the default one and completely remove the legacy address implementation.
+- The Supabase database has row-level security policies on the addresses table that need to be configured properly to allow data insertion.
+
+# User Profile Preferences
+- User questions the necessity of created_at, lastUpdated fields in the clean architecture app implementation (as opposed to the database).
+- User prefers to keep addresses separate from the UserProfile entity since there's already dedicated 'my addresses' functionality.
+- User prefers to keep UserProfile entity simple by removing addresses, isPublic, bio, and displayName fields from the clean architecture app implementation.
+- User prefers to remove edit functionality from the profile screen completely.
+
+# Address Form Simplification
+- User prefers simplified address forms with fields ordered: Recipient Name, Recipient Phone, Address Type, House No/Building/Floor, Area/Street, and Landmark (Optional).
+- User prefers simplified address forms: remove address label field (redundant with address type), hide City/State/Country/Postal fields (use GPS), rename fields (Address line 1→Area/Street, Address line 2→House/Building/Floor, Phone→Recipient Number), and remove 'Additional information' section.
+- User prefers to remove redundant address label field and is not concerned about preserving existing label data.
+
+# Authentication
+- The user wants to postpone auth work for later.
+- The user wants to implement Supabase authentication in the clean architecture auth screens and wants to make them the default authentication implementation, completely removing legacy auth screens.
+- The user wants to implement Remember Me functionality in their authentication system.
+- The user has two separate Google client ID JSON files - one for Android and one for web - that need to be configured correctly for authentication.
+- For Supabase Google authentication, the user needs guidance on whether to use Web client or Android client ID and secret.
+- The user prefers to postpone Google sign-in implementation for later as the normal email/password authentication is working.
+- The user needs to remove Google OAuth credentials (Client IDs and Client Secret) from their repository as they are being detected by GitHub's secret scanning protection.
+
+# UI Components & Design Preferences
+- The user prefers to have a common back button widget that is easy to use throughout the app for consistent and maintainable navigation.
+- The user prefers to have a common app bar widget that is reusable, consistent and maintainable throughout the app, especially in user profile-related screens.
+- The user prefers a cleaner Profile screen layout with centered title, smaller profile icon positioned on the left, and email displayed next to the profile icon rather than as a separate element.
+- The user prefers selectable buttons over dropdown menus for address type selection, with icon and text aligned horizontally in one line rather than stacked vertically.
+
+# Migration Progress
+- Successfully migrated address functionality from legacy implementation to clean architecture.
+- Removed legacy address files (address_form_screen.dart, address_list_screen.dart).
+- Enhanced clean architecture address implementation with improved functionality.
+- Updated all routes to use clean architecture address screens.
+- Added proper error handling and user feedback in address operations.
+- Created a reusable CommonAppBar widget for consistent UI across the app.
+- Implemented the CommonAppBar in all profile-related screens (addresses, preferences, orders, wishlist).
+- Redesigned the Profile screen with a more efficient layout (centered title, smaller profile image on left, name and email next to image).
+- Fixed user profile data synchronization between User entity and UserProfile entity.
+- Improved profile data loading with better error handling and fallback mechanisms.

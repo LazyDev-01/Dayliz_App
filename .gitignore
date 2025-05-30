@@ -1,0 +1,103 @@
+# Flutter/Dart specific
+**/*.log
+**/.DS_Store
+**/.atom/
+**/.buildlog/
+**/.history
+**/.svn/
+**/migrate_working_dir/
+
+# IntelliJ/Android Studio related
+**/.idea/
+**/*.iml
+**/*.ipr
+**/*.iws
+**/.classpath
+**/.project
+**/.settings/
+**/.vscode/
+
+# Flutter/Dart package files
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/pubspec.lock
+**/.packages
+**/.pub/
+**/build/
+**/DerivedData/
+**/doc/api/
+**/xcuserdata/
+**/.gradle/
+**/captures/
+**/gradlew.bat
+**/gradlew
+**/local.properties
+**/GeneratedPluginRegistrant.*
+
+# Python specific
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/.env
+**/.venv
+**/env/
+**/venv/
+**/ENV/
+**/.Python
+**/pip-log.txt
+**/pip-delete-this-directory.txt
+
+# Backup files
+frontend_old_backup/
+**/*_backup/
+**/*_old/
+**/*.bak
+**/*.backup
+
+# Debugging and logs
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/testem.log
+**/hs_err_pid*
+
+# Environment files (but keep examples)
+**/.env
+!**/.env.example
+
+# Google OAuth client secrets (but keep examples)
+**/client_secret_*.json
+!**/client_secret_example.json
+
+# API Keys and secrets
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Editor directories and files
+**/.vscode/
+**/.idea/
+
+# Zero byte and temp files
+**/Run
+**/Process
+**/flutter
+**/Get
+**/_navigateToAddAddress(context
+**/ref.read(addressNotifierProvider.notifier).loadAddresses()
+
+# Large files and archives
+**/*.zip
+**/*.rar
+**/*.7z
+**/*.tar.gz
+
+# Python virtual environments
+**/venv/
+**/env/
+**/.venv/
+**/.env/
+
+# Flutter build outputs
+**/build/
+**/.dart_tool/

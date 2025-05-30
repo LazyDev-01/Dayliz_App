@@ -1,0 +1,56 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Project Architecture
+- User is migrating from legacy code to clean architecture, preferring to implement feature by feature rather than all at once.
+- User prefers to verify clean architecture screens are fully functional before removing their legacy counterparts.
+- User wants to focus on completing clean app migration and identifying all remaining legacy screens to be removed.
+- The clean architecture implementation is partially complete with overall structure at 70%, domain layer at 60%, data layer at 50%, presentation layer at 40%, product feature at 70%, and core infrastructure at 55%.
+- User prefers to keep UserProfile entity simple by removing addresses, isPublic, bio, and displayName fields from the clean architecture implementation.
+- User questions the necessity of created_at, lastUpdated fields in the clean architecture app implementation (as opposed to the database).
+
+# Backend Strategy
+- User plans to implement a dual backend strategy with FastAPI alongside Supabase, testing FastAPI features before launch but keeping it disabled initially.
+- User prefers to implement database schema alignment tasks via MCP server rather than direct SQL migrations.
+- User wants to prioritize backend integration over legacy code cleanup, focusing on updating repository implementations.
+- User doesn't have real data in Supabase tables and wants to populate the products table first.
+
+# UI/UX Preferences
+- User prefers a common, reusable app bar widget throughout the app with the Dayliz logo on the left and a larger profile icon.
+- User prefers to have search bar integrated within the app bar rather than as a separate component.
+- User prefers no transitions or animations when navigating between screens using the bottom navigation bar.
+- User prefers Light theme as default and hiding language and theme options from the UI.
+- User prefers to remove divider lines between sections and reduce vertical spacing between list items.
+- User prefers borderless product cards without visible borders for a more spacious look.
+- User prefers rectangular Add buttons over circular ones in product card designs to avoid user confusion.
+
+# Screen-Specific Requirements
+- User wants to activate clean architecture screens (home, categories, product) as primary/default and disable legacy screens.
+- User prefers to start implementing the clean home screen with basic UI components (top app bar and bottom app bar) first.
+- User wants to remove redundant code by consolidating the two different clean categories screens.
+- User prefers to use the more general CleanProductListingScreen instead of specialized screens for better maintainability.
+- User prefers to have the subcategory name displayed in the app bar when navigating to product listing from a subcategory.
+
+# Profile Screen Design
+- User is moving the profile from bottom app bar to top app bar with a circular modern and minimalist icon.
+- User prefers a cleaner Profile screen with centered title, smaller profile icon on the left, and email displayed next to the profile icon.
+- User prefers to organize the profile screen into two main sections: 'Your Account' and 'Settings & Preferences'.
+- User prefers wallet, support, and wishlist buttons with icons displayed horizontally above the Account section.
+- User prefers list-style UI elements without divider lines between individual items for profile screen navigation options.
+- User removed sidebar/drawer and consolidated navigation in profile screen to align with modern q-commerce app patterns.
+
+# Address Form Simplification
+- User prefers simplified address forms with fields: Recipient Name, Recipient Phone, Address Type, House No/Building/Floor, Area/Street, and Landmark (Optional).
+- User prefers selectable buttons over dropdown menus for address type selection, with icon and text aligned horizontally.
+- User prefers to remove redundant address label field and is not concerned about preserving existing label data.
+
+# Authentication
+- The app has a critical authentication bug allowing users to register with email addresses that are already in use, which needs to be fixed by implementing proper validation in the registration flow.
+- The register screen should create new user accounts if email doesn't exist in database, display 'Email id already exists' message if it does, and navigate to home screen after successful registration instead of redirecting to login screen.
+- User prefers error messages to be displayed directly beneath the relevant input field rather than at the bottom of forms, with specific text like 'Email id already exists!' for duplicate email errors.
+
+# Testing Strategy
+
+- User prefers to focus on testing one feature at a time, starting with authentication, rather than testing the entire application at once.

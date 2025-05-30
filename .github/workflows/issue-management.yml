@@ -1,0 +1,60 @@
+name: Issue Management
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled]
+  pull_request:
+    types: [opened, edited, labeled, unlabeled]
+
+jobs:
+  label_issues:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const issue = context.payload.issue || context.payload.pull_request;
+            
+            // Skip if no issue is found (e.g., on some PR events)
+            if (!issue) return;
+            
+            // Extract phase from issue body
+            const body = issue.body || '';
+            const phaseMatch = body.match(/## Phase\s*\n- \[x\] Phase (\d+):/);
+            
+            if (phaseMatch) {
+              const phase = phaseMatch[1];
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: [`phase-${phase}`]
+              });
+            }
+            
+            // Extract effort from issue body
+            const effortMatch = body.match(/## Effort Estimation\s*\n- \[x\] (\d+)/);
+            
+            if (effortMatch) {
+              const effort = effortMatch[1];
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: [`effort-${effort}`]
+              });
+            }
+            
+            // Extract component from issue body
+            const componentMatch = body.match(/## Component\s*\n- \[x\] (\w+)/);
+            
+            if (componentMatch) {
+              const component = componentMatch[1].toLowerCase();
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: [component]
+              });
+            } 

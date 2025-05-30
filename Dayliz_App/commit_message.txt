@@ -1,0 +1,9 @@
+Remove sensitive credentials and improve secrets management
+
+- Remove Google OAuth client IDs and secrets from all files
+- Remove Supabase URL and anon key from .env
+- Update .gitignore to exclude sensitive files
+- Add documentation for secrets management
+- Replace actual credentials with placeholders in documentation
+
+This commit addresses GitHub's secret scanning alerts and improves the security of the repository by preventing sensitive credentials from being committed.

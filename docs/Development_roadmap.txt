@@ -1,0 +1,160 @@
+Dayliz App: Serial Stacked Sprint Implementation Plan
+
+Phase 1: Foundation Setup (2-3 weeks)
+Authentication System
+[ ] Setup Supabase project with email/phone authentication
+[ ] Implement JWT token handling in FastAPI
+[ ] Create login/signup screens with form validation
+[ ] Add secure token storage and refresh mechanism
+[ ] Build authentication middleware for protected routes
+
+Design System
+[ ] Define typography scale (4-5 text styles)
+[ ] Create color palette with semantic naming
+[ ] Implement spacing constants and grid system
+[ ] Build theme provider with light/dark support
+[ ] Document design tokens in Figma or similar tool
+
+Custom Components
+[ ] Create DaylizButton with variants (primary, secondary, ghost)
+[ ] Build DaylizTextField with validation states
+[ ] Implement DaylizCard with consistent elevation
+[ ] Design navigation components (tabs, bottom bar)
+[ ] Create loading indicators and shimmer placeholders
+
+Navigation
+[ ] Setup GoRouter with path-based navigation
+[ ] Implement custom page transitions
+[ ] Add deep linking support
+[ ] Create 404/error screens
+[ ] Implement route guards for authenticated routes
+
+Backend Foundation
+[ ] Setup FastAPI project structure with SQLAlchemy
+[ ] Define core database models (User, Product, Order)
+[ ] Create migration system
+[ ] Implement basic CRUD operations
+[ ] Add logging and error handling middleware
+
+
+Phase 2: Product Browsing + UI Polish (2-3 weeks)
+
+Product Catalog
+[ ] Create product listing endpoint with pagination
+[ ] Implement category and subcategory filtering
+[ ] Add search functionality with debouncing
+[ ] Build sorting options (price, popularity)
+[ ] Implement product detail endpoint
+
+UI Implementation
+[ ] Create home screen with featured products
+[ ] Build category browser with horizontal scrolling
+[ ] Implement product grid with staggered loading
+[ ] Design product detail screen with images
+[ ] Add ratings and reviews section
+
+Cart Functionality
+[ ] Implement cart provider with Riverpod
+[ ] Create add-to-cart animation with Lottie
+[ ] Build optimistic UI updates for cart operations
+[ ] Implement quantity adjustment with haptic feedback
+[ ] Add cart persistence with local storage
+
+Animations & Polish
+[ ] Add hero transitions for product images
+[ ] Implement scroll animations for product lists
+[ ] Create micro-interactions for buttons and inputs
+[ ] Add pull-to-refresh with custom animation
+[ ] Implement skeleton loading for all data-dependent screens
+
+
+Phase 3: Checkout & Payment (2-3 weeks)
+Address Management
+[ ] Create address database models and API
+[ ] Implement Google Maps integration for address selection
+[ ] Build address form with validation
+[ ] Add address saving and selection UI
+[ ] Implement default address functionality
+
+Cart & Order Flow
+[ ] Create cart summary screen with totals
+[ ] Build order creation API endpoint
+[ ] Implement inventory verification
+[ ] Add order confirmation screen
+[ ] Create email/SMS notification for new orders
+
+Payment Integration
+[ ] Setup Razorpay test environment
+[ ] Implement payment creation endpoint
+[ ] Build payment UI with Razorpay SDK
+[ ] Add webhook handling for payment events
+[ ] Implement order status updates based on payment
+
+Order Management
+[ ] Create order detail screen
+[ ] Implement order cancellation
+[ ] Build order summary API
+[ ] Add receipt generation
+[ ] Implement payment retries for failed transactions
+
+
+Phase 4: User Profile + Order History (2 weeks)
+
+User Profile
+[ ] Create profile screen with user details
+[ ] Implement profile editing functionality
+[ ] Add avatar upload with image cropping
+[ ] Build settings screen (notifications, language)
+[ ] Implement account deletion and GDPR compliance
+
+Order History
+[ ] Create order history endpoint with filtering
+[ ] Build order history UI with status indicators
+[ ] Implement order detail view
+[ ] Add reorder functionality
+[ ] Create order tracking screen
+
+Delivery Tracking
+[ ] Implement order status update API
+[ ] Create real-time status updates with WebSockets
+[ ] Build delivery tracking map
+[ ] Add estimated delivery time calculation
+[ ] Implement delivery feedback system
+
+Notifications
+[ ] Setup Firebase Cloud Messaging
+[ ] Implement notification handlers for order updates
+[ ] Create local notifications for offline events
+[ ] Add notification settings and preferences
+[ ] Build notification inbox UI
+
+
+Phase 5: Polish & Launch Prep (2 weeks)
+UI Finalization
+[ ] Complete dark mode implementation for all screens
+[ ] Add final icons and illustrations
+[ ] Implement splash screen and app icon
+[ ] Optimize animations for performance
+[ ] Ensure consistent UI across all flows
+
+Error Handling
+[ ] Implement comprehensive error states for all screens
+[ ] Add offline mode handling
+[ ] Create retry mechanisms for failed requests
+[ ] Implement crash reporting with Sentry
+[ ] Add user-friendly error messages
+
+Performance Optimization
+[ ] Run Flutter performance profiling
+[ ] Optimize image loading and caching
+[ ] Reduce unnecessary rebuilds with memoization
+[ ] Implement background fetch for critical data
+[ ] Optimize app size with Flutter app bundle
+
+
+Launch Preparation
+[ ] Conduct user testing with Indian Android devices
+[ ] Prepare Play Store listing (screenshots, description)
+[ ] Complete privacy policy and terms of service
+[ ] Setup analytics for user behavior tracking
+[ ] Create app promotional materials
