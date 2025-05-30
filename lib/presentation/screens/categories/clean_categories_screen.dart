@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/entities/category.dart';
 import '../../providers/cart_providers.dart';
-import '../../providers/category_providers_simple.dart';
+import '../../providers/category_providers.dart';
 import '../../widgets/common/common_app_bar.dart';
 import '../../widgets/common/common_bottom_nav_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
@@ -19,7 +19,7 @@ class CleanCategoriesScreen extends ConsumerWidget {
     final cartItemCount = ref.watch(cartItemCountProvider);
 
     // Watch categories async provider
-    final categoriesAsync = ref.watch(categoriesSimpleProvider);
+    final categoriesAsync = ref.watch(categoriesProvider);
 
     // Set the current index for the bottom navigation bar
     ref.read(bottomNavIndexProvider.notifier).state = 1; // 1 is for Categories
@@ -36,7 +36,7 @@ class CleanCategoriesScreen extends ConsumerWidget {
         loading: () => const LoadingIndicator(message: 'Loading categories...'),
         error: (error, stackTrace) => ErrorState(
           message: error.toString(),
-          onRetry: () => ref.refresh(categoriesSimpleProvider),
+          onRetry: () => ref.refresh(categoriesProvider),
         ),
       ),
       bottomNavigationBar: CommonBottomNavBar(
@@ -53,8 +53,8 @@ class CleanCategoriesScreen extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.refresh(categoriesSimpleProvider);
-        await ref.read(categoriesSimpleProvider.future);
+        ref.refresh(categoriesProvider);
+        await ref.read(categoriesProvider.future);
       },
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -80,7 +80,7 @@ class CleanCategoriesScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => ref.refresh(categoriesSimpleProvider),
+            onPressed: () => ref.refresh(categoriesProvider),
             child: const Text('Refresh'),
           ),
         ],

@@ -33,6 +33,9 @@ android {
 
         // Google Sign-In configuration
         manifestPlaceholders["com.google.android.gms.client_id"] = "@string/web_client_id"
+
+        // Google Maps API Key configuration
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = project.findProperty("GOOGLE_MAPS_API_KEY") ?: "your_google_maps_api_key"
     }
 
     buildTypes {

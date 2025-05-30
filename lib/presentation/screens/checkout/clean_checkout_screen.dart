@@ -9,7 +9,7 @@ import '../../../domain/entities/payment_method.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/cart_providers.dart';
 import '../../providers/payment_method_providers.dart';
-import '../../providers/user_providers.dart';
+import '../../providers/user_profile_providers.dart';
 import '../../widgets/address/clean_address_selection_widget.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/error_state.dart';
@@ -131,7 +131,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
 
   Widget _buildShippingStep() {
     // Get the selected address
-    final selectedAddress = ref.watch(selectedAddressProvider);
+    final selectedAddress = ref.watch(defaultAddressProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,7 +333,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
         ),
         const SizedBox(height: 8),
         Builder(builder: (context) {
-          final address = ref.watch(selectedAddressProvider);
+          final address = ref.watch(defaultAddressProvider);
           if (address != null) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -487,7 +487,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
       // Validate current step before proceeding
       if (_currentStep == 0) {
         // Check if an address is selected
-        final selectedAddress = ref.read(selectedAddressProvider);
+        final selectedAddress = ref.read(defaultAddressProvider);
         if (selectedAddress == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Please select a delivery address')),
@@ -516,7 +516,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
 
   Future<void> _placeOrder(String userId) async {
     // Get cart items, address, and payment method
-    final selectedAddress = ref.read(selectedAddressProvider);
+    final selectedAddress = ref.read(defaultAddressProvider);
 
     // Validate required data
     if (selectedAddress == null) {

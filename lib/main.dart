@@ -59,6 +59,8 @@ import 'presentation/screens/profile/clean_address_form_screen.dart';
 import 'presentation/screens/profile/clean_user_profile_screen.dart';
 import 'presentation/screens/profile/clean_preferences_screen.dart';
 import 'presentation/screens/search/clean_search_screen.dart';
+import 'test_gps_integration.dart';
+import 'test_google_maps_integration.dart';
 
 // Splash screen temporarily disabled
 // import 'presentation/screens/splash/clean_splash_screen.dart';
@@ -862,6 +864,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
+      // Debug menu screen (alternative route)
+      GoRoute(
+        path: '/clean/debug',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const DebugMenuScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ),
+      ),
       // Debug Google Sign-In screen
       GoRoute(
         path: '/debug/google-signin',
@@ -1039,6 +1055,52 @@ final routerProvider = Provider<GoRouter>((ref) {
             child: const Scaffold(
               body: Center(child: Text('Invalid subcategory')),
             ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
+      ),
+      // Clean architecture product details route
+      GoRoute(
+        path: '/clean/product/:id',
+        pageBuilder: (context, state) {
+          final productId = state.pathParameters['id']!;
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: CleanProductDetailsScreen(productId: productId),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      // GPS Test Screen
+      GoRoute(
+        path: '/test-gps',
+        pageBuilder: (context, state) {
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const TestGPSIntegrationScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
+      ),
+      // Google Maps Test Screen
+      GoRoute(
+        path: '/test-google-maps',
+        pageBuilder: (context, state) {
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const TestGoogleMapsIntegrationScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },

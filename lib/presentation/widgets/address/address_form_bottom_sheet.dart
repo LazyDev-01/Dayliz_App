@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/services/location_service.dart';
 import '../../../domain/entities/address.dart';
-import '../../providers/user_providers.dart';
+import '../../providers/user_profile_providers.dart';
 
 class AddressFormBottomSheet extends ConsumerStatefulWidget {
   final Address? address;
@@ -183,9 +183,9 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
 
       try {
         if (_isEditing) {
-          await ref.read(addressesNotifierProvider.notifier).updateAddress(userId, address);
+          await ref.read(userProfileNotifierProvider.notifier).updateAddress(userId, address);
         } else {
-          await ref.read(addressesNotifierProvider.notifier).addAddress(userId, address);
+          await ref.read(userProfileNotifierProvider.notifier).addAddress(userId, address);
         }
 
         if (mounted) {

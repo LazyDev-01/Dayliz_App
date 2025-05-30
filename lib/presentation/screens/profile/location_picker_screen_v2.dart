@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../core/services/location_service.dart';
 import '../../widgets/address/address_form_bottom_sheet.dart';
+import '../../widgets/common/google_map_widget.dart';
 import 'location_search_screen.dart';
 
 class LocationPickerScreen extends ConsumerStatefulWidget {
@@ -13,65 +15,17 @@ class LocationPickerScreen extends ConsumerStatefulWidget {
 }
 
 class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
-  String _currentAddress = 'NA';
-  String _currentArea = 'NA';
-  bool _isLoadingLocation = false;
+  String _currentAddress = 'Detecting location...';
+  String _currentArea = 'Please wait...';
   LocationData? _currentLocationData;
-  final LocationService _locationService = LocationService();
 
   @override
   void initState() {
     super.initState();
-    // Auto-detect location when page loads
-    _getCurrentLocation();
+    // Location detection is now handled by GoogleMapWidget
   }
 
-  Future<void> _getCurrentLocation() async {
-    setState(() {
-      _isLoadingLocation = true;
-      _currentAddress = 'Detecting location...';
-      _currentArea = 'Please wait...';
-    });
 
-    try {
-      // Get current location with address
-      LocationData? locationData = await _locationService.getCurrentLocationWithAddress();
-
-      if (locationData != null) {
-        setState(() {
-          _currentLocationData = locationData;
-          _currentAddress = locationData.address ?? 'Location detected';
-          _currentArea = '${locationData.city ?? ''}, ${locationData.state ?? ''}'.trim();
-          if (_currentArea == ',') {
-            _currentArea = 'GPS location detected';
-          }
-        });
-      } else {
-        setState(() {
-          _currentAddress = 'Unable to detect location';
-          _currentArea = 'Please try manual search or check GPS';
-        });
-      }
-    } catch (e) {
-      // Handle location errors
-      setState(() {
-        if (e is LocationServiceDisabledException) {
-          _currentAddress = 'Location services disabled';
-          _currentArea = 'Please enable GPS in settings';
-        } else if (e is LocationPermissionDeniedException) {
-          _currentAddress = 'Location permission denied';
-          _currentArea = 'Please grant location permission';
-        } else {
-          _currentAddress = 'Unable to fetch location';
-          _currentArea = 'Please try again or search manually';
-        }
-      });
-    } finally {
-      setState(() {
-        _isLoadingLocation = false;
-      });
-    }
-  }
 
   void _showSearchOverlay() {
     Navigator.of(context).push(
@@ -119,73 +73,26 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
       ),
       body: Column(
         children: [
-          // Map Container (No search bar above)
+          // Google Maps Container
           Expanded(
             flex: 2,
-            child: Container(
-              width: double.infinity,
-              color: const Color(0xFF87CEEB), // Light blue placeholder for map
-              child: Stack(
-                children: [
-                  // Map placeholder
-                  const Center(
-                    child: Text(
-                      'Map will be integrated here',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-
-                  // Location pin in center
-                  const Center(
-                    child: Icon(
-                      Icons.location_on,
-                      color: Colors.black87,
-                      size: 32,
-                    ),
-                  ),
-
-                  // Current location button (top right)
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: _isLoadingLocation
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.green,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.my_location,
-                                color: Colors.green,
-                                size: 20,
-                              ),
-                        onPressed: _isLoadingLocation ? null : _getCurrentLocation,
-                        tooltip: 'Get current location',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            child: GoogleMapWidget(
+              height: double.infinity,
+              initialLocation: _currentLocationData != null
+                  ? LatLng(_currentLocationData!.latitude, _currentLocationData!.longitude)
+                  : null,
+              onLocationSelected: (locationData) {
+                setState(() {
+                  _currentLocationData = locationData;
+                  _currentAddress = locationData.address ?? 'Location detected';
+                  _currentArea = '${locationData.city ?? ''}, ${locationData.state ?? ''}'.trim();
+                  if (_currentArea == ',') {
+                    _currentArea = 'GPS location detected';
+                  }
+                });
+              },
+              showCurrentLocationButton: true,
+              showCenterMarker: true,
             ),
           ),
 

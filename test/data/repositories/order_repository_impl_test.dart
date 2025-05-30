@@ -5,7 +5,7 @@ import 'package:mockito/mockito.dart';
 import 'package:dayliz_app/core/errors/exceptions.dart';
 import 'package:dayliz_app/core/errors/failures.dart';
 import 'package:dayliz_app/core/network/network_info.dart';
-import 'package:dayliz_app/data/datasources/order_datasource.dart';
+import 'package:dayliz_app/data/datasources/order_data_source.dart';
 import 'package:dayliz_app/data/repositories/order_repository_impl.dart';
 import 'package:dayliz_app/domain/entities/order.dart' as domain;
 import 'package:dayliz_app/domain/entities/address.dart';

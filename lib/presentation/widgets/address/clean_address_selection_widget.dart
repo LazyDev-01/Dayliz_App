@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../domain/entities/address.dart';
-import '../../providers/user_providers.dart';
+import '../../providers/user_profile_providers.dart';
+import '../../providers/auth_providers.dart';
 import '../common/error_state.dart';
 import '../common/loading_indicator.dart';
 import '../common/empty_state.dart';
@@ -22,55 +23,63 @@ class CleanAddressSelectionWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final addressesState = ref.watch(addressesNotifierProvider);
-    final selectedAddressId = ref.watch(selectedAddressIdProvider);
+    final profileState = ref.watch(userProfileNotifierProvider);
+    final addresses = profileState.addresses ?? [];
+    final defaultAddress = ref.watch(defaultAddressProvider);
 
-    return addressesState.when(
-      loading: () => const LoadingIndicator(),
-      error: (error, stackTrace) => ErrorState(
-        message: error.toString(),
-        onRetry: () => ref.read(addressesNotifierProvider.notifier).refreshAddresses(),
-      ),
-      data: (addresses) {
-        if (addresses.isEmpty) {
-          return EmptyState(
-            icon: Icons.location_off,
-            title: 'No Addresses',
-            message: 'You have no saved addresses yet.',
-            buttonText: 'Add Address',
-            onButtonPressed: () => _navigateToAddAddress(context),
-          );
-        }
+    if (profileState.isAddressesLoading) {
+      return const LoadingIndicator();
+    }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: addresses.length,
-              itemBuilder: (context, index) {
-                final address = addresses[index];
-                final isSelected = selectedAddressId == address.id;
+    if (profileState.addressErrorMessage != null) {
+      return ErrorState(
+        message: profileState.addressErrorMessage!,
+        onRetry: () async {
+          final user = ref.read(currentUserProvider);
+          if (user != null) {
+            await ref.read(userProfileNotifierProvider.notifier).loadAddresses(user.id);
+          }
+        },
+      );
+    }
 
-                return _buildAddressCard(context, ref, address, isSelected);
-              },
+    if (addresses.isEmpty) {
+      return EmptyState(
+        icon: Icons.location_off,
+        title: 'No Addresses',
+        message: 'You have no saved addresses yet.',
+        buttonText: 'Add Address',
+        onButtonPressed: () => _navigateToAddAddress(context),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: addresses.length,
+          itemBuilder: (context, index) {
+            final address = addresses[index];
+            final isSelected = defaultAddress?.id == address.id;
+
+            return _buildAddressCard(context, ref, address, isSelected);
+          },
+        ),
+
+        if (showAddButton) ...[
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => _navigateToAddAddress(context),
+            icon: const Icon(Icons.add),
+            label: const Text('Add New Address'),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
             ),
-
-            if (showAddButton) ...[
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => _navigateToAddAddress(context),
-                icon: const Icon(Icons.add),
-                label: const Text('Add New Address'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                ),
-              ),
-            ],
-          ],
-        );
-      },
+          ),
+        ],
+      ],
     );
   }
 
@@ -159,7 +168,8 @@ class CleanAddressSelectionWidget extends ConsumerWidget {
   }
 
   void _selectAddress(WidgetRef ref, Address address) {
-    ref.read(selectedAddressIdProvider.notifier).state = address.id;
+    // Since we're using defaultAddressProvider, we don't need to set a selected address ID
+    // The selection is handled by the default address logic
     if (onAddressSelected != null) {
       onAddressSelected!(address);
     }
@@ -208,7 +218,8 @@ class CleanAddressSelectionWidget extends ConsumerWidget {
       );
 
       try {
-        final userId = ref.read(currentUserIdProvider);
+        final user = ref.read(currentUserProvider);
+        final userId = user?.id;
         if (userId == null) {
           scaffoldMessenger.showSnackBar(
             const SnackBar(
@@ -220,7 +231,7 @@ class CleanAddressSelectionWidget extends ConsumerWidget {
         }
 
         // Attempt to delete the address
-        await ref.read(addressesNotifierProvider.notifier).deleteAddress(userId, address.id);
+        await ref.read(userProfileNotifierProvider.notifier).deleteAddress(userId, address.id);
 
         // If we get here, the deletion was successful
         scaffoldMessenger.showSnackBar(
@@ -238,14 +249,17 @@ class CleanAddressSelectionWidget extends ConsumerWidget {
           errorMessage = 'The address service is not available at this time. Please try again later.';
 
           // Try to refresh the provider
-          final notifier = ref.refresh(addressesNotifierProvider);
+          final notifier = ref.refresh(userProfileNotifierProvider);
           debugPrint('Refreshed addressesNotifierProvider: ${notifier.hashCode}');
         } else if (e.toString().contains('Permission denied')) {
           errorMessage = 'Permission denied. You may need to log in again.';
         } else if (e.toString().contains('not found')) {
           errorMessage = 'Address not found. It may have been already deleted.';
           // Refresh the addresses
-          ref.read(addressesNotifierProvider.notifier).refreshAddresses();
+          final currentUser = ref.read(currentUserProvider);
+          if (currentUser != null) {
+            await ref.read(userProfileNotifierProvider.notifier).loadAddresses(currentUser.id);
+          }
         } else if (e.toString().contains('used as a shipping address') ||
                    e.toString().contains('used as a billing address')) {
           errorMessage = 'This address cannot be deleted because it is used in one or more orders.';

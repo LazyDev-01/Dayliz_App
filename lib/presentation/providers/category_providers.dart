@@ -1,170 +1,144 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../di/dependency_injection.dart' as di;
 import '../../domain/entities/category.dart';
-import '../../domain/repositories/category_repository.dart';
-import '../../domain/usecases/get_categories_usecase.dart';
-import '../../core/errors/failures.dart';
-import '../../core/usecases/usecase.dart';
 
-// This file is being phased out in favor of clean_category_providers.dart
-// It's maintained temporarily for backward compatibility
-
-// State providers
-final selectedCategoryIdProvider = StateProvider<String?>((ref) => null);
-final categoryFiltersProvider = StateProvider<Map<String, bool>>((ref) => {});
-
-// Repository provider
-final categoryRepositoryProvider = Provider((_) => di.sl<CategoryRepository>());
-
-// Use case providers
-final getCategoriesUseCaseProvider = Provider(
-  (ref) => GetCategoriesUseCase(ref.watch(categoryRepositoryProvider)),
-);
-
-final getCategoriesWithSubcategoriesUseCaseProvider = Provider(
-  (ref) => GetCategoriesWithSubcategoriesUseCase(
-    ref.watch(categoryRepositoryProvider),
-  ),
-);
-
-// Categories providers
+/// Main category provider that directly fetches categories from Supabase
+/// This is the consolidated provider for all category operations
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
-  final useCase = ref.watch(getCategoriesUseCaseProvider);
-  final result = await useCase(NoParams());
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (categories) => categories,
-  );
-});
-
-final categoriesWithSubcategoriesProvider = FutureProvider<List<Category>>((ref) async {
-  final useCase = ref.watch(getCategoriesWithSubcategoriesUseCaseProvider);
-  final result = await useCase(NoParams());
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (categories) => categories,
-  );
-});
-
-// Filtered categories provider
-final filteredCategoriesProvider = Provider<List<Category>>((ref) {
-  final categoriesAsync = ref.watch(categoriesWithSubcategoriesProvider);
-  final filters = ref.watch(categoryFiltersProvider);
-  
-  return categoriesAsync.when(
-    data: (categories) {
-      if (filters.isEmpty || filters.values.every((isActive) => !isActive)) {
-        return categories;
-      }
-      
-      return categories.where((category) {
-        return filters[category.id] ?? false;
-      }).toList();
-    },
-    loading: () => [],
-    error: (_, __) => [],
-  );
-});
-
-// Selected category provider
-final selectedCategoryProvider = Provider<Category?>((ref) {
-  final categoriesAsync = ref.watch(categoriesWithSubcategoriesProvider);
-  final selectedId = ref.watch(selectedCategoryIdProvider);
-  
-  if (selectedId == null) {
-    return null;
-  }
-  
-  return categoriesAsync.when(
-    data: (categories) {
-      try {
-        return categories.firstWhere((category) => category.id == selectedId);
-      } catch (e) {
-        return null;
-      }
-    },
-    loading: () => null,
-    error: (_, __) => null,
-  );
-});
-
-// Provider to track loading state for categories
-final categoriesLoadingProvider = StateProvider<bool>((ref) => false);
-
-// Provider to track error message for categories
-final categoriesErrorProvider = StateProvider<String?>((ref) => null);
-
-// Provider for getting a category by ID
-final categoryByIdProvider = FutureProvider.family<Category, String>((ref, id) async {
-  // Reset error
-  ref.read(categoriesErrorProvider.notifier).state = null;
-  
-  // Set loading state
-  ref.read(categoriesLoadingProvider.notifier).state = true;
-  
   try {
-    final result = await di.sl<GetCategoryByIdUseCase>()(GetCategoryByIdParams(id: id));
-    
-    return result.fold(
-      (failure) {
-        ref.read(categoriesErrorProvider.notifier).state = _mapFailureToMessage(failure);
-        throw _mapFailureToMessage(failure);
-      },
-      (category) {
-        // Reset loading
-        ref.read(categoriesLoadingProvider.notifier).state = false;
-        return category;
-      },
-    );
+    // Fetch categories with subcategories from Supabase
+    // Don't rely on database display_order, we'll sort manually
+    final response = await Supabase.instance.client
+        .from('categories')
+        .select('*, subcategories(*)')
+        .order('name'); // Order by name first, then we'll custom sort
+
+    // Convert to Category entities
+    final categories = response.map((data) => _mapToCategory(data)).toList();
+
+    // Custom sort to ensure correct order:
+    // 1. Grocery & Kitchen
+    // 2. Snacks & Drinks
+    // 3. Beauty & Hygiene
+    // 4. Household & Essentials
+    final sortedCategories = _sortCategoriesInCorrectOrder(categories);
+
+    return sortedCategories;
   } catch (e) {
-    // Reset loading on error
-    ref.read(categoriesLoadingProvider.notifier).state = false;
-    ref.read(categoriesErrorProvider.notifier).state = e.toString();
-    rethrow;
+    throw Exception('Failed to load categories: ${e.toString()}');
   }
 });
 
-// Provider for getting subcategories for a category
-final subcategoriesProvider = FutureProvider.family<List<SubCategory>, String>((ref, categoryId) async {
-  // Reset error
-  ref.read(categoriesErrorProvider.notifier).state = null;
-  
-  // Set loading state
-  ref.read(categoriesLoadingProvider.notifier).state = true;
-  
-  try {
-    final result = await di.sl<GetSubcategoriesUseCase>()(GetSubcategoriesParams(categoryId: categoryId));
-    
-    return result.fold(
-      (failure) {
-        ref.read(categoriesErrorProvider.notifier).state = _mapFailureToMessage(failure);
-        throw _mapFailureToMessage(failure);
-      },
-      (subcategories) {
-        // Reset loading
-        ref.read(categoriesLoadingProvider.notifier).state = false;
-        return subcategories;
-      },
-    );
-  } catch (e) {
-    // Reset loading on error
-    ref.read(categoriesLoadingProvider.notifier).state = false;
-    ref.read(categoriesErrorProvider.notifier).state = e.toString();
-    rethrow;
-  }
-});
+/// Sort categories in the correct order regardless of database display_order
+List<Category> _sortCategoriesInCorrectOrder(List<Category> categories) {
+  // Define the desired order
+  final desiredOrder = [
+    'Grocery & Kitchen',
+    'Snacks & Drinks',
+    'Beauty & Hygiene',
+    'Household & Essentials'
+  ];
 
-// Helper function to map failures to user-friendly messages
-String _mapFailureToMessage(Failure failure) {
-  switch (failure.runtimeType) {
-    case ServerFailure:
-      return 'Server error occurred. Please try again later.';
-    case NetworkFailure:
-      return 'Network error. Please check your internet connection.';
-    case CacheFailure:
-      return 'Cache error. Please restart the app.';
+  // Create a map for quick lookup
+  final categoryMap = <String, Category>{};
+  for (final category in categories) {
+    categoryMap[category.name] = category;
+  }
+
+  // Build the sorted list
+  final sortedCategories = <Category>[];
+
+  // Add categories in the desired order
+  for (final categoryName in desiredOrder) {
+    if (categoryMap.containsKey(categoryName)) {
+      sortedCategories.add(categoryMap[categoryName]!);
+      categoryMap.remove(categoryName); // Remove to avoid duplicates
+    }
+  }
+
+  // Add any remaining categories that weren't in our desired order
+  sortedCategories.addAll(categoryMap.values);
+
+  return sortedCategories;
+}
+
+/// Map Supabase data to Category entity
+Category _mapToCategory(Map<String, dynamic> data) {
+  // Parse subcategories if available
+  List<SubCategory>? subcategories;
+  if (data['subcategories'] != null) {
+    final subcategoriesData = data['subcategories'] as List<dynamic>;
+    subcategories = subcategoriesData
+        .map((subData) => _mapToSubCategory(subData))
+        .toList();
+
+    // Sort subcategories by display order
+    subcategories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+  }
+
+  return Category(
+    id: data['id'] ?? '',
+    name: data['name'] ?? '',
+    icon: _getIconFromString(data['icon_name']),
+    themeColor: _getColorFromHex(data['theme_color']),
+    imageUrl: data['image_url'],
+    displayOrder: data['display_order'] ?? 0,
+    subCategories: subcategories,
+  );
+}
+
+/// Map Supabase data to SubCategory entity
+SubCategory _mapToSubCategory(Map<String, dynamic> data) {
+  return SubCategory(
+    id: data['id'] ?? '',
+    name: data['name'] ?? '',
+    parentId: data['category_id'] ?? '',
+    imageUrl: data['image_url'],
+    displayOrder: data['display_order'] ?? 0,
+  );
+}
+
+/// Convert icon name string to IconData
+IconData _getIconFromString(String? iconName) {
+  switch (iconName) {
+    case 'kitchen':
+      return Icons.kitchen;
+    case 'fastfood':
+      return Icons.fastfood;
+    case 'spa':
+      return Icons.spa;
+    case 'devices':
+      return Icons.devices;
+    case 'shopping_bag':
+      return Icons.shopping_bag;
+    case 'checkroom':
+      return Icons.checkroom;
+    case 'sports':
+      return Icons.sports_cricket;
+    case 'face':
+      return Icons.face;
+    case 'home':
+      return Icons.home;
+    case 'toys':
+      return Icons.toys;
     default:
-      return 'An unexpected error occurred.';
+      return Icons.category;
   }
-} 
+}
+
+/// Convert hex color string to Color
+Color _getColorFromHex(String? hexColor) {
+  if (hexColor == null) return Colors.blue;
+
+  try {
+    hexColor = hexColor.replaceAll('#', '');
+    if (hexColor.length == 6) {
+      hexColor = 'FF$hexColor'; // Add alpha if not present
+    }
+    return Color(int.parse(hexColor, radix: 16));
+  } catch (e) {
+    return Colors.blue; // Fallback color
+  }
+}

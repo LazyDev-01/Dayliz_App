@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_it/get_it.dart';
 import 'package:dartz/dartz.dart';
-import 'package:flutter/foundation.dart';
+
 
 import '../../core/errors/failures.dart';
 import '../../domain/entities/order.dart' as domain;
@@ -395,8 +395,6 @@ void fetchOrdersByStatus(WidgetRef ref, String status) {
 
 /// Register order-related dependencies if they're not already registered
 void _registerOrderDependencies() {
-  debugPrint('Registering order dependencies...');
-
   try {
     // Register OrderRepository if not already registered
     if (!sl.isRegistered<OrderRepository>()) {
@@ -455,9 +453,9 @@ void _registerOrderDependencies() {
       sl.registerLazySingleton(() => CancelOrderUseCase(sl()));
     }
 
-    debugPrint('Order dependencies registered successfully');
+    // Order dependencies registered successfully
   } catch (e) {
-    debugPrint('Error registering order dependencies: $e');
+    // Error registering order dependencies
     rethrow;
   }
 }

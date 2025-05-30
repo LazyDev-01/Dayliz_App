@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // import 'package:geolocator/geolocator.dart';
 
 import '../../../domain/entities/address.dart';
-import '../../providers/user_providers.dart';
+import '../../providers/user_profile_providers.dart';
 
 class CleanAddressFormScreen extends ConsumerStatefulWidget {
   final Address? address;
@@ -106,39 +106,30 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
 
       final userId = currentUser.id;
 
-      // Check if the address service is available
-      final addressesNotifier = ref.read(addressesNotifierProvider.notifier);
-      final address = await addressesNotifier.getAddressById(userId, addressId);
+      // Load addresses first to get the specific address
+      await ref.read(userProfileNotifierProvider.notifier).loadAddresses(userId);
+      final profileState = ref.read(userProfileNotifierProvider);
+      final addresses = profileState.addresses ?? [];
+      final address = addresses.firstWhere((a) => a.id == addressId, orElse: () => throw Exception('Address not found'));
 
-      if (address != null) {
-        setState(() {
-          // Label field removed
-          _addressLine1Controller.text = address.addressLine1;
-          _addressLine2Controller.text = address.addressLine2;
-          _cityController.text = address.city;
-          _stateController.text = address.state;
-          _postalCodeController.text = address.postalCode;
-          _countryController.text = address.country;
-          _phoneNumberController.text = address.phoneNumber ?? '';
-          _landmarkController.text = address.landmark ?? '';
-          _additionalInfoController.text = address.additionalInfo ?? '';
-          _recipientNameController.text = address.recipientName ?? '';
-          _addressType = address.addressType;
-          _latitude = address.latitude;
-          _longitude = address.longitude;
-          _zoneId = address.zoneId;
-        });
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Address not found'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          Navigator.of(context).pop();
-        }
-      }
+      // Address found, populate the form
+      setState(() {
+        // Label field removed
+        _addressLine1Controller.text = address.addressLine1;
+        _addressLine2Controller.text = address.addressLine2;
+        _cityController.text = address.city;
+        _stateController.text = address.state;
+        _postalCodeController.text = address.postalCode;
+        _countryController.text = address.country;
+        _phoneNumberController.text = address.phoneNumber ?? '';
+        _landmarkController.text = address.landmark ?? '';
+        _additionalInfoController.text = address.additionalInfo ?? '';
+        _recipientNameController.text = address.recipientName ?? '';
+        _addressType = address.addressType;
+        _latitude = address.latitude;
+        _longitude = address.longitude;
+        _zoneId = address.zoneId;
+      });
     } catch (e) {
       debugPrint('Error fetching address: $e');
       if (mounted) {
@@ -150,7 +141,7 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
           errorMessage = 'The address service is not available at this time. Please try again later.';
 
           // Try to refresh the provider
-          final notifier = ref.refresh(addressesNotifierProvider);
+          final notifier = ref.refresh(userProfileNotifierProvider);
           debugPrint('Refreshed addressesNotifierProvider: ${notifier.hashCode}');
         } else {
           errorMessage = 'Error loading address: ${e.toString()}';
@@ -248,11 +239,11 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
 
         if (_isEditing) {
           debugPrint('Updating existing address...');
-          await ref.read(addressesNotifierProvider.notifier).updateAddress(userId, address);
+          await ref.read(userProfileNotifierProvider.notifier).updateAddress(userId, address);
           debugPrint('Address updated successfully');
         } else {
           debugPrint('Adding new address...');
-          await ref.read(addressesNotifierProvider.notifier).addAddress(userId, address);
+          await ref.read(userProfileNotifierProvider.notifier).addAddress(userId, address);
           debugPrint('Address added successfully');
         }
 
@@ -283,7 +274,7 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
             errorMessage = 'The address service is not available at this time. Please try again later.';
 
             // Try to refresh the provider
-            final notifier = ref.refresh(addressesNotifierProvider);
+            final notifier = ref.refresh(userProfileNotifierProvider);
             debugPrint('Refreshed addressesNotifierProvider: ${notifier.hashCode}');
           } else if (e is PostgrestException) {
             // Handle Supabase-specific errors

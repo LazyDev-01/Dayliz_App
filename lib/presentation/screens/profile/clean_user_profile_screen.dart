@@ -9,8 +9,8 @@ import '../../providers/auth_providers.dart';
 import '../../../domain/entities/user_profile.dart';
 import '../../../domain/entities/user.dart' as domain;
 import '../../widgets/common/common_app_bar.dart';
-import '../../widgets/loading_indicator.dart';
-import '../../widgets/error_state.dart';
+import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/error_state.dart';
 
 /// A Clean Architecture implementation of the user profile screen
 /// This is currently a placeholder for future implementation

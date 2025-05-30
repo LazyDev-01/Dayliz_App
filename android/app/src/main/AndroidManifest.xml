@@ -66,6 +66,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${GOOGLE_MAPS_API_KEY}" />
+
         <!-- Google Sign-In Activity -->
         <activity
             android:name="io.flutter.plugins.googlesignin.GoogleSignInActivity"

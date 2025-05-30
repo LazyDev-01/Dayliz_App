@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,12 +17,12 @@ final debouncedSearchQueryProvider = StateProvider<String>((ref) => '');
 /// Provider to handle debounce logic for search
 final searchDebouncerProvider = Provider<void>((ref) {
   Timer? timer;
-  
+
   ref.listen<String>(searchQueryProvider, (_, newQuery) {
     if (timer != null) {
       timer!.cancel();
     }
-    
+
     timer = Timer(const Duration(milliseconds: 500), () {
       ref.read(debouncedSearchQueryProvider.notifier).state = newQuery;
     });
@@ -43,54 +43,54 @@ final recentSearchesProvider = StateNotifierProvider<RecentSearchesNotifier, Lis
 /// State notifier for managing recent searches
 class RecentSearchesNotifier extends StateNotifier<List<String>> {
   static const int _maxSearches = 5;
-  
+
   RecentSearchesNotifier() : super([]) {
     _loadRecentSearches();
   }
-  
+
   Future<void> _loadRecentSearches() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final searches = prefs.getStringList('recent_searches') ?? [];
       state = searches;
     } catch (e) {
-      debugPrint('Error loading recent searches: $e');
+      // Silently handle error and use empty list
     }
   }
-  
+
   Future<void> _saveRecentSearches() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList('recent_searches', state);
     } catch (e) {
-      debugPrint('Error saving recent searches: $e');
+      // Silently handle error
     }
   }
-  
+
   Future<void> addSearch(String query) async {
     if (query.trim().isEmpty) return;
-    
+
     // Remove if already exists (to avoid duplicates)
     state = state.where((item) => item.toLowerCase() != query.toLowerCase()).toList();
-    
+
     // Add to the beginning of the list
     final newState = [query, ...state];
-    
+
     // Limit to max searches
     if (newState.length > _maxSearches) {
       state = newState.sublist(0, _maxSearches);
     } else {
       state = newState;
     }
-    
+
     await _saveRecentSearches();
   }
-  
+
   Future<void> removeSearch(String query) async {
     state = state.where((item) => item != query).toList();
     await _saveRecentSearches();
   }
-  
+
   Future<void> clearSearches() async {
     state = [];
     await _saveRecentSearches();
@@ -100,24 +100,24 @@ class RecentSearchesNotifier extends StateNotifier<List<String>> {
 /// Provider for search results
 final searchResultsProvider = FutureProvider.autoDispose<List<Product>>((ref) async {
   final query = ref.watch(debouncedSearchQueryProvider);
-  
+
   if (query.trim().isEmpty) {
     return [];
   }
-  
+
   // Set loading state
   ref.read(searchLoadingProvider.notifier).state = true;
   ref.read(searchErrorProvider.notifier).state = null;
-  
+
   try {
     // Get the search products use case from DI
     final searchProductsUseCase = di.sl<SearchProductsUseCase>();
-    
+
     // Call the use case
     final result = await searchProductsUseCase(
       SearchProductsParams(query: query, limit: 20),
     );
-    
+
     return result.fold(
       (failure) {
         // Handle failure

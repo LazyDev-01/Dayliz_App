@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/clean_category_providers.dart' as clean_category_providers;
+import '../providers/category_providers.dart';
 import '../../core/config/app_config.dart';
 import '../screens/dev/backend_config_screen.dart';
 import '../../test_gps_integration.dart';
@@ -140,65 +140,52 @@ class CleanArchitectureDemoScreen extends ConsumerWidget {
 
             const SizedBox(height: 12),
 
-            // Categories list with clean_category_providers
+            // Categories list with main provider
             Consumer(
               builder: (context, ref, child) {
-                final categoryState = ref.watch(clean_category_providers.categoriesNotifierProvider);
+                final categoriesAsync = ref.watch(categoriesProvider);
 
-                // Initialize categories if not already loaded
-                if (categoryState.categories.isEmpty && !categoryState.isLoading) {
-                  Future.microtask(() => ref.read(clean_category_providers.categoriesNotifierProvider.notifier).loadCategories());
-                }
+                return categoriesAsync.when(
+                  data: (categories) {
+                    if (categories.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text('No categories available'),
+                      );
+                    }
 
-                if (categoryState.isLoading) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-
-                if (categoryState.errorMessage != null) {
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      'Error loading categories: ${categoryState.errorMessage}',
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  );
-                }
-
-                if (categoryState.categories.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Text('No categories available'),
-                  );
-                }
-
-                // Show max 5 categories
-                final categories = categoryState.categories.take(5).toList();
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final category = categories[index];
-                    return _buildFeatureCard(
-                      context: context,
-                      title: category.name,
-                      description: 'Browse ${category.subCategories?.length ?? 0} subcategories',
-                      icon: category.icon,
-                      onTap: () {
-                        // Set selected category
-                        ref.read(clean_category_providers.categoriesNotifierProvider.notifier).selectCategory(category.id);
-                        // Navigate to subcategory screen
-                        Navigator.pushNamed(
-                          context,
-                          '/clean/category',
-                          arguments: category.id,
+                    // Show max 5 categories
+                    final displayCategories = categories.take(5).toList();
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: displayCategories.length,
+                      itemBuilder: (context, index) {
+                        final category = displayCategories[index];
+                        return _buildFeatureCard(
+                          context: context,
+                          title: category.name,
+                          description: 'Browse ${category.subCategories?.length ?? 0} subcategories',
+                          icon: category.icon,
+                          onTap: () {
+                            // Navigate to categories screen
+                            context.go('/categories');
+                          },
                         );
                       },
                     );
                   },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (error, stack) => Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      'Error loading categories: $error',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
                 );
               },
             ),

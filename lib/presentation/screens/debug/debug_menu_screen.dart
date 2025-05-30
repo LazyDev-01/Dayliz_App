@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'supabase_connection_test_screen.dart';
 import 'supabase_auth_test_screen.dart';
@@ -77,6 +78,24 @@ class DebugMenuScreen extends ConsumerWidget {
             icon: Icons.search,
             onTap: () {
               CleanRoutes.navigateToSearch(context);
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'GPS Integration Test',
+            subtitle: 'Test real GPS functionality and mock GPS switching',
+            icon: Icons.gps_fixed,
+            onTap: () {
+              context.push('/test-gps');
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Google Maps Test',
+            subtitle: 'Test Google Maps integration with location picking',
+            icon: Icons.map,
+            onTap: () {
+              context.push('/test-google-maps');
             },
           ),
 

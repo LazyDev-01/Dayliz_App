@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'core/services/location_service.dart';
+import 'core/config/app_config.dart';
 
 /// Test screen to verify GPS integration functionality
 class TestGPSIntegrationScreen extends StatefulWidget {
@@ -12,7 +14,7 @@ class TestGPSIntegrationScreen extends StatefulWidget {
 class _TestGPSIntegrationScreenState extends State<TestGPSIntegrationScreen> {
   final LocationService _locationService = LocationService();
 
-  String _status = 'Ready to test Enhanced Mock GPS';
+  String _status = 'Ready to test Production GPS (Real + Mock)';
   bool _isLoading = false;
   LocationData? _currentLocation;
   String _permissionStatus = 'Unknown';
@@ -35,7 +37,7 @@ class _TestGPSIntegrationScreenState extends State<TestGPSIntegrationScreen> {
       _serviceEnabled = await _locationService.isLocationServiceEnabled();
 
       // Check permission status
-      MockLocationPermission permission = await _locationService.checkLocationPermission();
+      LocationPermission permission = await _locationService.checkLocationPermission();
       _permissionStatus = permission.toString();
 
       setState(() {
@@ -59,7 +61,7 @@ class _TestGPSIntegrationScreenState extends State<TestGPSIntegrationScreen> {
     });
 
     try {
-      MockLocationPermission permission = await _locationService.requestLocationPermission();
+      LocationPermission permission = await _locationService.requestLocationPermission();
       setState(() {
         _permissionStatus = permission.toString();
         _status = 'Permission request completed';
@@ -109,11 +111,34 @@ class _TestGPSIntegrationScreenState extends State<TestGPSIntegrationScreen> {
     await _locationService.openAppSettings();
   }
 
+  Future<void> _toggleGPSMode() async {
+    setState(() {
+      _isLoading = true;
+      _status = 'Switching GPS mode...';
+    });
+
+    try {
+      await AppConfig.setUseRealGPS(!AppConfig.useRealGPS);
+      setState(() {
+        _status = 'GPS mode switched to ${AppConfig.useRealGPS ? "Real GPS" : "Mock GPS"}';
+        _currentLocation = null; // Clear previous location data
+      });
+    } catch (e) {
+      setState(() {
+        _status = 'Error switching GPS mode: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Enhanced Mock GPS Test'),
+        title: const Text('Production GPS Test'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
@@ -137,6 +162,7 @@ class _TestGPSIntegrationScreenState extends State<TestGPSIntegrationScreen> {
                     Text('Current Status: $_status'),
                     Text('Service Enabled: $_serviceEnabled'),
                     Text('Permission: $_permissionStatus'),
+                    Text('GPS Mode: ${AppConfig.useRealGPS ? "Real GPS" : "Mock GPS"}'),
                     if (_isLoading) ...[
                       const SizedBox(height: 8),
                       const LinearProgressIndicator(),
@@ -159,6 +185,20 @@ class _TestGPSIntegrationScreenState extends State<TestGPSIntegrationScreen> {
                       'Actions',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
+                    const SizedBox(height: 8),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _toggleGPSMode,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppConfig.useRealGPS ? Colors.blue : Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Switch to ${AppConfig.useRealGPS ? "Mock" : "Real"} GPS'),
+                      ),
+                    ),
+
                     const SizedBox(height: 16),
 
                     SizedBox(

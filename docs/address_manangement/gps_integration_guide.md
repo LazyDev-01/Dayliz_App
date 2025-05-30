@@ -9,8 +9,8 @@ This document outlines the implementation of real GPS functionality in the Dayli
 ### ✅ Completed Changes
 
 1. **Dependencies Updated**
-   - Enabled `geolocator: ^10.1.0` for GPS positioning
-   - Enabled `geocoding: ^2.1.1` for reverse geocoding
+   - Enabled `geolocator: ^12.0.0 ` for GPS positioning
+   - Enabled `geocoding: ^3.0.0 ` for reverse geocoding
    - Removed mock implementation dependencies
 
 2. **Location Service Refactored**

@@ -5,7 +5,7 @@ import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
+
 
 import '../../core/errors/failures.dart';
 import '../../core/errors/exceptions.dart';
@@ -16,7 +16,7 @@ import '../../domain/usecases/upload_profile_image_usecase.dart';
 import '../../domain/usecases/update_preferences_usecase.dart';
 import '../../domain/repositories/user_profile_repository.dart';
 import '../providers/auth_providers.dart';
-import '../../data/datasources/user_profile_datasource.dart';
+import '../../data/datasources/user_profile_data_source_impl.dart';
 import '../../data/models/user_profile_model.dart';
 import '../../domain/entities/address.dart';
 import '../../domain/usecases/user_profile/add_address_usecase.dart';
@@ -25,7 +25,7 @@ import '../../domain/usecases/user_profile/get_user_addresses_usecase.dart';
 import '../../domain/usecases/user_profile/set_default_address_usecase.dart';
 import '../../domain/usecases/user_profile/update_address_usecase.dart';
 import '../../domain/usecases/user_profile/update_user_profile_usecase.dart';
-import '../services/supabase_client.dart';
+import 'supabase_providers.dart';
 import 'network_providers.dart';
 
 /// State for user profile
