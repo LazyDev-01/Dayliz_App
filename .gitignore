@@ -101,3 +101,7 @@ frontend_old_backup/
 # Flutter build outputs
 **/build/
 **/.dart_tool/
+
+node_modules/
+apps/*/node_modules/
+**/node_modules/
