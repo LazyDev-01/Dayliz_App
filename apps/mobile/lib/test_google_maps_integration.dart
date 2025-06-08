@@ -12,34 +12,21 @@ class TestGoogleMapsIntegrationScreen extends StatefulWidget {
 }
 
 class _TestGoogleMapsIntegrationScreenState extends State<TestGoogleMapsIntegrationScreen> {
-  String _status = 'Initializing Google Maps...';
   LatLng? _selectedLocation;
   LocationData? _selectedLocationData;
-  bool _isLoading = false;
-  bool _mapLoaded = false;
+  String _statusMessage = 'Ready to test Google Maps integration';
 
   void _onLocationChanged(LatLng location) {
     setState(() {
       _selectedLocation = location;
-      _status = 'Location: ${location.latitude.toStringAsFixed(6)}, ${location.longitude.toStringAsFixed(6)}';
+      _statusMessage = 'Location: ${location.latitude.toStringAsFixed(6)}, ${location.longitude.toStringAsFixed(6)}';
     });
   }
 
   void _onLocationSelected(LocationData locationData) {
     setState(() {
       _selectedLocationData = locationData;
-      _status = 'Address: ${locationData.address}';
-      if (!_mapLoaded) {
-        _mapLoaded = true;
-        _status = '✅ Google Maps loaded successfully! Address: ${locationData.address}';
-      }
-    });
-  }
-
-  void _onMapReady() {
-    setState(() {
-      _mapLoaded = true;
-      _status = '✅ Google Maps initialized successfully!';
+      _statusMessage = 'Address: ${locationData.address ?? 'Unknown'}';
     });
   }
 
@@ -48,69 +35,65 @@ class _TestGoogleMapsIntegrationScreenState extends State<TestGoogleMapsIntegrat
     return Scaffold(
       appBar: AppBar(
         title: const Text('Google Maps Test'),
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF4CAF50),
         foregroundColor: Colors.white,
       ),
       body: Column(
         children: [
-          // Status Section
+          // Status Information
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16.0),
-            color: Colors.grey[100],
+            margin: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Status',
-                  style: Theme.of(context).textTheme.titleLarge,
+                const Text(
+                  'Google Maps Integration Test',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                Text(_status),
+                Text(
+                  _statusMessage,
+                  style: const TextStyle(fontSize: 14),
+                ),
                 if (_selectedLocation != null) ...[
                   const SizedBox(height: 8),
-                  Text('Coordinates: ${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}'),
-                ],
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      _mapLoaded ? Icons.check_circle : Icons.radio_button_unchecked,
-                      color: _mapLoaded ? Colors.green : Colors.grey,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _mapLoaded ? 'Google Maps Loaded' : 'Loading Google Maps...',
-                      style: TextStyle(
-                        color: _mapLoaded ? Colors.green : Colors.grey,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-                if (_isLoading) ...[
-                  const SizedBox(height: 8),
-                  const LinearProgressIndicator(),
+                  Text(
+                    'Coordinates: ${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                 ],
               ],
             ),
           ),
 
-          // Google Maps Section
+          // Google Maps Widget
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Interactive Google Map',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  const Text(
+                    'Google Maps with Rich POI Data',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  const SizedBox(height: 16),
 
-                  // Google Map Widget
+                  const SizedBox(height: 12),
+
+                  // Google Maps Widget
                   Expanded(
                     child: GoogleMapWidget(
                       height: double.infinity,
@@ -118,6 +101,7 @@ class _TestGoogleMapsIntegrationScreenState extends State<TestGoogleMapsIntegrat
                       onLocationSelected: _onLocationSelected,
                       showCurrentLocationButton: true,
                       showCenterMarker: true,
+                      mapType: MapType.normal, // Rich POI data
                     ),
                   ),
                 ],
@@ -125,60 +109,75 @@ class _TestGoogleMapsIntegrationScreenState extends State<TestGoogleMapsIntegrat
             ),
           ),
 
-          // Location Data Section
-          if (_selectedLocationData != null) ...[
+          // Address Information Section
+          if (_selectedLocationData != null)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16.0),
+              margin: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green[200]!),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Selected Location Details',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  _buildLocationDetail('Address', _selectedLocationData!.address),
-                  _buildLocationDetail('City', _selectedLocationData!.city),
-                  _buildLocationDetail('State', _selectedLocationData!.state),
-                  _buildLocationDetail('Postal Code', _selectedLocationData!.postalCode),
-                  _buildLocationDetail('Country', _selectedLocationData!.country),
-                  _buildLocationDetail('Locality', _selectedLocationData!.locality),
-                  _buildLocationDetail('Sub Locality', _selectedLocationData!.subLocality),
+                  if (_selectedLocationData!.address != null)
+                    Text('Address: ${_selectedLocationData!.address}'),
+                  if (_selectedLocationData!.city != null)
+                    Text('City: ${_selectedLocationData!.city}'),
+                  if (_selectedLocationData!.state != null)
+                    Text('State: ${_selectedLocationData!.state}'),
+                  if (_selectedLocationData!.postalCode != null)
+                    Text('Postal Code: ${_selectedLocationData!.postalCode}'),
+                  if (_selectedLocationData!.country != null)
+                    Text('Country: ${_selectedLocationData!.country}'),
                 ],
               ),
             ),
-          ],
-        ],
-      ),
-    );
-  }
 
-  Widget _buildLocationDetail(String label, String? value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w500),
+          // Test Instructions
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16.0),
+            margin: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange[200]!),
             ),
-          ),
-          Expanded(
-            child: Text(value ?? 'N/A'),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Test Instructions:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  '1. Tap the location button to get current GPS location\n'
+                  '2. Move the map to see different locations\n'
+                  '3. Check if business names and POI labels are visible\n'
+                  '4. Verify address resolution is working\n'
+                  '5. Test different map types using the style selector',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
           ),
         ],
       ),

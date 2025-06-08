@@ -4,8 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/product.dart';
 import '../../providers/cart_providers.dart';
 import '../../providers/auth_providers.dart';
@@ -289,7 +289,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       child: ElevatedButton(
         onPressed: widget.product.inStock ? () => _addToCart(context) : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).primaryColor, // Using theme primary color
+          backgroundColor: AppColors.primary, // Using standard green #4CAF50
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16), // Increased horizontal padding
           shape: RoundedRectangleBorder(
@@ -563,38 +563,17 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
         print('Error refreshing cart provider: $e');
       }
 
-      // Show success message
+      // Success feedback disabled for early launch
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${widget.product.name} added to cart'),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            width: MediaQuery.of(context).size.width * 0.9,
-            action: SnackBarAction(
-              label: 'VIEW CART',
-              onPressed: () {
-                context.go('/clean/cart');
-              },
-            ),
-          ),
-        );
+        debugPrint('${widget.product.name} added to cart');
       }
     } catch (e) {
       // Debug print for error
       print('Error adding to cart: $e');
 
-      // Show error message
+      // Error feedback disabled for early launch
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to add ${widget.product.name} to cart: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-            width: MediaQuery.of(context).size.width * 0.9,
-          ),
-        );
+        debugPrint('Failed to add ${widget.product.name} to cart: ${e.toString()}');
       }
     }
   }
@@ -636,16 +615,9 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
                 });
               }
 
-              // Show feedback
+              // Success feedback disabled for early launch
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${widget.product.name} removed from cart'),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                    width: MediaQuery.of(context).size.width * 0.9,
-                  ),
-                );
+                debugPrint('${widget.product.name} removed from cart');
               }
 
               return;
@@ -694,16 +666,9 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               });
             }
 
-            // Show feedback
+            // Success feedback disabled for early launch
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${widget.product.name} removed from cart'),
-                  duration: const Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                  width: MediaQuery.of(context).size.width * 0.9,
-                ),
-              );
+              debugPrint('${widget.product.name} removed from cart');
             }
           }
         }
@@ -793,17 +758,9 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       // Debug print for error
       print('Error updating quantity: $e');
 
-      // Show error message
+      // Error feedback disabled for early launch
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update quantity: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-            width: MediaQuery.of(context).size.width * 0.9,
-          ),
-        );
+        debugPrint('Failed to update quantity: ${e.toString()}');
       }
     }
   }

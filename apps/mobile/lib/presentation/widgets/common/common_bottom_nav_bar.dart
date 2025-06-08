@@ -13,15 +13,15 @@ class CommonBottomNavBar extends ConsumerStatefulWidget {
   /// Callback when a tab is tapped
   final Function(int)? onTap;
 
-  /// The number of items in the cart (for badge)
-  final int cartItemCount;
+  /// Whether to use custom navigation handling (default: false)
+  final bool useCustomNavigation;
 
   /// Creates a common bottom navigation bar with consistent styling
   const CommonBottomNavBar({
     Key? key,
     required this.currentIndex,
     this.onTap,
-    this.cartItemCount = 0,
+    this.useCustomNavigation = false,
   }) : super(key: key);
 
   @override
@@ -33,6 +33,7 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
   // Animation controller for icon animations
   late AnimationController _animationController;
   int _previousIndex = 0;
+  bool _isAnimating = false;
 
   @override
   void initState() {
@@ -40,9 +41,9 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
     _previousIndex = widget.currentIndex;
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 150), // Reduced for better performance
     );
-    _animationController.forward(from: 1.0);
+    _animationController.value = 1.0; // Start at full scale
   }
 
   @override
@@ -54,15 +55,29 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
   @override
   void didUpdateWidget(CommonBottomNavBar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentIndex != widget.currentIndex) {
+    if (oldWidget.currentIndex != widget.currentIndex && !_isAnimating) {
       _previousIndex = oldWidget.currentIndex;
-      _animationController.forward(from: 0.0);
+      _triggerAnimation();
     }
+  }
+
+  /// Optimized animation trigger to prevent multiple simultaneous animations
+  void _triggerAnimation() {
+    if (_isAnimating) return;
+
+    _isAnimating = true;
+    _animationController.reset();
+    _animationController.forward().then((_) {
+      if (mounted) {
+        _isAnimating = false;
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
 
     // Animation for scaling effect
     final Animation<double> scaleAnimation = CurvedAnimation(
@@ -74,7 +89,7 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -82,26 +97,40 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
       ),
       child: BottomNavigationBar(
         currentIndex: widget.currentIndex,
-      onTap: (index) {
-        // Update the state
-        ref.read(bottomNavIndexProvider.notifier).state = index;
-
-        // Call the onTap callback if provided
-        if (widget.onTap != null) {
-          widget.onTap!(index);
-        } else {
-          // Default navigation behavior
-          _handleNavigation(context, index);
-        }
-      },
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white, // Ensure consistent background color
-      selectedItemColor: theme.primaryColor,
-      unselectedItemColor: theme.textTheme.bodyMedium?.color?.withAlpha(153), // Using withAlpha instead of withOpacity
-      items: _buildAnimatedItems(scaleAnimation),
-      elevation: 0, // Remove default elevation as we're using custom shadow
-    ),
+        onTap: (index) => _handleTap(context, index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: isDarkMode
+            ? theme.bottomNavigationBarTheme.backgroundColor ?? const Color(0xFF1E1E1E)
+            : theme.bottomNavigationBarTheme.backgroundColor ?? Colors.white,
+        selectedItemColor: theme.primaryColor,
+        unselectedItemColor: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+        items: _buildAnimatedItems(scaleAnimation),
+        elevation: 0, // Remove default elevation as we're using custom shadow
+        // Accessibility improvements
+        selectedFontSize: 12,
+        unselectedFontSize: 10,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+      ),
     );
+  }
+
+  /// Optimized tap handling with proper state management
+  void _handleTap(BuildContext context, int index) {
+    // Prevent rapid tapping during animation
+    if (_isAnimating) return;
+
+    // Only update provider state if not using custom navigation
+    if (!widget.useCustomNavigation) {
+      ref.read(bottomNavIndexProvider.notifier).state = index;
+    }
+
+    // Call custom callback or default navigation
+    if (widget.onTap != null) {
+      widget.onTap!(index);
+    } else {
+      _handleNavigation(context, index);
+    }
   }
 
   // Build animated navigation items
@@ -112,13 +141,15 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
         icon: Icons.home_outlined,
         activeIcon: Icons.home,
         label: 'Home',
+        semanticLabel: 'Navigate to Home',
         animation: animation,
       ),
       _buildAnimatedItem(
         index: 1,
-        icon: Icons.category_outlined,
-        activeIcon: Icons.category,
+        icon: Icons.grid_view_outlined,
+        activeIcon: Icons.grid_view,
         label: 'Categories',
+        semanticLabel: 'Navigate to Categories',
         animation: animation,
       ),
       _buildCartItem(
@@ -130,6 +161,7 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
         icon: Icons.receipt_outlined,
         activeIcon: Icons.receipt,
         label: 'Orders',
+        semanticLabel: 'Navigate to Orders',
         animation: animation,
       ),
     ];
@@ -141,6 +173,7 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
     required IconData icon,
     required IconData activeIcon,
     required String label,
+    required String semanticLabel,
     required Animation<double> animation,
   }) {
     final isSelected = widget.currentIndex == index;
@@ -149,28 +182,31 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
     // Only animate the item that is being selected or deselected
     final shouldAnimate = isSelected || wasSelected;
 
+    Widget buildIcon(IconData iconData, bool isActive) {
+      final iconWidget = Icon(
+        iconData,
+        semanticLabel: semanticLabel,
+      );
+
+      if (!shouldAnimate) return iconWidget;
+
+      return ScaleTransition(
+        scale: isSelected
+            ? Tween<double>(begin: 0.8, end: 1.0).animate(animation)
+            : Tween<double>(begin: 1.0, end: 0.8).animate(animation),
+        child: iconWidget,
+      );
+    }
+
     return BottomNavigationBarItem(
-      icon: shouldAnimate
-          ? ScaleTransition(
-              scale: isSelected
-                  ? Tween<double>(begin: 0.8, end: 1.0).animate(animation)
-                  : Tween<double>(begin: 1.0, end: 0.8).animate(animation),
-              child: Icon(icon),
-            )
-          : Icon(icon),
-      activeIcon: shouldAnimate
-          ? ScaleTransition(
-              scale: isSelected
-                  ? Tween<double>(begin: 0.8, end: 1.0).animate(animation)
-                  : Tween<double>(begin: 1.0, end: 0.8).animate(animation),
-              child: Icon(activeIcon),
-            )
-          : Icon(activeIcon),
+      icon: buildIcon(icon, false),
+      activeIcon: buildIcon(activeIcon, true),
       label: label,
+      tooltip: semanticLabel, // Additional accessibility support
     );
   }
 
-  // Build cart item with badge
+  // Build cart item with badge - optimized to reduce widget duplication
   BottomNavigationBarItem _buildCartItem({
     required int index,
     required Animation<double> animation,
@@ -179,61 +215,37 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
     final wasSelected = _previousIndex == index;
     final shouldAnimate = isSelected || wasSelected;
 
+    // Create simple icon widget without badge
+    Widget buildIcon(IconData iconData) {
+      final icon = Icon(
+        iconData,
+        semanticLabel: 'Cart',
+      );
+
+      if (!shouldAnimate) return icon;
+
+      return ScaleTransition(
+        scale: isSelected
+            ? Tween<double>(begin: 0.8, end: 1.0).animate(animation)
+            : Tween<double>(begin: 1.0, end: 0.8).animate(animation),
+        child: icon,
+      );
+    }
+
     return BottomNavigationBarItem(
-      icon: shouldAnimate
-          ? ScaleTransition(
-              scale: isSelected
-                  ? Tween<double>(begin: 0.8, end: 1.0).animate(animation)
-                  : Tween<double>(begin: 1.0, end: 0.8).animate(animation),
-              child: Badge(
-                isLabelVisible: widget.cartItemCount > 0,
-                label: Text(
-                  widget.cartItemCount.toString(),
-                  style: const TextStyle(color: Colors.white, fontSize: 10),
-                ),
-                child: const Icon(Icons.shopping_cart_outlined),
-              ),
-            )
-          : Badge(
-              isLabelVisible: widget.cartItemCount > 0,
-              label: Text(
-                widget.cartItemCount.toString(),
-                style: const TextStyle(color: Colors.white, fontSize: 10),
-              ),
-              child: const Icon(Icons.shopping_cart_outlined),
-            ),
-      activeIcon: shouldAnimate
-          ? ScaleTransition(
-              scale: isSelected
-                  ? Tween<double>(begin: 0.8, end: 1.0).animate(animation)
-                  : Tween<double>(begin: 1.0, end: 0.8).animate(animation),
-              child: Badge(
-                isLabelVisible: widget.cartItemCount > 0,
-                label: Text(
-                  widget.cartItemCount.toString(),
-                  style: const TextStyle(color: Colors.white, fontSize: 10),
-                ),
-                child: const Icon(Icons.shopping_cart),
-              ),
-            )
-          : Badge(
-              isLabelVisible: widget.cartItemCount > 0,
-              label: Text(
-                widget.cartItemCount.toString(),
-                style: const TextStyle(color: Colors.white, fontSize: 10),
-              ),
-              child: const Icon(Icons.shopping_cart),
-            ),
+      icon: buildIcon(Icons.shopping_cart_outlined),
+      activeIcon: buildIcon(Icons.shopping_cart),
       label: 'Cart',
+      tooltip: 'Cart', // Removed cart count from tooltip
     );
   }
 
-  /// Handles navigation based on the selected tab index
+  /// Handles navigation based on the selected tab index - FIXED route paths
   void _handleNavigation(BuildContext context, int index) {
     switch (index) {
       case 0:
-        // Use replace instead of go to avoid animation for home
-        context.replace('/clean-home');
+        // FIXED: Use correct home route path
+        context.replace('/home');
         break;
       case 1:
         // Use replace instead of go to avoid animation for categories
@@ -245,7 +257,7 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
         break;
       case 3:
         // Use replace instead of go to avoid animation for orders
-        context.replace('/clean/orders');
+        context.replace('/orders');
         break;
     }
   }
@@ -257,12 +269,34 @@ class CommonBottomNavBars {
   static CommonBottomNavBar standard({
     required int currentIndex,
     Function(int)? onTap,
-    required int cartItemCount,
+    bool useCustomNavigation = false,
   }) {
     return CommonBottomNavBar(
       currentIndex: currentIndex,
       onTap: onTap,
-      cartItemCount: cartItemCount,
+      useCustomNavigation: useCustomNavigation,
+    );
+  }
+
+  /// Creates a bottom navigation bar for main screen usage
+  static CommonBottomNavBar forMainScreen({
+    required int currentIndex,
+  }) {
+    return CommonBottomNavBar(
+      currentIndex: currentIndex,
+      useCustomNavigation: false, // Use default navigation
+    );
+  }
+
+  /// Creates a bottom navigation bar with custom navigation handling
+  static CommonBottomNavBar withCustomNavigation({
+    required int currentIndex,
+    required Function(int) onTap,
+  }) {
+    return CommonBottomNavBar(
+      currentIndex: currentIndex,
+      onTap: onTap,
+      useCustomNavigation: true,
     );
   }
 }

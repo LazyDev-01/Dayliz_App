@@ -17,6 +17,7 @@ import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/payment/payment_method_card.dart';
 import '../../widgets/payment/modern_payment_options_widget.dart';
+import 'order_processing_screen.dart';
 
 class CleanCheckoutScreen extends ConsumerStatefulWidget {
   const CleanCheckoutScreen({Key? key}) : super(key: key);
@@ -516,6 +517,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
 
   Future<void> _placeOrder(String userId) async {
     // Get cart items, address, and payment method
+    final cartState = ref.read(cartNotifierProvider);
     final selectedAddress = ref.read(defaultAddressProvider);
 
     // Validate required data
@@ -539,33 +541,53 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
       return;
     }
 
-    setState(() {
-      _isProcessing = true;
-    });
+    // Prepare order data
+    final orderData = {
+      'userId': userId,
+      'items': cartState.items.map((item) => {
+        'productId': item.product.id,
+        'productName': item.product.name,
+        'quantity': item.quantity,
+        'price': item.product.price,
+        'total': item.product.price * item.quantity,
+      }).toList(),
+      'subtotal': cartState.totalPrice,
+      'tax': cartState.totalPrice * 0.18, // 18% tax
+      'shipping': 0.0, // Free shipping for now
+      'total': cartState.totalPrice + (cartState.totalPrice * 0.18),
+      'paymentMethod': _selectedPaymentMethod,
+      'shippingAddress': {
+        'addressLine1': selectedAddress.addressLine1,
+        'addressLine2': selectedAddress.addressLine2,
+        'city': selectedAddress.city,
+        'state': selectedAddress.state,
+        'postalCode': selectedAddress.postalCode,
+        'country': selectedAddress.country,
+        'latitude': selectedAddress.latitude,
+        'longitude': selectedAddress.longitude,
+        'landmark': selectedAddress.landmark,
+      },
+      'status': 'pending',
+      'createdAt': DateTime.now(),
+      'estimatedDelivery': DateTime.now().add(const Duration(hours: 2)),
+    };
 
-    try {
-      // Simulate order processing
-      await Future.delayed(const Duration(seconds: 2));
-
-      // Clear cart
-      await ref.read(cartNotifierProvider.notifier).clearCart();
-
-      // Show order success and navigate to order confirmation
-      if (mounted) {
-        context.go('/clean/order-confirmation/123'); // Sample order ID
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error placing order: ${e.toString()}')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-      }
+    // Navigate to order processing screen
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => OrderProcessingScreen(
+            orderData: orderData,
+            onSuccess: () {
+              // Clear cart after successful order
+              ref.read(cartNotifierProvider.notifier).clearCart();
+            },
+            onError: () {
+              // Handle error if needed
+            },
+          ),
+        ),
+      );
     }
   }
 

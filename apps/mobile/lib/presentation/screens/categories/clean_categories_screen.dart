@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/category.dart';
-import '../../providers/cart_providers.dart';
+
 import '../../providers/category_providers.dart';
-import '../../widgets/common/common_app_bar.dart';
-import '../../widgets/common/common_bottom_nav_bar.dart';
+import '../../widgets/common/navigation_handler.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
 import '../product/clean_product_listing_screen.dart';
@@ -15,21 +16,28 @@ class CleanCategoriesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch cart item count for badge
-    final cartItemCount = ref.watch(cartItemCountProvider);
 
     // Watch categories async provider
     final categoriesAsync = ref.watch(categoriesProvider);
 
-    // Set the current index for the bottom navigation bar
-    ref.read(bottomNavIndexProvider.notifier).state = 1; // 1 is for Categories
-
     return Scaffold(
-      appBar: CommonAppBars.simple(
-        title: 'Categories',
+      appBar: AppBar(
+        title: const Text(
+          'Categories',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         centerTitle: true,
-        showShadow: false,
-        elevation: 0,
+        backgroundColor: AppColors.appBarSecondary, // Light green tint
+        foregroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.black),
+        elevation: 4,
+        shadowColor: Colors.black.withValues(alpha: 0.3),
+        surfaceTintColor: AppColors.appBarSecondary,
+        scrolledUnderElevation: 4,
       ),
       body: categoriesAsync.when(
         data: (categories) => _buildCategoriesList(context, ref, categories),
@@ -39,9 +47,10 @@ class CleanCategoriesScreen extends ConsumerWidget {
           onRetry: () => ref.refresh(categoriesProvider),
         ),
       ),
-      bottomNavigationBar: CommonBottomNavBar(
+      bottomNavigationBar: NavigationHandler.createBottomNavBar(
+        context: context,
+        ref: ref,
         currentIndex: 1, // Categories tab
-        cartItemCount: cartItemCount,
       ),
     );
   }
@@ -51,19 +60,13 @@ class CleanCategoriesScreen extends ConsumerWidget {
       return _buildEmptyState(ref);
     }
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.refresh(categoriesProvider);
-        await ref.read(categoriesProvider.future);
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        return _buildCategorySection(context, category);
       },
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 16.0),
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return _buildCategorySection(context, category);
-        },
-      ),
     );
   }
 
@@ -97,22 +100,12 @@ class CleanCategoriesScreen extends ConsumerWidget {
         // Category header
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: Row(
-            children: [
-              Icon(
-                category.icon,
-                color: category.themeColor,
-                size: 24,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                category.name,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          child: Text(
+            category.name,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
 
@@ -121,12 +114,12 @@ class CleanCategoriesScreen extends ConsumerWidget {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 0.8,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 12,
+              crossAxisCount: 4,
+              childAspectRatio: 0.65,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 3,
             ),
             itemCount: category.subCategories!.length,
             itemBuilder: (context, index) {
@@ -150,82 +143,173 @@ class CleanCategoriesScreen extends ConsumerWidget {
   }
 
   Widget _buildSubcategoryCard(BuildContext context, SubCategory subcategory, Color themeColor) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: InkWell(
-        onTap: () {
-          // Navigate to product listing with subcategory filter
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CleanProductListingScreen(
-                subcategoryId: subcategory.id,
-              ),
-              // Pass the subcategory name as route arguments
-              settings: RouteSettings(
-                arguments: {
-                  'subcategoryName': subcategory.name,
-                },
-              ),
+    return _BounceCard(
+      onTap: () {
+        // Navigate to product listing with subcategory filter
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CleanProductListingScreen(
+              subcategoryId: subcategory.id,
             ),
-          );
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Subcategory image
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: themeColor.withAlpha(30),
-                  shape: BoxShape.circle,
-                ),
-                child: subcategory.imageUrl != null
-                    ? ClipOval(
-                        child: Image.network(
-                          subcategory.imageUrl!,
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.category,
-                              color: themeColor.withAlpha(150),
-                              size: 30,
-                            );
-                          },
+            // Pass the subcategory name as route arguments
+            settings: RouteSettings(
+              arguments: {
+                'subcategoryName': subcategory.name,
+              },
+            ),
+          ),
+        );
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Subcategory image container
+          Expanded(
+            flex: 3,
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+              child: subcategory.imageUrl != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: CachedNetworkImage(
+                        imageUrl: subcategory.imageUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          decoration: BoxDecoration(
+                            color: themeColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.category,
+                            color: themeColor.withValues(alpha: 0.6),
+                            size: 32,
+                          ),
                         ),
-                      )
-                    : Icon(
-                        Icons.category,
-                        color: themeColor.withAlpha(150),
-                        size: 30,
+                        errorWidget: (context, url, error) => Container(
+                          decoration: BoxDecoration(
+                            color: themeColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.category,
+                            color: themeColor.withValues(alpha: 0.6),
+                            size: 32,
+                          ),
+                        ),
                       ),
-              ),
-              const SizedBox(height: 8),
-              // Subcategory name
-              Text(
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        color: themeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.category,
+                        color: themeColor.withValues(alpha: 0.6),
+                        size: 32,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Subcategory name
+          Expanded(
+            flex: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
                 subcategory.name,
                 style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF212121),
+                  height: 1.1,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
+}
 
+/// A custom widget that provides a bounce effect when tapped
+class _BounceCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const _BounceCard({
+    required this.child,
+    required this.onTap,
+  });
+
+  @override
+  State<_BounceCard> createState() => _BounceCardState();
+}
+
+class _BounceCardState extends State<_BounceCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _onTap() async {
+    // Quick bounce animation for fast taps
+    await _animationController.forward();
+    await _animationController.reverse();
+    widget.onTap();
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    _animationController.forward();
+  }
+
+  void _onTapCancel() {
+    _animationController.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _onTap,
+      onTapDown: _onTapDown,
+      onTapCancel: _onTapCancel,
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: widget.child,
+          );
+        },
+      ),
+    );
+  }
 }

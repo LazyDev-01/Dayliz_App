@@ -189,12 +189,26 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
         }
 
         if (mounted) {
+          // Show success message briefly
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(_isEditing ? 'Address updated successfully' : 'Address added successfully'),
+              content: Text(_isEditing ? 'Address updated successfully' : 'Address saved successfully'),
+              duration: const Duration(milliseconds: 1500),
             ),
           );
+
+          // Close the bottom sheet
           Navigator.of(context).pop();
+
+          // Navigate to saved addresses page or back to previous screen
+          if (!_isEditing) {
+            // Check if we can pop back (came from another screen like cart)
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop(); // Go back to previous screen
+            } else {
+              Navigator.of(context).pushReplacementNamed('/addresses');
+            }
+          }
         }
       } catch (e) {
         if (mounted) {
@@ -317,25 +331,7 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
                     ),
                   ),
 
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Enter complete address',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-
-                  // Divider line
-                  Container(
-                    height: 1,
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    color: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
 
                   // Form content
                   Expanded(
@@ -348,8 +344,8 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
                   const Text(
                     'Save address as*',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -444,12 +440,12 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
                   ),
                   const SizedBox(height: 20),
 
-                  // Delivery Address Section Title
+                  // Help our delivery agent Section Title
                   const Text(
-                    'Delivery Address',
+                    'Help our delivery agent',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -505,7 +501,7 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
                     controller: _addressLine1Controller,
                     style: const TextStyle(color: Colors.black),
                     decoration: InputDecoration(
-                      labelText: 'Area / Sector / Locality *',
+                      labelText: 'Street / Area / Locality *',
                       labelStyle: TextStyle(color: Colors.grey[600]),
                       border: OutlineInputBorder(
                         borderSide: BorderSide(color: Colors.grey[300]!),

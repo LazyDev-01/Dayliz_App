@@ -78,13 +78,14 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
       if (!_isValidUuid(userId)) {
         throw ServerException(message: 'Invalid user ID format. Must be a valid UUID.');
       }
+
       final response = await client
           .from('addresses')
           .select()
           .eq('user_id', userId)
           .order('is_default', ascending: false);
 
-      return (response as List).map((item) => Address(
+      final addresses = (response as List).map((item) => Address(
         id: item['id'],
         userId: item['user_id'],
         addressLine1: item['address_line1'],
@@ -108,6 +109,8 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
         createdAt: item['created_at'] != null ? DateTime.parse(item['created_at'].toString()) : null,
         updatedAt: item['updated_at'] != null ? DateTime.parse(item['updated_at'].toString()) : null,
       )).toList();
+
+      return addresses;
     } catch (e) {
       throw ServerException(message: e.toString());
     }
@@ -317,92 +320,50 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
 
       debugPrint('Deleting address: $addressId for user: $userId');
 
-      // First, let's create the safe_delete_address function if it doesn't exist
-      try {
-        const createFunctionSQL = '''
-        -- Function to safely delete an address
-        CREATE OR REPLACE FUNCTION safe_delete_address(
-          address_id_param UUID,
-          user_id_param UUID
-        )
-        RETURNS BOOLEAN
-        LANGUAGE plpgsql
-        SECURITY DEFINER -- This makes the function run with the privileges of the creator
-        AS \$\$
-        DECLARE
-          is_default BOOLEAN;
-          remaining_address_id UUID;
-        BEGIN
-          -- Check if the address exists and belongs to the user
-          SELECT is_default INTO is_default
-          FROM addresses
-          WHERE id = address_id_param AND user_id = user_id_param;
+      // Simplified approach: Direct deletion with basic checks
+      // Check if the address exists and belongs to the user
+      final addressResponse = await client
+          .from('addresses')
+          .select('id, is_default')
+          .eq('id', addressId)
+          .eq('user_id', userId)
+          .maybeSingle();
 
-          IF is_default IS NULL THEN
-            RAISE EXCEPTION 'Address not found or does not belong to user';
-            RETURN FALSE;
-          END IF;
-
-          -- Check if the address is referenced by any orders
-          IF EXISTS (
-            SELECT 1 FROM orders
-            WHERE (
-              shipping_address_id = address_id_param
-              OR billing_address_id = address_id_param
-              OR shipping_address->>'id' = address_id_param::TEXT
-              OR billing_address->>'id' = address_id_param::TEXT
-            )
-            LIMIT 1
-          ) THEN
-            RAISE EXCEPTION 'Cannot delete this address because it is used in one or more orders.';
-            RETURN FALSE;
-          END IF;
-
-          -- Delete the address
-          DELETE FROM addresses
-          WHERE id = address_id_param AND user_id = user_id_param;
-
-          -- If the deleted address was the default one, set a new default address
-          IF is_default THEN
-            SELECT id INTO remaining_address_id
-            FROM addresses
-            WHERE user_id = user_id_param
-            LIMIT 1;
-
-            IF remaining_address_id IS NOT NULL THEN
-              UPDATE addresses
-              SET is_default = TRUE
-              WHERE id = remaining_address_id;
-            END IF;
-          END IF;
-
-          RETURN TRUE;
-        END;
-        \$\$;
-
-        -- Grant execute permission to authenticated users
-        GRANT EXECUTE ON FUNCTION safe_delete_address(UUID, UUID) TO authenticated;
-        ''';
-
-        // Create the function
-        await client.rpc('execute_sql', params: {'sql': createFunctionSQL});
-        debugPrint('Created safe_delete_address function');
-      } catch (e) {
-        // Function might already exist, which is fine
-        debugPrint('Note: Function creation error (may already exist): $e');
+      if (addressResponse == null) {
+        debugPrint('Address not found or does not belong to user');
+        throw ServerException(message: 'Address not found or does not belong to user');
       }
 
-      // Now call the function to safely delete the address
-      final result = await client.rpc('safe_delete_address', params: {
-        'address_id_param': addressId,
-        'user_id_param': userId
-      });
+      final isDefault = addressResponse['is_default'] ?? false;
+      debugPrint('Address is default: $isDefault');
 
-      if (result == null || result == false) {
-        throw ServerException(message: 'Failed to delete address');
+      // Delete the address directly
+      await client
+          .from('addresses')
+          .delete()
+          .eq('id', addressId)
+          .eq('user_id', userId);
+
+      // If the deleted address was the default one, set a new default address
+      if (isDefault) {
+        final remainingAddresses = await client
+            .from('addresses')
+            .select('id')
+            .eq('user_id', userId)
+            .limit(1);
+
+        if (remainingAddresses.isNotEmpty) {
+          final remainingAddressId = remainingAddresses.first['id'];
+          await client
+              .from('addresses')
+              .update({'is_default': true})
+              .eq('id', remainingAddressId);
+
+          debugPrint('Set new default address: $remainingAddressId');
+        }
       }
 
-      debugPrint('Address deleted successfully using safe_delete_address function');
+      debugPrint('Address deleted successfully');
       return true;
     } catch (e) {
       debugPrint('Exception in deleteAddress: $e');

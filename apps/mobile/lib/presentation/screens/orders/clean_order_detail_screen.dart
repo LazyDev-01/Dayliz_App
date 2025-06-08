@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:timeline_tile/timeline_tile.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/order.dart' as domain;
 import '../../../domain/entities/order_item.dart';
 import '../../../domain/entities/payment_method.dart';
@@ -41,7 +42,17 @@ class _CleanOrderDetailScreenState extends ConsumerState<CleanOrderDetailScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Order Details'),
+        title: const Text(
+          'Order Details',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        iconTheme: IconThemeData(color: Colors.black),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

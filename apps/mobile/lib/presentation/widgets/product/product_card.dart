@@ -255,21 +255,13 @@ class ProductCard extends ConsumerWidget {
       await notifier.addToCart(product: product, quantity: 1);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${product.name} added to cart'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        debugPrint('${product.name} added to cart');
+        // Success feedback disabled for early launch
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to add to cart: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        debugPrint('Failed to add to cart: $e');
+        // Error feedback disabled for early launch
       }
     }
   }

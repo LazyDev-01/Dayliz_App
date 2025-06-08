@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/product.dart';
 import '../../../data/test/test_subcategories.dart';
 import '../../providers/product_providers.dart';
@@ -256,10 +257,16 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
         centerTitle: true,
         showShadow: false,
         elevation: 0,
+        backgroundColor: AppColors.appBarSecondary, // Light green tint
+        foregroundColor: Colors.black,
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () => _showFilterDialog(context, ref),
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              // Search functionality to be implemented later
+              debugPrint('Search icon tapped - functionality to be implemented');
+            },
+            tooltip: 'Search',
           ),
         ],
       ),
@@ -333,12 +340,7 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
     }
   }
 
-  /// Filter products by subcategory
-  void _filterBySubcategory(String? subcategory) {
-    setState(() {
-      _selectedSubcategory = subcategory;
-    });
-  }
+
 
   Widget _buildContent() {
     if (_isLoading) {
@@ -365,133 +367,5 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
     );
   }
 
-  void _showFilterDialog(BuildContext context, WidgetRef ref) {
-    // Get current filters
-    final currentFilters = ref.read(productFiltersProvider);
-    String? selectedSortBy = currentFilters['sortBy'];
-    bool? isAscending = currentFilters['ascending'];
-    double? minPrice = currentFilters['minPrice'];
-    double? maxPrice = currentFilters['maxPrice'];
 
-    // Show dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Filter Products'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Sort by options
-              const Text('Sort by:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              _buildSortOption(context, 'Price', 'price', selectedSortBy, (value) => selectedSortBy = value),
-              _buildSortOption(context, 'Popularity', 'popularity', selectedSortBy, (value) => selectedSortBy = value),
-              _buildSortOption(context, 'Rating', 'rating', selectedSortBy, (value) => selectedSortBy = value),
-              _buildSortOption(context, 'Newest', 'createdAt', selectedSortBy, (value) => selectedSortBy = value),
-
-              const SizedBox(height: 16),
-
-              // Ascending/descending options
-              Row(
-                children: [
-                  const Text('Order:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 16),
-                  ChoiceChip(
-                    label: const Text('Ascending'),
-                    selected: isAscending == true,
-                    onSelected: (selected) => isAscending = selected ? true : false,
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('Descending'),
-                    selected: isAscending == false,
-                    onSelected: (selected) => isAscending = selected ? false : true,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Price range
-              const Text('Price range:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Min',
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (value) => minPrice = double.tryParse(value),
-                      controller: TextEditingController(text: minPrice?.toString() ?? ''),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Max',
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (value) => maxPrice = double.tryParse(value),
-                      controller: TextEditingController(text: maxPrice?.toString() ?? ''),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              // Apply the filters
-              ref.read(productFiltersProvider.notifier).update((state) => {
-                ...state,
-                'sortBy': selectedSortBy,
-                'ascending': isAscending,
-                'minPrice': minPrice,
-                'maxPrice': maxPrice,
-                // Reset page to 1 when applying new filters
-                'page': 1,
-              });
-
-              // Close the dialog
-              Navigator.pop(context);
-            },
-            child: const Text('Apply'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSortOption(
-    BuildContext context,
-    String label,
-    String value,
-    String? selectedValue,
-    Function(String) onChanged,
-  ) {
-    return RadioListTile<String>(
-      title: Text(label),
-      value: value,
-      groupValue: selectedValue,
-      onChanged: (newValue) {
-        if (newValue != null) {
-          onChanged(newValue);
-        }
-      },
-      dense: true,
-    );
-  }
 }

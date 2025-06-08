@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
@@ -66,7 +67,7 @@ abstract class CartLocalDataSource {
 /// Implementation of the cart local data source
 class CartLocalDataSourceImpl implements CartLocalDataSource {
   final SharedPreferences sharedPreferences;
-  
+
   static const String _cachedCartKey = 'CACHED_CART';
 
   CartLocalDataSourceImpl({required this.sharedPreferences});
@@ -75,12 +76,12 @@ class CartLocalDataSourceImpl implements CartLocalDataSource {
   Future<List<CartItemModel>> getCachedCartItems() async {
     try {
       final jsonString = sharedPreferences.getString(_cachedCartKey);
-      
+
       if (jsonString != null) {
         final List<dynamic> jsonList = json.decode(jsonString);
         return jsonList.map((item) => CartItemModel.fromJson(item)).toList();
       }
-      
+
       return [];
     } catch (e) {
       throw CartLocalException('Failed to get cached cart items: ${e.toString()}');
@@ -90,15 +91,26 @@ class CartLocalDataSourceImpl implements CartLocalDataSource {
   @override
   Future<bool> cacheCartItems(List<CartItemModel> cartItems) async {
     try {
+      debugPrint('🏠 CART LOCAL: Caching ${cartItems.length} cart items');
+
       final List<Map<String, dynamic>> jsonList = cartItems
           .map((item) => (item).toJson())
           .toList();
-      
-      return await sharedPreferences.setString(
+
+      final success = await sharedPreferences.setString(
         _cachedCartKey,
         json.encode(jsonList),
       );
+
+      if (success) {
+        debugPrint('🏠 CART LOCAL: ✅ Cart items cached successfully');
+      } else {
+        debugPrint('🏠 CART LOCAL: ❌ Failed to cache cart items');
+      }
+
+      return success;
     } catch (e) {
+      debugPrint('🏠 CART LOCAL: ❌ Exception caching cart items: $e');
       throw CartLocalException('Failed to cache cart items: ${e.toString()}');
     }
   }
@@ -110,34 +122,38 @@ class CartLocalDataSourceImpl implements CartLocalDataSource {
   }) async {
     try {
       final currentItems = await getCachedCartItems();
-      
+
       // Check if product already exists in cart
       final existingItemIndex = currentItems.indexWhere(
         (item) => item.product.id == product.id,
       );
-      
+
       if (existingItemIndex >= 0) {
         // Update quantity if product already exists
         final updatedItem = currentItems[existingItemIndex].copyWithModel(
           quantity: currentItems[existingItemIndex].quantity + quantity,
         );
-        
+
         currentItems[existingItemIndex] = updatedItem;
         await cacheCartItems(currentItems);
-        
+
         return updatedItem;
       } else {
         // Add new product to cart
+        final productModel = product is ProductModel
+            ? product
+            : _convertToProductModel(product);
+
         final newItem = CartItemModel(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
-          product: product as ProductModel,
+          product: productModel,
           quantity: quantity,
           addedAt: DateTime.now(),
         );
-        
+
         currentItems.add(newItem);
         await cacheCartItems(currentItems);
-        
+
         return newItem;
       }
     } catch (e) {
@@ -151,13 +167,13 @@ class CartLocalDataSourceImpl implements CartLocalDataSource {
   }) async {
     try {
       final currentItems = await getCachedCartItems();
-      
+
       final updatedItems = currentItems.where((item) => item.id != cartItemId).toList();
-      
+
       if (currentItems.length == updatedItems.length) {
         return false; // Item not found
       }
-      
+
       return await cacheCartItems(updatedItems);
     } catch (e) {
       throw CartLocalException('Failed to remove from local cart: ${e.toString()}');
@@ -171,20 +187,20 @@ class CartLocalDataSourceImpl implements CartLocalDataSource {
   }) async {
     try {
       final currentItems = await getCachedCartItems();
-      
+
       final itemIndex = currentItems.indexWhere((item) => item.id == cartItemId);
-      
+
       if (itemIndex < 0) {
         throw CartLocalException('Cart item not found');
       }
-      
+
       final updatedItem = currentItems[itemIndex].copyWithModel(
         quantity: quantity,
       );
-      
+
       currentItems[itemIndex] = updatedItem;
       await cacheCartItems(currentItems);
-      
+
       return updatedItem;
     } catch (e) {
       throw CartLocalException('Failed to update local quantity: ${e.toString()}');
@@ -204,7 +220,7 @@ class CartLocalDataSourceImpl implements CartLocalDataSource {
   Future<double> getLocalTotalPrice() async {
     try {
       final currentItems = await getCachedCartItems();
-      
+
       return currentItems.fold<double>(0, (double total, item) => total + item.totalPrice);
     } catch (e) {
       throw CartLocalException('Failed to get local total price: ${e.toString()}');
@@ -215,7 +231,7 @@ class CartLocalDataSourceImpl implements CartLocalDataSource {
   Future<int> getLocalItemCount() async {
     try {
       final currentItems = await getCachedCartItems();
-      
+
       return currentItems.fold<int>(0, (int count, item) => count + item.quantity);
     } catch (e) {
       throw CartLocalException('Failed to get local item count: ${e.toString()}');
@@ -228,10 +244,43 @@ class CartLocalDataSourceImpl implements CartLocalDataSource {
   }) async {
     try {
       final currentItems = await getCachedCartItems();
-      
+
       return currentItems.any((item) => item.product.id == productId);
     } catch (e) {
       throw CartLocalException('Failed to check if in local cart: ${e.toString()}');
     }
   }
-} 
+
+
+
+  /// Helper method to convert a Product entity to a ProductModel
+  ProductModel _convertToProductModel(Product product) {
+    try {
+      return ProductModel.fromProduct(product);
+    } catch (e) {
+      debugPrint('Error using ProductModel.fromProduct: $e');
+
+      // Fallback to manual conversion
+      return ProductModel(
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        discountPercentage: product.discountPercentage,
+        rating: product.rating,
+        reviewCount: product.reviewCount,
+        mainImageUrl: product.mainImageUrl,
+        additionalImages: product.additionalImages,
+        inStock: product.inStock,
+        stockQuantity: product.stockQuantity,
+        categoryId: product.categoryId,
+        subcategoryId: product.subcategoryId,
+        brand: product.brand,
+        attributes: product.attributes,
+        tags: product.tags,
+        createdAt: product.createdAt,
+        updatedAt: product.updatedAt,
+      );
+    }
+  }
+}

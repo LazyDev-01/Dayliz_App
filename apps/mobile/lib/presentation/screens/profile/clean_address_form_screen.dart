@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // Temporarily comment out geolocator import
 // import 'package:geolocator/geolocator.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/address.dart';
 import '../../providers/user_profile_providers.dart';
 
@@ -360,7 +361,17 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
     return Scaffold(
       backgroundColor: Colors.grey[50], // Light grey background
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Address' : 'Add New Address'),
+        title: Text(
+          _isEditing ? 'Edit Address' : 'Add New Address',
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: Form(
         key: _formKey,

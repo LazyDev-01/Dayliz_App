@@ -4,7 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import 'supabase_connection_test_screen.dart';
 import 'supabase_auth_test_screen.dart';
+import 'google_maps_diagnostic_screen.dart';
+import 'simple_google_maps_test.dart';
+import 'google_maps_api_test.dart';
 import '../profile/clean_address_form_screen.dart';
+import '../order/order_summary_screen.dart';
+import '../categories/optimized_categories_screen.dart';
+import '../categories/ultra_high_fps_categories_screen.dart';
+import '../dev/cart_sync_test_screen.dart';
 import '../../../navigation/routes.dart';
 import '../../widgets/common/common_app_bar.dart';
 
@@ -30,6 +37,20 @@ class DebugMenuScreen extends ConsumerWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const SupabaseConnectionTestScreen(),
+                ),
+              );
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Cart Sync Diagnostics',
+            subtitle: 'Test cart database synchronization and authentication',
+            icon: Icons.sync,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CartSyncTestScreen(),
                 ),
               );
             },
@@ -91,11 +112,115 @@ class DebugMenuScreen extends ConsumerWidget {
           ),
           _buildDebugTile(
             context,
-            title: 'Google Maps Test',
-            subtitle: 'Test Google Maps integration with location picking',
+            title: 'Google Maps API Test',
+            subtitle: 'Test API key and network connectivity',
+            icon: Icons.api,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GoogleMapsApiTest(),
+                ),
+              );
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Simple Google Maps Test',
+            subtitle: 'Basic test to check if Google Maps loads',
+            icon: Icons.map_outlined,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SimpleGoogleMapsTest(),
+                ),
+              );
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Google Maps Diagnostic',
+            subtitle: 'Diagnose Google Maps loading issues',
+            icon: Icons.bug_report,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GoogleMapsDiagnosticScreen(),
+                ),
+              );
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Google Maps Integration Test',
+            subtitle: 'Test Google Maps integration with rich POI data',
             icon: Icons.map,
             onTap: () {
               context.push('/test-google-maps');
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Modern Cart Screen',
+            subtitle: 'Test the new modern cart UI design (UI-only)',
+            icon: Icons.shopping_cart,
+            onTap: () {
+              context.push('/modern-cart');
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Payment Selection Screen',
+            subtitle: 'Test the payment method selection for checkout flow (UI-only)',
+            icon: Icons.payment,
+            onTap: () {
+              context.push('/payment-selection');
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Order Summary Screen',
+            subtitle: 'Test the order summary page after order placement (UI-only)',
+            icon: Icons.receipt_long,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OrderSummaryScreen(
+                    orderId: 'DEBUG_ORDER_123',
+                  ),
+                ),
+              );
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Optimized Categories Screen',
+            subtitle: 'High-performance categories with staggered grid (Performance Test)',
+            icon: Icons.speed,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OptimizedCategoriesScreen(),
+                ),
+              );
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Ultra High FPS Categories',
+            subtitle: '90-120 FPS capable categories (Requires high refresh rate display)',
+            icon: Icons.rocket_launch,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const UltraHighFpsCategoriesScreen(),
+                ),
+              );
             },
           ),
 

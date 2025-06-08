@@ -185,6 +185,7 @@ class _CleanSettingsScreenState extends ConsumerState<CleanSettingsScreen> {
               leading: const Icon(Icons.shopping_cart),
               onTap: () => context.go('/debug/cart-dependencies'),
             ),
+
           ],
         ),
       ),

@@ -97,6 +97,18 @@ import '../domain/usecases/payment_method/get_payment_methods_usecase.dart';
 import '../domain/usecases/payment_method/add_payment_method_usecase.dart';
 import '../domain/usecases/payment_method/set_default_payment_method_usecase.dart';
 
+// Location and Zone imports
+import '../domain/repositories/location_repository.dart';
+import '../domain/repositories/zone_repository.dart';
+import '../data/repositories/location_repository_impl.dart';
+import '../data/repositories/zone_repository_impl.dart';
+import '../data/datasources/location_local_data_source.dart';
+import '../data/datasources/zone_remote_data_source.dart';
+import '../domain/usecases/location/request_location_permission_usecase.dart';
+import '../domain/usecases/location/get_current_location_usecase.dart';
+import '../domain/usecases/location/validate_delivery_zone_usecase.dart';
+import '../domain/usecases/location/location_setup_usecase.dart';
+
 /// Global service locator for clean architecture components
 final sl = GetIt.instance;
 
@@ -475,6 +487,74 @@ Future<void> initCleanArchitecture() async {
 
   // Register Order-related dependencies
   _registerOrderDependencies();
+
+  //-------------------------------------------------------------------------
+  // Location and Zone
+  //-------------------------------------------------------------------------
+
+  // Zone Data Sources
+  if (!sl.isRegistered<ZoneRemoteDataSource>()) {
+    sl.registerLazySingleton<ZoneRemoteDataSource>(
+      () => ZoneSupabaseRemoteDataSource(client: sl()),
+    );
+  }
+
+  // Location Data Sources
+  if (!sl.isRegistered<LocationLocalDataSource>()) {
+    sl.registerLazySingleton<LocationLocalDataSource>(
+      () => LocationLocalDataSourceImpl(),
+    );
+  }
+
+  // Zone Repository
+  if (!sl.isRegistered<ZoneRepository>()) {
+    sl.registerLazySingleton<ZoneRepository>(
+      () => ZoneRepositoryImpl(
+        remoteDataSource: sl(),
+        networkInfo: sl(),
+      ),
+    );
+  }
+
+  // Location Repository
+  if (!sl.isRegistered<LocationRepository>()) {
+    sl.registerLazySingleton<LocationRepository>(
+      () => LocationRepositoryImpl(
+        localDataSource: sl(),
+        zoneRepository: sl(),
+        networkInfo: sl(),
+      ),
+    );
+  }
+
+  // Location Use Cases
+  if (!sl.isRegistered<RequestLocationPermissionUseCase>()) {
+    sl.registerLazySingleton(() => RequestLocationPermissionUseCase(sl()));
+  }
+  if (!sl.isRegistered<CheckLocationPermissionUseCase>()) {
+    sl.registerLazySingleton(() => CheckLocationPermissionUseCase(sl()));
+  }
+  if (!sl.isRegistered<IsLocationServiceEnabledUseCase>()) {
+    sl.registerLazySingleton(() => IsLocationServiceEnabledUseCase(sl()));
+  }
+  if (!sl.isRegistered<GetCurrentLocationUseCase>()) {
+    sl.registerLazySingleton(() => GetCurrentLocationUseCase(sl()));
+  }
+  if (!sl.isRegistered<ValidateDeliveryZoneUseCase>()) {
+    sl.registerLazySingleton(() => ValidateDeliveryZoneUseCase(sl()));
+  }
+  if (!sl.isRegistered<GetLocationAndValidateZoneUseCase>()) {
+    sl.registerLazySingleton(() => GetLocationAndValidateZoneUseCase(sl()));
+  }
+  if (!sl.isRegistered<IsLocationSetupCompletedUseCase>()) {
+    sl.registerLazySingleton(() => IsLocationSetupCompletedUseCase(sl()));
+  }
+  if (!sl.isRegistered<MarkLocationSetupCompletedUseCase>()) {
+    sl.registerLazySingleton(() => MarkLocationSetupCompletedUseCase(sl()));
+  }
+  if (!sl.isRegistered<ClearLocationSetupStatusUseCase>()) {
+    sl.registerLazySingleton(() => ClearLocationSetupStatusUseCase(sl()));
+  }
 
   debugPrint('Clean architecture component registration complete');
 }

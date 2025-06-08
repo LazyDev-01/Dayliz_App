@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/product.dart';
 import '../../providers/product_providers.dart';
 import '../../providers/cart_providers.dart';
@@ -33,7 +34,17 @@ class CleanProductDetailsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(productState.product?.name ?? 'Product Details'),
+        title: Text(
+          productState.product?.name ?? 'Product Details',
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: AppColors.appBarSecondary, // Light green tint
+        foregroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.black),
         actions: [
           // Wishlist button
           Consumer(
@@ -381,17 +392,8 @@ class CleanProductDetailsScreen extends ConsumerWidget {
           quantity: 1,
         );
 
-        // Show snackbar
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${product.name} added to cart'),
-            duration: const Duration(seconds: 2),
-            action: SnackBarAction(
-              label: 'View Cart',
-              onPressed: () => context.push('/clean/cart'),
-            ),
-          ),
-        );
+        // Success feedback disabled for early launch
+        debugPrint('${product.name} added to cart');
       }
     }
   }

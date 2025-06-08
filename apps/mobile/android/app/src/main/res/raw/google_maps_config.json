@@ -1,0 +1,11 @@
+{
+  "logging": {
+    "level": "ERROR",
+    "enableConsoleLogging": false,
+    "enableFileLogging": false
+  },
+  "performance": {
+    "enableFrameMetrics": false,
+    "enableRenderingOptimizations": true
+  }
+}

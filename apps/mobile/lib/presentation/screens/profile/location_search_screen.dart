@@ -76,6 +76,7 @@ class _LocationSearchScreenState extends State<LocationSearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: true, // Important: Allow screen to resize when keyboard appears
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,

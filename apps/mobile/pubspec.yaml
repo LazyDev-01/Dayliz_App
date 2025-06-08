@@ -42,17 +42,20 @@ dependencies:
   get_it: ^7.6.0              # Dependency injection
   flutter_riverpod: ^2.4.0    # State management
   riverpod_annotation: ^2.1.5  # Riverpod code generation
+  fast_immutable_collections: ^10.2.4 # High-performance immutable collections
+  flutter_hooks: ^0.20.5      # Better state management and lifecycle handling
 
   # Network
   http: ^1.1.0                # HTTP client
   dio: ^5.3.2                 # Alternative HTTP client with more features
   internet_connection_checker: ^1.0.0+1 # Network connectivity
   cached_network_image: ^3.2.3 # Image caching
+  flutter_cache_manager: ^3.3.1 # Advanced caching for API responses and files
 
   # Local storage
   shared_preferences: ^2.2.1  # Simple key-value storage
   hive: ^2.2.3                # NoSQL database
-  hive_flutter: ^1.1.0        # Flutter integration for Hive
+  hive_flutter: ^1.1.0        # Hive Flutter integration for high-performance local storage
   sqflite: ^2.3.0             # SQLite database
 
   # Supabase (restored)
@@ -74,6 +77,7 @@ dependencies:
   visibility_detector: ^0.4.0+2
   timeline_tile: ^2.0.0       # Timeline visualization for order tracking
   confetti: ^0.7.0            # Confetti animation for celebrations
+  flutter_staggered_grid_view: ^0.7.0 # High-performance grid layouts
 
   # Navigation
   go_router: ^10.1.2          # Router
@@ -85,6 +89,12 @@ dependencies:
   uuid: ^4.5.1                # UUID generation (updated for geolocator compatibility)
   connectivity_plus: ^4.0.2   # Network connectivity
   package_info_plus: ^4.2.0   # Package information
+
+  # UI/UX Enhancement Packages
+  flutter_screenutil: ^5.9.3  # Responsive design for all screen sizes
+  auto_size_text: ^3.0.0      # Responsive typography that adapts to screen
+  rive: ^0.13.1               # Interactive vector animations (premium feel)
+  flutter_keyboard_visibility: ^6.0.0 # Better keyboard handling
 
   # Location dependencies - Updated to stable versions compatible with Flutter 3.29.2
   geolocator: ^12.0.0           # Stable geolocation (compatible with Flutter 3.29.2)
@@ -100,8 +110,9 @@ dependencies:
 
   permission_handler: ^11.3.0 # Permission handling (updated)
 
-  # Maps and Location - Re-enabled with latest versions
-  google_maps_flutter: ^2.9.0  # Latest Google Maps (compatible with Flutter 3.32.0)
+  # Maps and Location - Google Maps implementation
+  google_maps_flutter: ^2.9.0   # Google Maps Flutter SDK
+  # mapbox_maps_flutter: ^2.3.0  # Removed - migrated back to Google Maps
 
 dev_dependencies:
   flutter_test:

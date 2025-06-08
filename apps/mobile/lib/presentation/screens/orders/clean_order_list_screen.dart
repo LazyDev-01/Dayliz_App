@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/order.dart' as domain;
 import '../../providers/order_providers.dart';
 import '../../widgets/common/empty_state.dart';
@@ -34,8 +35,10 @@ class _CleanOrderListScreenState extends ConsumerState<CleanOrderListScreen> {
     return Scaffold(
       appBar: CommonAppBars.withBackButton(
         title: 'My Orders',
-        fallbackRoute: '/clean/profile',
-        backButtonTooltip: 'Back to Profile',
+        fallbackRoute: '/home',
+        backButtonTooltip: 'Back to Home',
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.grey[800],
       ),
       body: RefreshIndicator(
         onRefresh: () async {

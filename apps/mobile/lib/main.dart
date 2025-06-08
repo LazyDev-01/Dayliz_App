@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dayliz_app/core/config/app_config.dart';
 import 'package:dayliz_app/core/services/supabase_service.dart';
 import 'package:dayliz_app/core/utils/image_preloader.dart';
+import 'package:dayliz_app/core/storage/hive_config.dart';
 // Clean architecture imports
 import 'package:dayliz_app/presentation/providers/auth_providers.dart' as clean_auth;
 import 'package:dayliz_app/presentation/providers/theme_providers.dart';
@@ -48,7 +49,9 @@ import 'presentation/screens/auth/clean_login_screen.dart';
 import 'presentation/screens/auth/clean_register_screen.dart';
 import 'presentation/screens/auth/clean_forgot_password_screen.dart';
 import 'presentation/screens/auth/clean_update_password_screen.dart';
-import 'presentation/screens/cart/clean_cart_screen.dart';
+
+import 'presentation/screens/cart/modern_cart_screen.dart';
+import 'presentation/screens/cart/payment_selection_screen.dart';
 import 'presentation/screens/checkout/clean_checkout_screen.dart';
 import 'presentation/screens/checkout/payment_methods_screen.dart';
 import 'presentation/screens/payment/payment_options_screen.dart';
@@ -59,8 +62,13 @@ import 'presentation/screens/profile/clean_address_form_screen.dart';
 import 'presentation/screens/profile/clean_user_profile_screen.dart';
 import 'presentation/screens/profile/clean_preferences_screen.dart';
 import 'presentation/screens/search/clean_search_screen.dart';
+import 'presentation/screens/location/location_setup_screen.dart';
+import 'presentation/screens/location/location_search_screen.dart';
+import 'presentation/screens/location/optimal_location_setup_screen.dart';
+import 'presentation/screens/debug/location_setup_test_screen.dart';
 import 'test_gps_integration.dart';
 import 'test_google_maps_integration.dart';
+// import 'test_google_maps_integration.dart'; // Removed - migrated to Mapbox
 
 // Splash screen temporarily disabled
 // import 'presentation/screens/splash/clean_splash_screen.dart';
@@ -77,6 +85,9 @@ Future<void> main() async {
 
   // Initialize app configuration
   await AppConfig.init();
+
+  // Initialize high-performance local storage
+  await HiveConfig.initialize();
 
   // Initialize Supabase service first
   try {
@@ -351,7 +362,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           return '/verify-email?token=$code&type=reset_password';
         }
 
-        return isAuthenticated ? '/home' : '/login';
+        // NEW: Simplified routing for authenticated users
+        if (isAuthenticated) {
+          debugPrint('ROUTER: User authenticated, redirecting to home (location setup will be handled by bottom sheet)');
+          return '/home';
+        }
+
+        return '/login';
       }
 
       // CRITICAL FIX: Never auto-redirect from auth screens
@@ -361,21 +378,27 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
+      // NEW: Allow location setup and location search screens
+      if (state.uri.path == '/location-setup' || state.uri.path == '/location-search') {
+        debugPrint('ROUTER: On location setup screen, allowing access');
+        return null;
+      }
+
       // GUEST MODE: Define guest-accessible routes (browsing without authentication)
       final guestAccessibleRoutes = [
         '/login',
         '/signup',
         '/reset-password',
-        '/home',           // Main home screen
-        '/categories',     // Browse categories
-        '/products',       // Browse products
-        '/clean/categories', // Clean architecture categories
-        // NOTE: Cart routes are protected - guests will see auth prompts
+        '/location-setup',  // NEW: Allow location setup for guests too
+        '/location-search', // NEW: Allow location search screen
+        // NOTE: /home is now protected by location setup
       ];
 
       // Check if current path is guest-accessible
       final isGuestAccessible = guestAccessibleRoutes.any((route) =>
         state.uri.path == route || state.uri.path.startsWith(route));
+
+      // Allow authenticated users to access all routes (location setup handled by bottom sheet)
 
       // Protect authenticated routes
       if (!isAuthenticated &&
@@ -534,6 +557,78 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      // Location Setup route
+      GoRoute(
+        path: '/location-setup',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const LocationSetupScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.3),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              ),
+            );
+          },
+        ),
+      ),
+
+      // Location Search route
+      GoRoute(
+        path: '/location-search',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const LocationSearchScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1.0, 0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              ),
+            );
+          },
+        ),
+      ),
+
+      // Optimal Location Setup route (NEW IMPLEMENTATION)
+      GoRoute(
+        path: '/location-setup',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const OptimalLocationSetupScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
+      // Debug Location Setup Test route
+      GoRoute(
+        path: '/debug/location-test',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const LocationSetupTestScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
       // Profile route
       GoRoute(
         path: '/profile',
@@ -553,12 +648,29 @@ final routerProvider = Provider<GoRouter>((ref) {
           child: const CleanCategoriesScreen(),
         ),
       ),
-      // Cart route
+      // Cart route (Phase 3: Updated to use Modern Cart Screen)
       GoRoute(
         path: '/cart',
         pageBuilder: (context, state) => NoTransitionPage<void>(
           key: state.pageKey,
-          child: const CleanCartScreen(),
+          child: const ModernCartScreen(),
+        ),
+      ),
+      // Modern Cart route (new UI design)
+      GoRoute(
+        path: '/modern-cart',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const ModernCartScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
         ),
       ),
       // Checkout route
@@ -1003,6 +1115,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
+      // Payment Selection Route (for cart checkout flow)
+      GoRoute(
+        path: '/payment-selection',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const PaymentSelectionScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1, 0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        ),
+      ),
+
       // Clean architecture routes that the app actually uses
       GoRoute(
         path: '/clean/categories',
@@ -1015,7 +1144,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/clean/cart',
         pageBuilder: (context, state) => NoTransitionPage<void>(
           key: state.pageKey,
-          child: const CleanCartScreen(),
+          child: const ModernCartScreen(),
         ),
       ),
       GoRoute(
@@ -1094,7 +1223,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      // Google Maps Test Screen
+      // Mapbox Test Screen
       GoRoute(
         path: '/test-google-maps',
         pageBuilder: (context, state) {
@@ -1145,17 +1274,29 @@ class IndexObserver extends NavigatorObserver {
   void _updateIndexFromRoute(Route<dynamic> route) {
     final routeName = route.settings.name;
     if (routeName != null) {
-      // Handle clean architecture routes
-      if (routeName == '/home' || routeName == '/clean-home') {
-        ref.read(bottomNavIndexProvider.notifier).state = 0;
-      } else if (routeName == '/categories' || routeName == '/clean/categories') {
-        ref.read(bottomNavIndexProvider.notifier).state = 1;
-      } else if (routeName == '/cart' || routeName == '/clean/cart') {
-        ref.read(bottomNavIndexProvider.notifier).state = 2;
-      } else if (routeName == '/orders' || routeName == '/clean/orders') {
-        ref.read(bottomNavIndexProvider.notifier).state = 3;
-      } else if (routeName == '/profile') {
-        // Profile is now in the top app bar, not in bottom navigation
+      // FIXED: Standardized route handling with proper mapping
+      switch (routeName) {
+        case '/home':
+        case '/clean-home': // Legacy support
+          ref.read(bottomNavIndexProvider.notifier).state = 0;
+          break;
+        case '/categories':
+        case '/clean/categories':
+          ref.read(bottomNavIndexProvider.notifier).state = 1;
+          break;
+        case '/cart':
+        case '/clean/cart':
+          ref.read(bottomNavIndexProvider.notifier).state = 2;
+          break;
+        case '/orders':
+          ref.read(bottomNavIndexProvider.notifier).state = 3;
+          break;
+        case '/profile':
+          // Profile is now in the top app bar, not in bottom navigation
+          break;
+        default:
+          // Don't update index for other routes to maintain current state
+          break;
       }
     }
   }

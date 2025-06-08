@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/address.dart';
 import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
@@ -110,12 +111,8 @@ class _CleanAddressListScreenState extends ConsumerState<CleanAddressListScreen>
       final userId = user?.id;
       if (userId == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('You must be logged in to delete addresses'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          // User not logged in - silently return for early launch
+          debugPrint('User must be logged in to delete addresses');
         }
         return;
       }
@@ -125,11 +122,8 @@ class _CleanAddressListScreenState extends ConsumerState<CleanAddressListScreen>
 
       // If we get here, the deletion was successful
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Address deleted successfully'),
-          ),
-        );
+        debugPrint('Address deleted successfully');
+        // Success feedback disabled for early launch
       }
     } catch (e) {
       debugPrint('Error deleting address: $e');
@@ -157,12 +151,8 @@ class _CleanAddressListScreenState extends ConsumerState<CleanAddressListScreen>
           errorMessage = 'Error deleting address: ${e.toString()}';
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-          ),
-        );
+        debugPrint('Error deleting address: $errorMessage');
+        // Error notifications disabled for early launch
       }
     }
   }
@@ -180,6 +170,8 @@ class _CleanAddressListScreenState extends ConsumerState<CleanAddressListScreen>
         title: 'Manage Address',
         fallbackRoute: '/profile',
         backButtonTooltip: 'Back to Profile',
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.grey[800],
       ),
       body: profileState.isAddressesLoading
         ? const LoadingIndicator()

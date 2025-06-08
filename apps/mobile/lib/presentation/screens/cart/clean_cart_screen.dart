@@ -9,11 +9,13 @@ import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/primary_button.dart';
-import '../../widgets/common/secondary_button.dart';
-import '../../widgets/cart/cart_item_card.dart';
-import '../../widgets/common/common_bottom_nav_bar.dart';
 
-/// A clean architecture implementation of the cart screen that uses Riverpod providers
+import '../../widgets/cart/cart_item_card.dart';
+import '../../widgets/common/navigation_handler.dart';
+
+/// LEGACY: A clean architecture implementation of the cart screen that uses Riverpod providers
+/// This screen has been replaced by ModernCartScreen in Phase 3
+/// Kept as backup for reference - DO NOT USE IN PRODUCTION
 class CleanCartScreen extends ConsumerWidget {
   const CleanCartScreen({Key? key}) : super(key: key);
 
@@ -22,15 +24,18 @@ class CleanCartScreen extends ConsumerWidget {
     // Watch cart state
     final cartState = ref.watch(cartNotifierProvider);
 
-    // Watch cart item count for badge
-    final cartItemCount = ref.watch(cartItemCountProvider);
 
-    // Set the current index for the bottom navigation bar
-    ref.read(bottomNavIndexProvider.notifier).state = 2; // 2 is for Cart
+
+    // Note: Navigation state is handled by NavigationHandler
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStrings.cart),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => _handleBackNavigation(context, ref),
+          tooltip: 'Back to Home',
+        ),
         actions: [
           if (cartState.items.isNotEmpty)
             IconButton(
@@ -46,18 +51,22 @@ class CleanCartScreen extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildBottomBar(context, ref, cartState),
-                CommonBottomNavBar(
+                NavigationHandler.createBottomNavBar(
+                  context: context,
+                  ref: ref,
                   currentIndex: 2, // Cart tab
-                  cartItemCount: cartItemCount,
                 ),
               ],
             )
-          : CommonBottomNavBar(
+          : NavigationHandler.createBottomNavBar(
+              context: context,
+              ref: ref,
               currentIndex: 2, // Cart tab
-              cartItemCount: cartItemCount,
             ),
     );
   }
+
+
 
   Widget _buildBody(BuildContext context, WidgetRef ref, CartState state) {
     // Show loading state
@@ -83,9 +92,8 @@ class CleanCartScreen extends ConsumerWidget {
         message: AppStrings.emptyCartMessage,
         buttonText: AppStrings.continueShopping,
         onButtonPressed: () {
-          // Navigate to clean home screen and set bottom nav index to 0 (Home)
-          ref.read(bottomNavIndexProvider.notifier).state = 0;
-          context.go('/clean-home');
+          // Navigate to main home screen
+          context.goToMainHomeWithProvider(ref);
         },
       );
     }
@@ -188,12 +196,8 @@ class CleanCartScreen extends ConsumerWidget {
     if (!success) {
       final errorMessage = ref.read(cartErrorProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage ?? AppStrings.errorRemovingFromCart),
-            backgroundColor: Colors.red,
-          ),
-        );
+        debugPrint('Error removing from cart: ${errorMessage ?? AppStrings.errorRemovingFromCart}');
+        // Error notifications disabled for early launch
       }
     }
   }
@@ -244,17 +248,24 @@ class CleanCartScreen extends ConsumerWidget {
 
     if (!success && context.mounted) {
       final errorMessage = ref.read(cartErrorProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage ?? AppStrings.errorClearingCart),
-          backgroundColor: Colors.red,
-        ),
-      );
+      debugPrint('Error clearing cart: ${errorMessage ?? AppStrings.errorClearingCart}');
+      // Error notifications disabled for early launch
     }
   }
 
   void _proceedToCheckout(BuildContext context) {
     // Navigate to checkout
     context.push('/checkout');
+  }
+
+  /// Handles back navigation properly for standalone cart screens
+  void _handleBackNavigation(BuildContext context, WidgetRef ref) {
+    debugPrint('🔙 Back button pressed in clean cart screen');
+
+    // Navigate to main home screen with proper provider update
+    debugPrint('🔙 Navigating to main home screen');
+    context.goToMainHomeWithProvider(ref);
+
+    debugPrint('🔙 Back navigation completed');
   }
 }

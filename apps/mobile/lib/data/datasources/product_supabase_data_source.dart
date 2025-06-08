@@ -155,6 +155,35 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
         .toList();
   }
 
+  /// Parse a single product response without images to avoid relationship errors
+  ProductModel _parseProductResponseWithoutImages(Map<String, dynamic> json) {
+    // Create a Product entity without images
+    final product = Product(
+      id: json['id']?.toString() ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      price: json['price'] != null ? (json['price'] as num).toDouble() : 0.0,
+      discountPercentage: json['discount_percentage'] != null
+          ? (json['discount_percentage'] as num).toDouble()
+          : null,
+      rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
+      reviewCount: json['review_count'] != null ? (json['review_count'] as num).toInt() : null,
+      mainImageUrl: 'https://via.placeholder.com/150', // Default placeholder
+      additionalImages: null, // No additional images for now
+      inStock: json['stock_quantity'] != null ? (json['stock_quantity'] as num) > 0 : false,
+      stockQuantity: json['stock_quantity'] != null ? (json['stock_quantity'] as num).toInt() : null,
+      categoryId: json['category_id']?.toString() ?? '',
+      subcategoryId: json['subcategory_id']?.toString(),
+      brand: json['brand'],
+      onSale: json['discount_percentage'] != null && (json['discount_percentage'] as num) > 0,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+    );
+
+    // Convert to ProductModel
+    return ProductModel.fromProduct(product);
+  }
+
   /// Get a single product by ID
   @override
   Future<ProductModel> getProductById(String id) async {
@@ -163,14 +192,14 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
 
       final response = await supabaseClient
           .from('products')
-          .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)')
+          .select('*')
           .eq('id', id)
           .single();
 
       debugPrint('ProductSupabaseDataSource: Retrieved product with ID: $id');
 
-      // Parse the response using the same method as getProducts
-      return _parseProductsResponse([response]).first;
+      // Parse the response without images to avoid relationship errors
+      return _parseProductResponseWithoutImages(response);
     } catch (e) {
       debugPrint('ProductSupabaseDataSource: Error fetching product: $e');
       throw ServerException(
@@ -256,7 +285,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       // Get products from the same category, excluding the current product
       final response = await supabaseClient
           .from('products')
-          .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)')
+          .select('*')
           .eq('category_id', categoryId)
           .neq('id', productId)
           .order('created_at', ascending: false)
@@ -264,7 +293,8 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
 
       debugPrint('ProductSupabaseDataSource: Retrieved ${response.length} related products');
 
-      return _parseProductsResponse(response);
+      // Parse the response without images to avoid relationship errors
+      return response.map((json) => _parseProductResponseWithoutImages(json)).toList();
     } catch (e) {
       debugPrint('ProductSupabaseDataSource: Error fetching related products: $e');
       throw ServerException(

@@ -525,13 +525,13 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
   void _handleSkip() {
     debugPrint('🎯 SKIP: User selected skip - bypassing authentication');
     debugPrint('🎯 SKIP: Current route: ${GoRouterState.of(context).uri.path}');
-    debugPrint('🎯 SKIP: Attempting navigation to /home');
+    debugPrint('🎯 SKIP: Attempting navigation to location setup');
 
-    // Navigate directly to home screen without authentication
+    // Navigate to location setup for guest users
     if (mounted) {
       try {
-        context.go('/home');
-        debugPrint('✅ SKIP: Navigation to /home initiated successfully');
+        context.go('/location-setup');
+        debugPrint('✅ SKIP: Navigation to location setup initiated successfully');
       } catch (e) {
         debugPrint('❌ SKIP: Navigation failed: $e');
       }

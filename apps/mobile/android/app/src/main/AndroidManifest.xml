@@ -66,10 +66,19 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Google Maps API Key -->
+        <!-- Google Maps API Key - Active configuration -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="${GOOGLE_MAPS_API_KEY}" />
+            android:value="AIzaSyBf-rFSTkhfN_Z6DB8PR4suHjimIMxxXg0" />
+        <!-- Mapbox configuration - Legacy (commented out) -->
+        <!-- <meta-data
+            android:name="com.mapbox.token"
+            android:value="${MAPBOX_ACCESS_TOKEN}" /> -->
+
+        <!-- Enable high refresh rate support for 90/120 FPS -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableHighRefreshRate"
+            android:value="true" />
 
         <!-- Google Sign-In Activity -->
         <activity

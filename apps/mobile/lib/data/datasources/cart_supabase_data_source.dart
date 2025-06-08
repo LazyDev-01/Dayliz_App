@@ -25,59 +25,102 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
   @override
   Future<List<CartItemModel>> getCartItems() async {
     try {
-      // Check authentication
+      // Check authentication with detailed logging
       final user = _supabaseClient.auth.currentUser;
+      final session = _supabaseClient.auth.currentSession;
+
+      debugPrint('🔐 CART SUPABASE: Getting cart items...');
+      debugPrint('🔐 CART SUPABASE: User: ${user?.id ?? 'null'}');
+      debugPrint('🔐 CART SUPABASE: Session: ${session != null ? 'exists' : 'null'}');
+
       if (user == null) {
-        throw ServerException(message: 'User is not authenticated');
+        debugPrint('🔐 CART SUPABASE: ❌ User not authenticated, returning empty cart');
+        return [];
       }
 
-      // Fetch cart items with product details using join
+      debugPrint('🔐 CART SUPABASE: ✅ User authenticated, fetching cart items...');
+
+      // Get cart items for the current user (simplified without join)
       final response = await _supabaseClient
           .from('cart_items')
-          .select('''
-            id,
-            product_id,
-            quantity,
-            added_at,
-            selected,
-            saved_for_later,
-            products (
-              id,
-              name,
-              description,
-              price,
-              sale_price,
-              image_url,
-              stock,
-              brand,
-              category_id,
-              is_featured,
-              is_active,
-              created_at,
-              updated_at,
-              in_stock,
-              average_rating,
-              review_count
-            )
-          ''')
+          .select('id, product_id, quantity, added_at')
           .eq('user_id', user.id)
           .order('added_at', ascending: false);
 
-      return (response as List<dynamic>).map((item) {
-        // Convert to CartItemModel
-        final product = ProductModel.fromJson(Map<String, dynamic>.from(item['products']));
+      debugPrint('🔐 CART SUPABASE: ✅ Found ${response.length} cart items in database');
 
-        return CartItemModel(
-          id: item['id'],
-          product: product,
-          quantity: item['quantity'],
-          addedAt: DateTime.parse(item['added_at']),
-        );
-      }).toList();
+      // Fetch real product details for each cart item
+      final cartItems = <CartItemModel>[];
+
+      for (final item in response) {
+        try {
+          debugPrint('🔐 CART SUPABASE: Fetching product details for: ${item['product_id']}');
+
+          // Fetch product details separately
+          final productResponse = await _supabaseClient
+              .from('products')
+              .select('*')
+              .eq('id', item['product_id'])
+              .single();
+
+          debugPrint('🔐 CART SUPABASE: ✅ Product details fetched: ${productResponse['name']}');
+
+          // Create ProductModel from fetched data with robust mapping
+          final productModel = _createProductModelFromSupabaseData(productResponse);
+
+          // Create CartItemModel with real product data
+          final cartItem = CartItemModel(
+            id: item['id'],
+            product: productModel,
+            quantity: item['quantity'],
+            addedAt: DateTime.parse(item['added_at']),
+          );
+
+          cartItems.add(cartItem);
+        } catch (e) {
+          debugPrint('🔐 CART SUPABASE: ❌ Failed to fetch product ${item['product_id']}: $e');
+
+          // Fallback to placeholder if product fetch fails
+          final placeholderProduct = ProductModel(
+            id: item['product_id'],
+            name: 'Product (ID: ${item['product_id']})',
+            description: 'Product details unavailable',
+            price: 0.0,
+            discountPercentage: 0.0,
+            rating: 0.0,
+            reviewCount: 0,
+            mainImageUrl: '',
+            additionalImages: const [],
+            inStock: true,
+            stockQuantity: 100,
+            categoryId: '',
+            subcategoryId: '',
+            brand: '',
+            attributes: const {},
+            tags: const [],
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+
+          final cartItem = CartItemModel(
+            id: item['id'],
+            product: placeholderProduct,
+            quantity: item['quantity'],
+            addedAt: DateTime.parse(item['added_at']),
+          );
+
+          cartItems.add(cartItem);
+        }
+      }
+
+      debugPrint('🔐 CART SUPABASE: ✅ Successfully processed ${cartItems.length} cart items with product details');
+      return cartItems;
     } on PostgrestException catch (e) {
+      debugPrint('🔐 CART SUPABASE: ❌ Database error: ${e.message}');
       throw ServerException(message: 'Database error: ${e.message}');
     } catch (e) {
-      throw ServerException(message: 'Failed to fetch cart items: ${e.toString()}');
+      debugPrint('🔐 CART SUPABASE: ❌ Get cart items failed: $e');
+      throw ServerException(message: 'Failed to get cart items: ${e.toString()}');
     }
   }
 
@@ -87,13 +130,20 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
     required int quantity,
   }) async {
     try {
-      // Check authentication
+      // Check authentication with detailed logging
       final user = _supabaseClient.auth.currentUser;
+      final session = _supabaseClient.auth.currentSession;
+
+      debugPrint('🔐 CART SUPABASE: Checking authentication...');
+      debugPrint('🔐 CART SUPABASE: User: ${user?.id ?? 'null'}');
+      debugPrint('🔐 CART SUPABASE: Session: ${session != null ? 'exists' : 'null'}');
+
       if (user == null) {
-        // For testing purposes, use a mock user ID
-        debugPrint('CartSupabaseDataSource: User not authenticated, using mock user ID');
-        return _addToCartWithMockUser(product, quantity);
+        debugPrint('🔐 CART SUPABASE: ❌ User not authenticated');
+        throw ServerException(message: 'User is not authenticated. Please login to sync cart with database.');
       }
+
+      debugPrint('🔐 CART SUPABASE: ✅ User authenticated, proceeding with database operation...');
 
       // Check if product already exists in cart
       final existingItem = await _supabaseClient
@@ -114,33 +164,15 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
               'added_at': DateTime.now().toIso8601String(),
             })
             .eq('id', existingItem['id'])
-            .select('''
-              id,
-              product_id,
-              quantity,
-              added_at,
-              products (
-                id,
-                name,
-                description,
-                price,
-                sale_price,
-                image_url,
-                stock,
-                brand,
-                category_id,
-                is_featured,
-                is_active,
-                created_at,
-                updated_at,
-                in_stock,
-                average_rating,
-                review_count
-              )
-            ''')
+            .select('id, product_id, quantity, added_at')
             .single();
 
-        final productModel = ProductModel.fromJson(Map<String, dynamic>.from(response['products']));
+        debugPrint('🔐 CART SUPABASE: ✅ Cart item updated successfully: ${response['id']}');
+
+        // Convert Product entity to ProductModel
+        final productModel = product is ProductModel
+            ? product
+            : _convertToProductModel(product);
 
         return CartItemModel(
           id: response['id'],
@@ -149,7 +181,7 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
           addedAt: DateTime.parse(response['added_at']),
         );
       } else {
-        // Add new item to cart
+        // Add new item to cart (simplified without join)
         final response = await _supabaseClient
             .from('cart_items')
             .insert({
@@ -160,33 +192,15 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
               'selected': true,
               'saved_for_later': false,
             })
-            .select('''
-              id,
-              product_id,
-              quantity,
-              added_at,
-              products (
-                id,
-                name,
-                description,
-                price,
-                sale_price,
-                image_url,
-                stock,
-                brand,
-                category_id,
-                is_featured,
-                is_active,
-                created_at,
-                updated_at,
-                in_stock,
-                average_rating,
-                review_count
-              )
-            ''')
+            .select('id, product_id, quantity, added_at')
             .single();
 
-        final productModel = ProductModel.fromJson(Map<String, dynamic>.from(response['products']));
+        debugPrint('🔐 CART SUPABASE: ✅ Cart item inserted successfully: ${response['id']}');
+
+        // Convert Product entity to ProductModel
+        final productModel = product is ProductModel
+            ? product
+            : _convertToProductModel(product);
 
         return CartItemModel(
           id: response['id'],
@@ -236,15 +250,22 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
     required int quantity,
   }) async {
     try {
-      // Check authentication
+      // Check authentication with detailed logging
       final user = _supabaseClient.auth.currentUser;
+      final session = _supabaseClient.auth.currentSession;
+
+      debugPrint('🔐 CART SUPABASE: Checking authentication for update quantity...');
+      debugPrint('🔐 CART SUPABASE: User: ${user?.id ?? 'null'}');
+      debugPrint('🔐 CART SUPABASE: Session: ${session != null ? 'exists' : 'null'}');
+
       if (user == null) {
-        // For testing purposes, use a mock user ID
-        debugPrint('CartSupabaseDataSource: User not authenticated, using mock user ID for updateQuantity');
-        return _updateQuantityWithMockUser(cartItemId, quantity);
+        debugPrint('🔐 CART SUPABASE: ❌ User not authenticated');
+        throw ServerException(message: 'User is not authenticated. Please login to sync cart with database.');
       }
 
-      // Update cart item quantity
+      debugPrint('🔐 CART SUPABASE: ✅ User authenticated, proceeding with quantity update...');
+
+      // Update cart item quantity (simplified without join)
       final response = await _supabaseClient
           .from('cart_items')
           .update({
@@ -252,43 +273,68 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
           })
           .eq('id', cartItemId)
           .eq('user_id', user.id)
-          .select('''
-            id,
-            product_id,
-            quantity,
-            added_at,
-            products (
-              id,
-              name,
-              description,
-              price,
-              sale_price,
-              image_url,
-              stock,
-              brand,
-              category_id,
-              is_featured,
-              is_active,
-              created_at,
-              updated_at,
-              in_stock,
-              average_rating,
-              review_count
-            )
-          ''')
+          .select('id, product_id, quantity, added_at')
           .single();
 
-      final productModel = ProductModel.fromJson(Map<String, dynamic>.from(response['products']));
+      debugPrint('🔐 CART SUPABASE: ✅ Cart item quantity updated successfully: ${response['id']}');
 
-      return CartItemModel(
-        id: response['id'],
-        product: productModel,
-        quantity: response['quantity'],
-        addedAt: DateTime.parse(response['added_at']),
-      );
+      // Fetch real product details
+      try {
+        debugPrint('🔐 CART SUPABASE: Fetching product details for: ${response['product_id']}');
+
+        final productResponse = await _supabaseClient
+            .from('products')
+            .select('*')
+            .eq('id', response['product_id'])
+            .single();
+
+        debugPrint('🔐 CART SUPABASE: ✅ Product details fetched: ${productResponse['name']}');
+
+        final productModel = _createProductModelFromSupabaseData(productResponse);
+
+        return CartItemModel(
+          id: response['id'],
+          product: productModel,
+          quantity: response['quantity'],
+          addedAt: DateTime.parse(response['added_at']),
+        );
+      } catch (e) {
+        debugPrint('🔐 CART SUPABASE: ❌ Failed to fetch product details: $e');
+
+        // Fallback to placeholder
+        final placeholderProduct = ProductModel(
+          id: response['product_id'],
+          name: 'Product (ID: ${response['product_id']})',
+          description: 'Product details unavailable',
+          price: 0.0,
+          discountPercentage: 0.0,
+          rating: 0.0,
+          reviewCount: 0,
+          mainImageUrl: '',
+          additionalImages: const [],
+          inStock: true,
+          stockQuantity: 100,
+          categoryId: '',
+          subcategoryId: '',
+          brand: '',
+          attributes: const {},
+          tags: const [],
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        return CartItemModel(
+          id: response['id'],
+          product: placeholderProduct,
+          quantity: response['quantity'],
+          addedAt: DateTime.parse(response['added_at']),
+        );
+      }
     } on PostgrestException catch (e) {
+      debugPrint('🔐 CART SUPABASE: ❌ Database error: ${e.message}');
       throw ServerException(message: 'Database error: ${e.message}');
     } catch (e) {
+      debugPrint('🔐 CART SUPABASE: ❌ Update quantity failed: $e');
       throw ServerException(message: 'Failed to update cart item quantity: ${e.toString()}');
     }
   }
@@ -559,6 +605,217 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
         tags: product.tags,
         createdAt: product.createdAt,
         updatedAt: product.updatedAt,
+      );
+    }
+  }
+
+  /// Robust method to create ProductModel from Supabase data with proper field mapping
+  ProductModel _createProductModelFromSupabaseData(Map<String, dynamic> data) {
+    try {
+      debugPrint('🔐 CART SUPABASE: Mapping product data: ${data.keys.toList()}');
+
+      // Handle different possible field names and null values
+      final id = data['id']?.toString() ?? '';
+      final name = data['name']?.toString() ?? 'Unknown Product';
+      final description = data['description']?.toString() ?? '';
+
+      // Handle price with multiple possible field names
+      double price = 0.0;
+      if (data['price'] != null) {
+        price = (data['price'] as num).toDouble();
+      } else if (data['retail_price'] != null) {
+        price = (data['retail_price'] as num).toDouble();
+      } else if (data['sale_price'] != null) {
+        price = (data['sale_price'] as num).toDouble();
+      }
+
+      // Handle discount percentage
+      double? discountPercentage;
+      if (data['discount_percentage'] != null) {
+        discountPercentage = (data['discount_percentage'] as num).toDouble();
+      }
+
+      // Handle rating
+      double? rating;
+      if (data['rating'] != null) {
+        rating = (data['rating'] as num).toDouble();
+      } else if (data['average_rating'] != null) {
+        rating = (data['average_rating'] as num).toDouble();
+      }
+
+      // Handle review count
+      int? reviewCount;
+      if (data['review_count'] != null) {
+        reviewCount = (data['review_count'] as num).toInt();
+      }
+
+      // Handle image URL with multiple possible field names
+      String mainImageUrl = '';
+      if (data['main_image_url'] != null && data['main_image_url'].toString().isNotEmpty) {
+        mainImageUrl = data['main_image_url'].toString();
+      } else if (data['image_url'] != null && data['image_url'].toString().isNotEmpty) {
+        mainImageUrl = data['image_url'].toString();
+      } else {
+        mainImageUrl = 'https://via.placeholder.com/150';
+      }
+
+      // Handle additional images
+      List<String>? additionalImages;
+      if (data['additional_images'] != null) {
+        if (data['additional_images'] is List) {
+          additionalImages = List<String>.from(data['additional_images']);
+        }
+      }
+
+      // Handle stock status
+      bool inStock = true;
+      int? stockQuantity;
+      if (data['in_stock'] != null) {
+        inStock = data['in_stock'] as bool;
+      } else if (data['is_in_stock'] != null) {
+        inStock = data['is_in_stock'] as bool;
+      }
+
+      if (data['stock_quantity'] != null) {
+        stockQuantity = (data['stock_quantity'] as num).toInt();
+        inStock = stockQuantity > 0;
+      }
+
+      // Handle category
+      final categoryId = data['category_id']?.toString() ?? '';
+      final subcategoryId = data['subcategory_id']?.toString();
+
+      // Handle brand
+      final brand = data['brand']?.toString();
+
+      // Handle attributes with special focus on weight/unit extraction
+      Map<String, dynamic>? attributes;
+      if (data['attributes'] != null && data['attributes'] is Map) {
+        attributes = Map<String, dynamic>.from(data['attributes']);
+      } else {
+        // Create attributes map if it doesn't exist
+        attributes = <String, dynamic>{};
+      }
+
+      // Extract weight/unit information from various possible sources
+      String? weightUnit;
+
+      // Check if weight is in attributes
+      if (attributes['weight'] != null) {
+        weightUnit = attributes['weight'].toString();
+      } else if (attributes['unit'] != null) {
+        weightUnit = attributes['unit'].toString();
+      } else if (attributes['quantity'] != null) {
+        weightUnit = attributes['quantity'].toString();
+      } else if (attributes['volume'] != null) {
+        weightUnit = attributes['volume'].toString();
+      }
+
+      // Check if weight is in a separate database field
+      if (weightUnit == null || weightUnit.isEmpty) {
+        if (data['weight'] != null && data['weight'].toString().isNotEmpty) {
+          weightUnit = data['weight'].toString();
+          attributes['weight'] = weightUnit;
+        } else if (data['unit'] != null && data['unit'].toString().isNotEmpty) {
+          weightUnit = data['unit'].toString();
+          attributes['weight'] = weightUnit;
+        } else if (data['package_size'] != null && data['package_size'].toString().isNotEmpty) {
+          weightUnit = data['package_size'].toString();
+          attributes['weight'] = weightUnit;
+        }
+      }
+
+      // If still no weight found, try to extract from product name
+      if (weightUnit == null || weightUnit.isEmpty) {
+        final nameMatch = RegExp(r'(\d+(?:\.\d+)?)\s*(g|kg|ml|l|gm|gram|grams|liter|liters|piece|pieces|pc|pcs)',
+                                 caseSensitive: false).firstMatch(name);
+        if (nameMatch != null) {
+          weightUnit = '${nameMatch.group(1)}${nameMatch.group(2)}';
+          attributes['weight'] = weightUnit;
+        }
+      }
+
+      // Ensure weight is properly stored in attributes
+      if (weightUnit != null && weightUnit.isNotEmpty) {
+        attributes['weight'] = weightUnit;
+        debugPrint('🔐 CART SUPABASE: Weight extracted: $weightUnit');
+      } else {
+        debugPrint('🔐 CART SUPABASE: ⚠️ No weight found for product: $name');
+      }
+
+      // Handle tags
+      List<String>? tags;
+      if (data['tags'] != null && data['tags'] is List) {
+        tags = List<String>.from(data['tags']);
+      }
+
+      // Handle timestamps
+      DateTime? createdAt;
+      DateTime? updatedAt;
+
+      if (data['created_at'] != null) {
+        try {
+          createdAt = DateTime.parse(data['created_at'].toString());
+        } catch (e) {
+          debugPrint('🔐 CART SUPABASE: Failed to parse created_at: $e');
+        }
+      }
+
+      if (data['updated_at'] != null) {
+        try {
+          updatedAt = DateTime.parse(data['updated_at'].toString());
+        } catch (e) {
+          debugPrint('🔐 CART SUPABASE: Failed to parse updated_at: $e');
+        }
+      }
+
+      final productModel = ProductModel(
+        id: id,
+        name: name,
+        description: description,
+        price: price,
+        discountPercentage: discountPercentage,
+        rating: rating,
+        reviewCount: reviewCount,
+        mainImageUrl: mainImageUrl,
+        additionalImages: additionalImages,
+        inStock: inStock,
+        stockQuantity: stockQuantity,
+        categoryId: categoryId,
+        subcategoryId: subcategoryId,
+        brand: brand,
+        attributes: attributes,
+        tags: tags,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+      );
+
+      debugPrint('🔐 CART SUPABASE: ✅ Product mapped successfully: $name (₹$price) - ${weightUnit ?? 'No weight'}');
+      return productModel;
+
+    } catch (e) {
+      debugPrint('🔐 CART SUPABASE: ❌ Error mapping product data: $e');
+
+      // Return a safe fallback product
+      return ProductModel(
+        id: data['id']?.toString() ?? 'unknown',
+        name: data['name']?.toString() ?? 'Product Error',
+        description: 'Failed to load product details',
+        price: 0.0,
+        discountPercentage: null,
+        rating: null,
+        reviewCount: null,
+        mainImageUrl: 'https://via.placeholder.com/150',
+        additionalImages: const [],
+        inStock: false,
+        stockQuantity: 0,
+        categoryId: '',
+        subcategoryId: null,
+        brand: null,
+        attributes: const {},
+        tags: const [],
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
     }
   }

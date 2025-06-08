@@ -390,34 +390,98 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
     );
   }
 
-  /// Set an address as default
-  Future<void> setDefaultAddress(String userId, String addressId) async {
-    state = state.copyWith(isAddressesLoading: true, clearAddressError: true);
+  /// Optimistically update default address for immediate UI feedback
+  /// This provides instant UI response while database sync happens in background
+  /// Production-safe with proper error handling and state recovery
+  void optimisticallySetDefaultAddress(String addressId) {
+    if (state.addresses != null) {
+      // Store original state for potential rollback
+      final originalAddresses = List<Address>.from(state.addresses!);
 
-    final result = await setDefaultAddressUseCase(
-      SetDefaultAddressParams(userId: userId, addressId: addressId),
+      try {
+        final updatedAddresses = state.addresses!.map((address) {
+          return address.copyWith(isDefault: address.id == addressId);
+        }).toList();
+
+        // Apply optimistic update
+        state = state.copyWith(
+          addresses: updatedAddresses,
+          // Mark as optimistically updated for tracking
+          addressErrorMessage: null,
+        );
+
+        debugPrint('✅ Optimistic update applied for address: $addressId');
+      } catch (e) {
+        // If optimistic update fails, log error but don't crash
+        debugPrint('❌ Optimistic update failed: $e');
+        // Keep original state
+      }
+    }
+  }
+
+  /// Rollback optimistic update if database sync fails
+  void rollbackOptimisticAddressUpdate(List<Address> originalAddresses) {
+    state = state.copyWith(
+      addresses: originalAddresses,
+      addressErrorMessage: 'Failed to update address. Please try again.',
     );
+    debugPrint('🔄 Rolled back optimistic address update');
+  }
 
-    result.fold(
-      (failure) => state = state.copyWith(
-        isAddressesLoading: false,
-        addressErrorMessage: _mapFailureToMessage(failure),
-      ),
-      (success) {
-        if (state.addresses != null) {
-          final updatedAddresses = state.addresses!.map((address) {
-            return address.copyWith(isDefault: address.id == addressId);
-          }).toList();
+  /// Set an address as default with production-safe error handling
+  /// This method handles the actual database sync after optimistic updates
+  Future<void> setDefaultAddress(String userId, String addressId) async {
+    try {
+      // Don't show loading state if optimistic update already applied
+      // This prevents UI flickering in production
+      state = state.copyWith(clearAddressError: true);
+
+      final result = await setDefaultAddressUseCase(
+        SetDefaultAddressParams(userId: userId, addressId: addressId),
+      );
+
+      result.fold(
+        (failure) {
+          // Database sync failed - error will be handled by caller with rollback
+          final errorMessage = _mapFailureToMessage(failure);
+          debugPrint('❌ Database sync failed: $errorMessage');
 
           state = state.copyWith(
             isAddressesLoading: false,
-            addresses: updatedAddresses,
+            addressErrorMessage: errorMessage,
           );
-        } else {
-          state = state.copyWith(isAddressesLoading: false);
-        }
-      },
-    );
+
+          // Rethrow to trigger catchError in caller
+          throw Exception(errorMessage);
+        },
+        (success) {
+          // Database sync successful - confirm optimistic update was correct
+          if (state.addresses != null) {
+            final updatedAddresses = state.addresses!.map((address) {
+              return address.copyWith(isDefault: address.id == addressId);
+            }).toList();
+
+            state = state.copyWith(
+              isAddressesLoading: false,
+              addresses: updatedAddresses,
+              addressErrorMessage: null, // Clear any previous errors
+            );
+
+            debugPrint('✅ Database sync successful for address: $addressId');
+          } else {
+            state = state.copyWith(isAddressesLoading: false);
+          }
+        },
+      );
+    } catch (e) {
+      // Handle any unexpected errors
+      debugPrint('❌ Unexpected error in setDefaultAddress: $e');
+      state = state.copyWith(
+        isAddressesLoading: false,
+        addressErrorMessage: 'An unexpected error occurred. Please try again.',
+      );
+      rethrow; // Propagate to caller for proper error handling
+    }
   }
 
   /// Update user preferences

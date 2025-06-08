@@ -25,11 +25,12 @@ class EmptyCart extends StatelessWidget {
               color: Colors.grey[400],
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               AppStrings.emptyCartTitle,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
               ),
               textAlign: TextAlign.center,
             ),
@@ -46,7 +47,7 @@ class EmptyCart extends StatelessWidget {
             ElevatedButton(
               onPressed: onBrowseProducts,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: Colors.grey[800],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
@@ -57,7 +58,7 @@ class EmptyCart extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                AppStrings.browseProducts,
+                'Add Items',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -69,4 +70,4 @@ class EmptyCart extends StatelessWidget {
       ),
     );
   }
-} 
+}

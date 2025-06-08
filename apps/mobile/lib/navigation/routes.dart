@@ -6,7 +6,7 @@ import '../presentation/screens/product/clean_product_details_screen.dart';
 import '../presentation/screens/auth/clean_login_screen.dart';
 import '../presentation/screens/auth/clean_forgot_password_screen.dart';
 import '../presentation/screens/auth/clean_register_screen.dart';
-import '../presentation/screens/cart/clean_cart_screen.dart';
+import '../presentation/screens/cart/modern_cart_screen.dart';
 import '../presentation/screens/checkout/clean_checkout_screen.dart';
 import '../presentation/screens/debug/debug_menu_screen.dart';
 import '../presentation/screens/checkout/payment_methods_screen.dart';
@@ -129,9 +129,9 @@ class CleanRoutes {
         return _errorRoute(settings);
 
       case 'cart':
-        // Clean cart screen
+        // Modern cart screen (Phase 3: Replaced old cart with modern implementation)
         return MaterialPageRoute(
-          builder: (_) => const CleanCartScreen(),
+          builder: (_) => const ModernCartScreen(),
           settings: settings,
         );
 

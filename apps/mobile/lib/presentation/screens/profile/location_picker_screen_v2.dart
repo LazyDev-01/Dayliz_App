@@ -18,11 +18,33 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
   String _currentAddress = 'Detecting location...';
   String _currentArea = 'Please wait...';
   LocationData? _currentLocationData;
+  final LocationService _locationService = LocationService();
 
   @override
   void initState() {
     super.initState();
-    // Location detection is now handled by GoogleMapWidget
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      LocationData? locationData = await _locationService.getCurrentLocationWithAddress();
+      if (locationData != null) {
+        setState(() {
+          _currentLocationData = locationData;
+          _currentAddress = locationData.address ?? 'Location detected';
+          _currentArea = '${locationData.city ?? ''}, ${locationData.state ?? ''}'.trim();
+          if (_currentArea == ',') {
+            _currentArea = 'GPS location detected';
+          }
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _currentAddress = 'Unable to detect location';
+        _currentArea = 'Please search manually';
+      });
+    }
   }
 
 
@@ -32,7 +54,7 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
       MaterialPageRoute(
         builder: (context) => LocationSearchScreen(
           onLocationSelected: (location) {
-            // Update map with selected location
+            // Update with selected location
             setState(() {
               _currentAddress = location['address'] ?? 'Selected location';
               _currentArea = location['area'] ?? 'Manual selection';
@@ -40,7 +62,16 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
           },
         ),
       ),
-    );
+    ).then((_) {
+      // Add a small delay when returning to prevent rendering glitches
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          setState(() {
+            // Force a rebuild to ensure proper map rendering
+          });
+        }
+      });
+    });
   }
 
   void _openAddressForm() {
@@ -71,11 +102,12 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
         ),
         centerTitle: false,
       ),
+      resizeToAvoidBottomInset: true, // Important: Allow screen to resize when keyboard appears
       body: Column(
         children: [
-          // Google Maps Container
+          // Google Maps Container - Flexible to shrink when keyboard appears
           Expanded(
-            flex: 2,
+            flex: 3, // Takes 3/4 of available space
             child: GoogleMapWidget(
               height: double.infinity,
               initialLocation: _currentLocationData != null
@@ -96,51 +128,43 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
             ),
           ),
 
-          // Bottom section with address info and button
+          // Bottom section with address info and button - Fixed minimum height
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
-                ),
-              ],
+            constraints: BoxConstraints(
+              minHeight: 120, // Minimum height to prevent overflow
+              maxHeight: MediaQuery.of(context).size.height * 0.4, // Maximum 40% of screen
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // "Delivering your order to" text
-                const Row(
-                  children: [
-                    Text(
-                      'Delivering your order to',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+            child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
                       ),
-                    ),
-                    Spacer(),
-                    Icon(
-                      Icons.location_on,
-                      color: Colors.green,
-                      size: 20,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                    ],
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
 
-                // Address display container
+
+                // Compact address display with inline change button
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: Colors.grey[300]!,
@@ -148,67 +172,51 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
                     ),
                   ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        color: Colors.grey[600],
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               _currentAddress,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[800],
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 2),
                             Text(
                               _currentArea,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 13,
                                 color: Colors.grey[600],
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      TextButton(
+                        onPressed: _showSearchOverlay,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.orange,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
+                        child: const Text(
+                          'CHANGE',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Search location manually button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _showSearchOverlay,
-                    icon: const Icon(
-                      Icons.search,
-                      color: Colors.green,
-                      size: 18,
-                    ),
-                    label: const Text(
-                      'Search location manually',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.green,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      side: const BorderSide(color: Colors.green, width: 1),
-                      backgroundColor: Colors.white,
-                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -228,7 +236,7 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
                       elevation: 0,
                     ),
                     child: const Text(
-                      'Enter complete address',
+                      'Continue',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -237,11 +245,15 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
                   ),
                 ),
 
-                // Safe area padding for bottom
-                SizedBox(height: MediaQuery.of(context).padding.bottom),
+                // Safe area padding for bottom - only when keyboard is not open
+                SizedBox(height: MediaQuery.of(context).viewInsets.bottom > 0
+                    ? 0
+                    : MediaQuery.of(context).padding.bottom),
               ],
             ),
           ),
+        ),
+        ),
         ],
       ),
     );

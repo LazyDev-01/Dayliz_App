@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/product.dart';
 import '../../providers/wishlist_providers.dart';
 import '../../widgets/common/empty_state.dart';
@@ -43,6 +44,8 @@ class _CleanWishlistScreenState extends ConsumerState<CleanWishlistScreen> {
         title: 'My Wishlist',
         fallbackRoute: '/clean/profile',
         backButtonTooltip: 'Back to Profile',
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.grey[800],
         actions: wishlistProducts.isNotEmpty
             ? [
                 IconButton(

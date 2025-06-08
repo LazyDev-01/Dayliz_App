@@ -8,6 +8,7 @@ import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../../domain/entities/user_profile.dart';
 import '../../../domain/entities/user.dart' as domain;
+import '../../../core/constants/app_colors.dart';
 import '../../widgets/common/common_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
@@ -94,17 +95,15 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Watch the auto-load provider to ensure profile loading is triggered
-    ref.watch(autoLoadUserProfileProvider);
+    // Only watch the auto-load provider once when the screen is first built
+    // This prevents infinite rebuilds when other screens modify the profile state
+    ref.read(autoLoadUserProfileProvider);
 
     final userProfileState = ref.watch(userProfileNotifierProvider);
     final currentUser = ref.watch(currentUserProvider);
     final authState = ref.watch(authNotifierProvider);
 
-    // Debug logging
-    debugPrint('Profile Screen Build - Auth: ${authState.isAuthenticated}, User: ${authState.user?.id}');
-    debugPrint('Profile Screen Build - Loading: ${userProfileState.isLoading}, Profile: ${userProfileState.profile != null}');
-    debugPrint('Profile Screen Build - Error: ${userProfileState.errorMessage}');
+    // Removed debug logging to prevent log spam
 
     // Enhanced fallback: Always ensure profile is loaded when screen is accessed
     if (authState.isAuthenticated && authState.user != null) {
@@ -112,16 +111,9 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
       if (userProfileState.profile == null &&
           !userProfileState.isLoading &&
           userProfileState.errorMessage == null) {
-        debugPrint('Profile Screen Build - No profile found, triggering load');
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _loadUserData();
         });
-      }
-      // If there's an error but no profile, also trigger load
-      else if (userProfileState.profile == null &&
-               userProfileState.errorMessage != null &&
-               !userProfileState.isLoading) {
-        debugPrint('Profile Screen Build - Error state with no profile, will show retry option');
       }
     }
 
@@ -137,6 +129,8 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
         centerTitle: true,
         fallbackRoute: '/home',
         backButtonTooltip: 'Back to Home',
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.grey[800],
         // Removed settings icon from actions
       ),
       body: userProfileState.isLoading
@@ -197,10 +191,10 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                // Profile avatar section
+                // Profile avatar section (reduced size)
                 Container(
-                  width: 70,
-                  height: 70,
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
@@ -224,7 +218,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                     child: Icon(
                       Icons.person,
                       color: Colors.white,
-                      size: 34,
+                      size: 24,
                     ),
                   ),
                 ),
@@ -263,6 +257,16 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Divider between profile and action buttons
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Divider(
+              color: Colors.grey[300],
+              thickness: 1,
+              height: 24,
             ),
           ),
 
@@ -341,10 +345,10 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
               onTap: _pickAndUploadImage,
               child: Stack(
                 children: [
-                  // Profile image
+                  // Profile image (reduced size)
                   Container(
-                    width: 70,
-                    height: 70,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
@@ -362,7 +366,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                                   color: Colors.grey[300],
                                   child: const Icon(
                                     Icons.person,
-                                    size: 36,
+                                    size: 24,
                                     color: Colors.white,
                                   ),
                                 );
@@ -372,7 +376,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                               color: Colors.grey[300],
                               child: const Icon(
                                 Icons.person,
-                                size: 36,
+                                size: 24,
                                 color: Colors.white,
                               ),
                             ),
@@ -404,8 +408,8 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                   // Uploading indicator
                   if (state.isImageUploading)
                     Container(
-                      width: 70,
-                      height: 70,
+                      width: 50,
+                      height: 50,
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.5),
                         shape: BoxShape.circle,

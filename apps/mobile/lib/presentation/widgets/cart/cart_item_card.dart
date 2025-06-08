@@ -65,7 +65,7 @@ class CartItemCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              
+
               // Product Details
               Expanded(
                 child: Column(
@@ -81,7 +81,19 @@ class CartItemCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    
+
+                    // Product weight/unit display
+                    if (_getWeightDisplay(product).isNotEmpty) ...[
+                      Text(
+                        _getWeightDisplay(product),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+
                     // Price display
                     if (product.discountPercentage != null && product.discountPercentage! > 0) ...[
                       Row(
@@ -115,9 +127,9 @@ class CartItemCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    
+
                     const SizedBox(height: 8),
-                    
+
                     // Total price
                     Text(
                       'Total: \$${totalPrice.toStringAsFixed(2)}',
@@ -129,7 +141,7 @@ class CartItemCard extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               // Quantity Controls
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -189,4 +201,22 @@ class CartItemCard extends StatelessWidget {
       ),
     );
   }
-} 
+
+  /// Get weight/unit display text from product attributes
+  String _getWeightDisplay(product) {
+    if (product.attributes == null) return '';
+
+    // Try different possible keys for weight/unit information
+    final weight = product.attributes!['weight']?.toString();
+    final unit = product.attributes!['unit']?.toString();
+    final quantity = product.attributes!['quantity']?.toString();
+    final volume = product.attributes!['volume']?.toString();
+
+    if (weight != null && weight.isNotEmpty) return weight;
+    if (unit != null && unit.isNotEmpty) return unit;
+    if (quantity != null && quantity.isNotEmpty) return quantity;
+    if (volume != null && volume.isNotEmpty) return volume;
+
+    return '';
+  }
+}

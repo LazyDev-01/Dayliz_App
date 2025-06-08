@@ -1,30 +1,31 @@
 import 'package:flutter/material.dart';
+import '../core/constants/app_colors.dart';
 
 class AppTheme {
-  // Primary Colors
-  static const Color primaryColor = Color(0xFF3559E0);
-  static const Color primaryLightColor = Color(0xFF7895FB);
-  static const Color primaryDarkColor = Color(0xFF1E40AF);
+  // Primary Colors - Updated to use blue-themed grocery palette
+  static const Color primaryColor = AppColors.primary;
+  static const Color primaryLightColor = AppColors.primaryLight;
+  static const Color primaryDarkColor = AppColors.primaryDark;
   
-  // Secondary Colors
-  static const Color secondaryColor = Color(0xFFFFC436);
-  static const Color secondaryLightColor = Color(0xFFFFD966);
-  static const Color secondaryDarkColor = Color(0xFFEAA213);
+  // Secondary Colors - Updated to use blue-themed grocery palette
+  static const Color secondaryColor = AppColors.secondary;
+  static const Color secondaryLightColor = AppColors.secondaryLight;
+  static const Color secondaryDarkColor = AppColors.secondaryDark;
   
-  // Neutral Colors
-  static const Color backgroundColor = Color(0xFFFAFAFA);
-  static const Color surfaceColor = Colors.white;
-  static const Color errorColor = Color(0xFFD32F2F);
+  // Neutral Colors - Updated to use blue-themed grocery palette
+  static const Color backgroundColor = AppColors.background;
+  static const Color surfaceColor = AppColors.surface;
+  static const Color errorColor = AppColors.error;
   
-  // Text Colors
-  static const Color textPrimaryColor = Color(0xFF212121);
-  static const Color textSecondaryColor = Color(0xFF757575);
-  static const Color textDisabledColor = Color(0xFFBDBDBD);
+  // Text Colors - Updated to use blue-themed grocery palette
+  static const Color textPrimaryColor = AppColors.textPrimary;
+  static const Color textSecondaryColor = AppColors.textSecondary;
+  static const Color textDisabledColor = AppColors.textDisabled;
   
-  // Status Colors
-  static const Color successColor = Color(0xFF4CAF50);
-  static const Color warningColor = Color(0xFFFFC107);
-  static const Color infoColor = Color(0xFF2196F3);
+  // Status Colors - Updated to use blue-themed grocery palette
+  static const Color successColor = AppColors.success;
+  static const Color warningColor = AppColors.warning;
+  static const Color infoColor = AppColors.info;
   
   // Dark Theme Colors
   static const Color darkBackgroundColor = Color(0xFF121212);

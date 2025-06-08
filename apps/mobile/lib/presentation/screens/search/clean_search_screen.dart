@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/product.dart';
 import '../../providers/search_providers.dart';
 import '../../widgets/common/empty_state.dart';
@@ -68,6 +69,8 @@ class _CleanSearchScreenState extends ConsumerState<CleanSearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.grey[800],
         title: TextField(
           controller: _searchController,
           focusNode: _searchFocus,
@@ -93,6 +96,7 @@ class _CleanSearchScreenState extends ConsumerState<CleanSearchScreen> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () => _performSearch(_searchController.text),
+            color: Colors.grey[800],
           ),
         ],
       ),

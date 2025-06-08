@@ -36,6 +36,9 @@ android {
 
         // Google Maps API Key configuration
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = project.findProperty("GOOGLE_MAPS_API_KEY") ?: "your_google_maps_api_key"
+
+        // Mapbox Access Token configuration
+        manifestPlaceholders["MAPBOX_ACCESS_TOKEN"] = project.findProperty("MAPBOX_ACCESS_TOKEN") ?: "pk.eyJ1IjoiZGF5bGl6IiwiYSI6ImNtYmJ0a244bzB6YXUybHNiaHB1bGI4bDkifQ.ZJdfmD9NbE3zAaDACGtg_g"
     }
 
     buildTypes {

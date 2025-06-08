@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
-import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/enhanced_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
-import '../../../navigation/routes.dart';
 
 /// A clean architecture implementation of the home screen
 class CleanHomeScreen extends ConsumerStatefulWidget {
@@ -74,10 +73,14 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    return CommonAppBars.homeScreen(
+    return EnhancedAppBars.homeScreen(
       onSearchTap: () => context.push('/search'),
       onProfileTap: () => context.push('/profile'),
       searchHint: 'Search for products...',
+      enableCloudAnimation: false, // Disable cloud animation
+      cloudType: CloudAnimationType.peaceful, // Peaceful clouds for home screen
+      cloudOpacity: 0.45, // Subtle but visible clouds
+      cloudColor: Colors.white, // Pure white clouds
     );
   }
 
@@ -98,29 +101,6 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
       onRefresh: _onRefresh,
       child: CustomScrollView(
         slivers: [
-          // Temporary button for product card test
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton(
-                onPressed: () => CleanRoutes.navigateToProductCardTest(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.shopping_bag),
-                    SizedBox(width: 8),
-                    Text('Test New Product Card Design', style: TextStyle(fontSize: 16)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
           // Banner carousel placeholder
           _buildBannerPlaceholder(),
 
