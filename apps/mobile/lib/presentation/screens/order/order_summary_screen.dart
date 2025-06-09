@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/services/order_service.dart';
+import '../../../domain/entities/order.dart' as domain;
 
 /// Order Summary Screen - Shows detailed order information
 /// Displays order items, billing details, delivery info, and tracking
@@ -21,12 +24,72 @@ class OrderSummaryScreen extends ConsumerStatefulWidget {
 class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
   late Map<String, dynamic> orderData;
   final DateFormat dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
+  bool isLoading = true;
+  String? errorMessage;
+  domain.Order? realOrder;
 
   @override
   void initState() {
     super.initState();
-    // Use provided order data or create sample data
+    // Use provided order data initially, then fetch real data
     orderData = widget.orderData ?? _createSampleOrderData();
+    _fetchOrderData();
+  }
+
+  Future<void> _fetchOrderData() async {
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final orderService = OrderService(supabaseClient: Supabase.instance.client);
+      final order = await orderService.getOrderById(widget.orderId);
+
+      setState(() {
+        realOrder = order;
+        orderData = _convertOrderToMap(order);
+        isLoading = false;
+      });
+
+      debugPrint('OrderSummaryScreen: Order data fetched successfully');
+
+    } catch (e) {
+      debugPrint('OrderSummaryScreen: Error fetching order: $e');
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Failed to load order details. Please try again.';
+      });
+    }
+  }
+
+  Map<String, dynamic> _convertOrderToMap(domain.Order order) {
+    return {
+      'orderId': order.id,
+      'status': order.status,
+      'items': order.items.map((item) => {
+        'productName': item.productName,
+        'quantity': item.quantity,
+        'price': item.unitPrice,
+        'total': item.totalPrice,
+        'image': item.imageUrl ?? 'https://via.placeholder.com/50',
+      }).toList(),
+      'subtotal': order.subtotal,
+      'tax': order.tax,
+      'shipping': order.shipping,
+      'total': order.total,
+      'paymentMethod': order.paymentMethod.type,
+      'shippingAddress': {
+        'addressLine1': order.shippingAddress.addressLine1,
+        'addressLine2': order.shippingAddress.addressLine2,
+        'city': order.shippingAddress.city,
+        'state': order.shippingAddress.state,
+        'postalCode': order.shippingAddress.postalCode,
+        'country': order.shippingAddress.country,
+      },
+      'estimatedDelivery': DateTime.now().add(const Duration(hours: 2)),
+      'createdAt': order.createdAt,
+    };
   }
 
   Map<String, dynamic> _createSampleOrderData() {
@@ -72,8 +135,79 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: _buildAppBar(context, theme),
-      body: _buildBody(context, theme),
-      bottomNavigationBar: _buildBottomButton(context, theme),
+      body: isLoading
+          ? _buildLoadingState()
+          : errorMessage != null
+              ? _buildErrorState(theme)
+              : _buildBody(context, theme),
+      bottomNavigationBar: isLoading || errorMessage != null
+          ? null
+          : _buildBottomButton(context, theme),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text(
+            'Loading order details...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(ThemeData theme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Error Loading Order',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              errorMessage ?? 'Something went wrong',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _fetchOrderData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
