@@ -9,7 +9,7 @@ import '../../providers/auth_providers.dart';
 import '../../../domain/entities/user_profile.dart';
 import '../../../domain/entities/user.dart' as domain;
 import '../../../core/constants/app_colors.dart';
-import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
 
@@ -124,14 +124,9 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
 
     return Scaffold(
       backgroundColor: Colors.grey[50], // Light grey background color
-      appBar: CommonAppBars.withBackButton(
+      appBar: UnifiedAppBars.withBackButton(
         title: 'Profile',
-        centerTitle: true,
         fallbackRoute: '/home',
-        backButtonTooltip: 'Back to Home',
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.grey[800],
-        // Removed settings icon from actions
       ),
       body: userProfileState.isLoading
           ? const LoadingIndicator(message: 'Loading profile...')
@@ -294,17 +289,17 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                   },
                 ),
 
-                // Payment Button
+                // Gift Button
                 _buildQuickActionButton(
-                  icon: Icons.payment_outlined,
-                  label: 'Payment',
+                  icon: Icons.card_giftcard_outlined,
+                  label: 'Gifts',
                   onTap: () {
-                    // Navigate to modern payment options screen
+                    // Navigate to gifts screen
                     final authState = ref.read(authNotifierProvider);
                     if (authState.isAuthenticated && authState.user != null) {
-                      context.push('/payment-options');
+                      context.push('/coupons');
                     } else {
-                      _showAuthRequiredDialog('Payment Methods');
+                      _showAuthRequiredDialog('Gifts & Offers');
                     }
                   },
                 ),
@@ -610,17 +605,17 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
               },
             ),
 
-            // Payment Button
+            // Gift Button
             _buildQuickActionButton(
-              icon: Icons.payment_outlined,
-              label: 'Payment',
+              icon: Icons.card_giftcard_outlined,
+              label: 'Gifts',
               onTap: () {
-                // Navigate to modern payment options screen
+                // Navigate to gifts screen
                 final authState = ref.read(authNotifierProvider);
                 if (authState.isAuthenticated && authState.user != null) {
-                  context.push('/payment-options');
+                  context.push('/coupons');
                 } else {
-                  _showAuthRequiredDialog('Payment Methods');
+                  _showAuthRequiredDialog('Gifts & Offers');
                 }
               },
             ),
@@ -726,12 +721,29 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
 
               Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
 
-              // Your Wishlist (replaced Payment Methods)
+              // Your Wishlist
               ListTile(
                 leading: Icon(Icons.favorite_border_outlined, color: primaryColor),
                 title: const Text('Your Wishlist'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/wishlist'),
+              ),
+
+              Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
+
+              // Payment Methods
+              ListTile(
+                leading: Icon(Icons.payment_outlined, color: primaryColor),
+                title: const Text('Payment Methods'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  final authState = ref.read(authNotifierProvider);
+                  if (authState.isAuthenticated && authState.user != null) {
+                    context.push('/payment-methods');
+                  } else {
+                    _showAuthRequiredDialog('Payment Methods');
+                  }
+                },
               ),
             ],
           ),

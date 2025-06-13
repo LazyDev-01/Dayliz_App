@@ -10,10 +10,10 @@ import 'google_maps_api_test.dart';
 import '../profile/clean_address_form_screen.dart';
 import '../order/order_summary_screen.dart';
 import '../categories/optimized_categories_screen.dart';
-import '../categories/ultra_high_fps_categories_screen.dart';
+
 import '../dev/cart_sync_test_screen.dart';
 import '../../../navigation/routes.dart';
-import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/unified_app_bar.dart';
 
 class DebugMenuScreen extends ConsumerWidget {
   const DebugMenuScreen({Key? key}) : super(key: key);
@@ -21,7 +21,7 @@ class DebugMenuScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: CommonAppBars.simple(
+      appBar: UnifiedAppBars.simple(
         title: 'Debug Menu',
       ),
       body: ListView(
@@ -209,20 +209,7 @@ class DebugMenuScreen extends ConsumerWidget {
               );
             },
           ),
-          _buildDebugTile(
-            context,
-            title: 'Ultra High FPS Categories',
-            subtitle: '90-120 FPS capable categories (Requires high refresh rate display)',
-            icon: Icons.rocket_launch,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const UltraHighFpsCategoriesScreen(),
-                ),
-              );
-            },
-          ),
+
 
         ],
       ),

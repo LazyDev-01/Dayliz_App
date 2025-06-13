@@ -72,19 +72,22 @@ class ProductCard extends ConsumerWidget {
   Widget _buildImageSection(double size) {
     return Stack(
       children: [
-        // Product image
-        SizedBox(
-          width: size,
-          height: size,
-          child: CachedNetworkImage(
-            imageUrl: product.mainImageUrl,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            errorWidget: (context, url, error) => Container(
-              color: Colors.grey[200],
-              child: const Icon(Icons.image_not_supported, size: 40),
+        // Product image with rounded corners
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: CachedNetworkImage(
+              imageUrl: product.mainImageUrl,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              errorWidget: (context, url, error) => Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.image_not_supported, size: 40),
+              ),
             ),
           ),
         ),

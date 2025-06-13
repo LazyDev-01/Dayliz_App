@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Primary colors - Standard Green (main theme)
-  static const primary = Color(0xFF4CAF50);        // Standard green for buttons and interactions
+  static const primary = Color(0xFF00AD48);        // Standard green for buttons and interactions
   static const primaryLight = Color(0xFF81C784);   // Light standard green
   static const primaryDark = Color(0xFF388E3C);    // Dark standard green
   static const forestGreen = Color(0xFF2E7D32);    // Dark forest green for navigation

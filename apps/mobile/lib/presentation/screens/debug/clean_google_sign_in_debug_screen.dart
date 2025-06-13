@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/utils/google_sign_in_tester.dart';
 import '../../../core/utils/supabase_config_checker.dart';
-import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 
 /// A clean architecture debug screen for testing Google Sign-In functionality
@@ -153,7 +153,7 @@ class _CleanGoogleSignInDebugScreenState extends ConsumerState<CleanGoogleSignIn
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CommonAppBars.withBackButton(
+      appBar: UnifiedAppBars.withBackButton(
         title: 'Google Sign-In Debug',
         fallbackRoute: '/clean/debug/menu',
       ),

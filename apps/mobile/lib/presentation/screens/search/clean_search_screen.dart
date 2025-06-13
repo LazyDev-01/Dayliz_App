@@ -8,6 +8,7 @@ import '../../providers/search_providers.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/product/product_card.dart';
 
 /// Clean architecture implementation of the search screen
@@ -56,6 +57,86 @@ class _CleanSearchScreenState extends ConsumerState<CleanSearchScreen> {
     });
   }
 
+  /// Builds a custom search app bar with unified design
+  PreferredSizeWidget _buildSearchAppBar() {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x1A000000), // 10% black opacity for subtle shadow
+              offset: Offset(0, 2),
+              blurRadius: 4,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF374151), // Dark grey
+          elevation: 0, // Remove default elevation since we use custom shadow
+          shadowColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF374151)),
+            onPressed: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              } else {
+                context.go('/home');
+              }
+            },
+            tooltip: 'Back',
+          ),
+          title: TextField(
+            controller: _searchController,
+            focusNode: _searchFocus,
+            style: const TextStyle(
+              color: Color(0xFF374151),
+              fontSize: 16,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Search for products...',
+              hintStyle: TextStyle(
+                color: const Color(0xFF374151).withValues(alpha: 0.6),
+                fontSize: 16,
+              ),
+              border: InputBorder.none,
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: Color(0xFF374151)),
+                      onPressed: _clearSearch,
+                    )
+                  : null,
+            ),
+            onSubmitted: _performSearch,
+            onChanged: (value) {
+              setState(() {});
+              if (value.trim().isNotEmpty) {
+                ref.read(searchQueryProvider.notifier).state = value;
+              }
+            },
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search, color: Color(0xFF374151)),
+              onPressed: () => _performSearch(_searchController.text),
+              tooltip: 'Search',
+            ),
+          ],
+          iconTheme: const IconThemeData(
+            color: Color(0xFF374151), // Dark grey for icons
+          ),
+          actionsIconTheme: const IconThemeData(
+            color: Color(0xFF374151), // Dark grey for action icons
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Initialize the debouncer
@@ -68,38 +149,7 @@ class _CleanSearchScreenState extends ConsumerState<CleanSearchScreen> {
     final errorMessage = ref.watch(searchErrorProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.grey[800],
-        title: TextField(
-          controller: _searchController,
-          focusNode: _searchFocus,
-          decoration: InputDecoration(
-            hintText: 'Search for products...',
-            border: InputBorder.none,
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: _clearSearch,
-                  )
-                : null,
-          ),
-          onSubmitted: _performSearch,
-          onChanged: (value) {
-            setState(() {});
-            if (value.trim().isNotEmpty) {
-              ref.read(searchQueryProvider.notifier).state = value;
-            }
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => _performSearch(_searchController.text),
-            color: Colors.grey[800],
-          ),
-        ],
-      ),
+      appBar: _buildSearchAppBar(),
       body: Column(
         children: [
           if (!_hasSearched && _searchController.text.isEmpty)

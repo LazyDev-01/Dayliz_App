@@ -41,6 +41,7 @@ class OrderRepositoryImpl implements OrderRepository {
             : OrderModel(
                 id: order.id,
                 userId: order.userId,
+                orderNumber: order.orderNumber,
                 items: order.items,
                 subtotal: order.subtotal,
                 tax: order.tax,

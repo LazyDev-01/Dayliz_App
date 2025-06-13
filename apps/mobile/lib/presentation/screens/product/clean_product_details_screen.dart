@@ -9,6 +9,7 @@ import '../../providers/cart_providers.dart';
 import '../../providers/wishlist_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../widgets/auth/auth_guard.dart';
+import '../../widgets/common/unified_app_bar.dart';
 
 class CleanProductDetailsScreen extends ConsumerWidget {
   final String productId;
@@ -33,18 +34,9 @@ class CleanProductDetailsScreen extends ConsumerWidget {
     final isInWishlistFuture = ref.watch(isProductInWishlistProvider(productId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          productState.product?.name ?? 'Product Details',
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: AppColors.appBarSecondary, // Light green tint
-        foregroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.black),
+      appBar: UnifiedAppBars.withBackButton(
+        title: productState.product?.name ?? 'Product Details',
+        fallbackRoute: '/home',
         actions: [
           // Wishlist button
           Consumer(
@@ -55,27 +47,28 @@ class CleanProductDetailsScreen extends ConsumerWidget {
                 data: (isInWishlist) => IconButton(
                   icon: Icon(
                     isInWishlist ? Icons.favorite : Icons.favorite_border,
-                    color: isInWishlist ? Colors.red : null,
+                    color: isInWishlist ? Colors.red : const Color(0xFF374151),
                   ),
                   onPressed: () => _toggleWishlist(context, ref),
                   tooltip: isInWishlist ? 'Remove from wishlist' : 'Add to wishlist',
                 ),
                 loading: () => const IconButton(
-                  icon: Icon(Icons.favorite_border),
+                  icon: Icon(Icons.favorite_border, color: Color(0xFF374151)),
                   onPressed: null,
                 ),
                 error: (_, __) => IconButton(
-                  icon: const Icon(Icons.favorite_border),
+                  icon: const Icon(Icons.favorite_border, color: Color(0xFF374151)),
                   onPressed: () => _toggleWishlist(context, ref),
                 ),
               );
             },
           ),
           IconButton(
-            icon: const Icon(Icons.share),
+            icon: const Icon(Icons.share, color: Color(0xFF374151)),
             onPressed: () {
               // Share product functionality
             },
+            tooltip: 'Share',
           ),
         ],
       ),

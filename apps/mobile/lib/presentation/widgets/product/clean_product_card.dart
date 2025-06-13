@@ -170,28 +170,31 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
   Widget _buildImageSection(double size) {
     return Stack(
       children: [
-        // Product image
-        SizedBox(
-          width: size,
-          height: size,
-          child: CachedNetworkImage(
-            imageUrl: widget.product.mainImageUrl,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
-              color: Colors.grey[200],
-              child: const Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
+        // Product image with rounded corners
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: CachedNetworkImage(
+              imageUrl: widget.product.mainImageUrl,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                color: Colors.grey[200],
+                child: const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
                   ),
                 ),
               ),
-            ),
-            errorWidget: (context, url, error) => Container(
-              color: Colors.grey[200],
-              child: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+              errorWidget: (context, url, error) => Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+              ),
             ),
           ),
         ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+
+import '../../widgets/common/unified_app_bar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 // Temporarily comment out geolocator import
 // import 'package:geolocator/geolocator.dart';
@@ -360,18 +362,9 @@ class _CleanAddressFormScreenState extends ConsumerState<CleanAddressFormScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50], // Light grey background
-      appBar: AppBar(
-        title: Text(
-          _isEditing ? 'Edit Address' : 'Add New Address',
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.black),
+      appBar: UnifiedAppBars.withBackButton(
+        title: _isEditing ? 'Edit Address' : 'Add New Address',
+        fallbackRoute: '/profile/addresses',
       ),
       body: Form(
         key: _formKey,

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../widgets/common/unified_app_bar.dart';
+
 import '../../../core/services/location_service.dart';
 import '../../widgets/address/address_form_bottom_sheet.dart';
 import '../../widgets/common/google_map_widget.dart';
@@ -85,22 +87,9 @@ class _LocationPickerScreenState extends ConsumerState<LocationPickerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Confirm Delivery Location',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: false,
+      appBar: UnifiedAppBars.withBackButton(
+        title: 'Confirm Delivery Location',
+        fallbackRoute: '/profile/addresses',
       ),
       resizeToAvoidBottomInset: true, // Important: Allow screen to resize when keyboard appears
       body: Column(

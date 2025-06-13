@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../widgets/common/unified_app_bar.dart';
+
 import '../../providers/auth_providers.dart';
 import '../../../core/validators/validators.dart';
 
@@ -29,20 +31,18 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Forgot Password'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            // Use Navigator.pop() for smooth back transition
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            } else {
-              // Fallback to context.go if no previous route exists
-              context.go('/login');
-            }
-          },
-        ),
+      appBar: UnifiedAppBars.withBackButton(
+        title: 'Forgot Password',
+        onBackPressed: () {
+          // Use Navigator.pop() for smooth back transition
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          } else {
+            // Fallback to context.go if no previous route exists
+            context.go('/auth/login');
+          }
+        },
+        fallbackRoute: '/auth/login',
       ),
       body: SafeArea(
         child: Center(

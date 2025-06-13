@@ -9,6 +9,7 @@ import '../../providers/category_providers.dart';
 import '../../widgets/common/navigation_handler.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../product/clean_product_listing_screen.dart';
 
 class CleanCategoriesScreen extends ConsumerWidget {
@@ -21,23 +22,8 @@ class CleanCategoriesScreen extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Categories',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: AppColors.appBarSecondary, // Light green tint
-        foregroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.black),
-        elevation: 4,
-        shadowColor: Colors.black.withValues(alpha: 0.3),
-        surfaceTintColor: AppColors.appBarSecondary,
-        scrolledUnderElevation: 4,
+      appBar: UnifiedAppBars.simple(
+        title: 'Categories',
       ),
       body: categoriesAsync.when(
         data: (categories) => _buildCategoriesList(context, ref, categories),

@@ -11,6 +11,7 @@ import '../../providers/user_profile_providers.dart';
 
 import '../../widgets/common/common_bottom_nav_bar.dart';
 import '../../widgets/common/navigation_handler.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../../domain/entities/address.dart';
 import '../../../domain/entities/cart_item.dart';
 import '../../../domain/entities/product.dart';
@@ -77,8 +78,12 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white, // Use white background
-      appBar: _buildAppBar(context, theme),
+      backgroundColor: Colors.grey[100], // Use light grey background
+      appBar: UnifiedAppBars.withBackButton(
+        title: AppStrings.cart,
+        onBackPressed: () => _handleBackNavigation(context),
+        fallbackRoute: '/home',
+      ),
       body: _buildBody(context, theme, daylizTheme, cartState, userProfileState),
       bottomNavigationBar: cartState.items.isNotEmpty && !cartState.isLoading && cartState.errorMessage == null
           ? _buildBottomSection(context, theme, daylizTheme, cartState)
@@ -86,30 +91,7 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     );
   }
 
-  /// Builds the app bar with back button and title
-  PreferredSizeWidget _buildAppBar(BuildContext context, ThemeData theme) {
-    return AppBar(
-      backgroundColor: AppColors.appBarSecondary, // Light green tint
-      elevation: 4,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      surfaceTintColor: Colors.transparent,
-      automaticallyImplyLeading: false, // Disable automatic back button
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.black),
-        onPressed: () => _navigateToHome(),
-        tooltip: 'Back to Home',
-      ),
-      title: const Text(
-        AppStrings.cart, // Use consistent app strings
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      centerTitle: false,
-    );
-  }
+
 
   /// Builds the main body content
   Widget _buildBody(BuildContext context, ThemeData theme, DaylizThemeExtension? daylizTheme, CartState cartState, UserProfileState userProfileState) {
@@ -232,7 +214,7 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Delivery in 12 minutes',
+                'Delivery in 30 minutes',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -603,7 +585,8 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), // Reduced padding
                 ),
                 onPressed: () {
-                  // TODO: Implement see all coupons
+                  // Navigate to coupons/gifts screen
+                  context.push('/coupons');
                 },
                 child: const Text(
                   'See all coupons ▶',
@@ -1406,6 +1389,22 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
         );
       },
     );
+  }
+
+  /// Handle back navigation from cart screen
+  void _handleBackNavigation(BuildContext context) {
+    debugPrint('🔙 Handling back navigation from cart');
+
+    // Check if we can pop (there's a previous screen)
+    if (Navigator.of(context).canPop()) {
+      debugPrint('🔙 Can pop - going to previous screen');
+      Navigator.of(context).pop();
+    } else {
+      debugPrint('🔙 Cannot pop - navigating to categories instead of home');
+      // Instead of going to home (which shows bottom nav), go to categories
+      // This provides a better UX as categories is the main shopping entry point
+      context.go('/clean/categories');
+    }
   }
 
   /// Navigate to home screen with clean navigation

@@ -10,6 +10,7 @@ import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/primary_button.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/payment/payment_method_card.dart';
 import '../../widgets/payment/add_payment_method_dialog.dart';
 
@@ -37,8 +38,9 @@ class PaymentMethodsScreen extends ConsumerWidget {
 
   Widget _buildNotLoggedInState(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Payment Methods'),
+      appBar: UnifiedAppBars.withBackButton(
+        title: 'Payment Methods',
+        fallbackRoute: '/home',
       ),
       body: EmptyState(
         icon: Icons.login,
@@ -54,8 +56,9 @@ class PaymentMethodsScreen extends ConsumerWidget {
     final paymentMethodState = ref.watch(paymentMethodNotifierProvider(userId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Payment Methods'),
+      appBar: UnifiedAppBars.withBackButton(
+        title: 'Payment Methods',
+        fallbackRoute: '/checkout',
         actions: [
           if (isCheckout && paymentMethodState.selectedMethod != null)
             TextButton(
@@ -64,7 +67,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
                   context.pop(paymentMethodState.selectedMethod);
                 }
               },
-              child: const Text('Done'),
+              child: const Text('Done', style: TextStyle(color: Color(0xFF374151))),
             ),
         ],
       ),

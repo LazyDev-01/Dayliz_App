@@ -50,14 +50,15 @@ void main() {
     productId: 'product-id',
     productName: 'Test Product',
     quantity: 2,
-    price: 99.99,
-    total: 199.98,
+    unitPrice: 99.99,
+    totalPrice: 199.98,
     imageUrl: 'https://example.com/image.jpg',
   );
 
   final tOrder = domain.Order(
     id: tOrderId,
     userId: tUserId,
+    orderNumber: 'DLZ-20250609-0001',
     items: [tOrderItem],
     subtotal: 199.98,
     tax: 20.00,
@@ -118,8 +119,8 @@ void main() {
       productId: 'product-id-2',
       productName: 'Test Product 2',
       quantity: 1,
-      price: 149.99,
-      total: 149.99,
+      unitPrice: 149.99,
+      totalPrice: 149.99,
       imageUrl: 'https://example.com/image2.jpg',
     );
 
@@ -181,11 +182,11 @@ void main() {
     // arrange
     const tCashPaymentMethod = PaymentMethod(
       id: 'cash-payment-id',
+      userId: 'test-user-id',
       type: 'cash_on_delivery',
-      cardNumber: null,
-      expiryDate: null,
-      cardHolderName: 'Test User',
+      name: 'Cash on Delivery',
       isDefault: false,
+      details: {},
     );
 
     final tCashOrder = tOrder.copyWith(paymentMethod: tCashPaymentMethod);

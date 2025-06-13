@@ -5,7 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/address.dart';
 import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
-import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/address/address_form_bottom_sheet.dart';
@@ -166,12 +166,9 @@ class _CleanAddressListScreenState extends ConsumerState<CleanAddressListScreen>
 
     return Scaffold(
       backgroundColor: Colors.grey[50], // Light grey background
-      appBar: CommonAppBars.withBackButton(
+      appBar: UnifiedAppBars.withBackButton(
         title: 'Manage Address',
-        fallbackRoute: '/profile',
-        backButtonTooltip: 'Back to Profile',
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.grey[800],
+        fallbackRoute: '/home',
       ),
       body: profileState.isAddressesLoading
         ? const LoadingIndicator()

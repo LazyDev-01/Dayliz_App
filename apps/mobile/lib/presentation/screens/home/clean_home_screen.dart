@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
-import '../../widgets/common/enhanced_app_bar.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
 
@@ -73,7 +73,7 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    return EnhancedAppBars.homeScreen(
+    return UnifiedAppBars.homeScreen(
       onSearchTap: () => context.push('/search'),
       onProfileTap: () => context.push('/profile'),
       searchHint: 'Search for products...',

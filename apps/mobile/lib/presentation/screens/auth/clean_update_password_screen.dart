@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../widgets/common/unified_app_bar.dart';
+
 import '../../providers/auth_providers.dart';
 import '../../../core/validators/validators.dart';
 
@@ -46,12 +48,10 @@ class _CleanUpdatePasswordScreenState extends ConsumerState<CleanUpdatePasswordS
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isReset ? 'Reset Password' : 'Update Password'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => _goBack(context),
-        ),
+      appBar: UnifiedAppBars.withBackButton(
+        title: widget.isReset ? 'Reset Password' : 'Update Password',
+        onBackPressed: () => _goBack(context),
+        fallbackRoute: widget.isReset ? '/auth/login' : '/profile',
       ),
       body: SafeArea(
         child: Center(
