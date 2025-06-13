@@ -50,14 +50,15 @@ void main() {
     productId: 'product-id',
     productName: 'Test Product',
     quantity: 2,
-    price: 99.99,
-    total: 199.98,
+    unitPrice: 99.99,
+    totalPrice: 199.98,
     imageUrl: 'https://example.com/image.jpg',
   );
 
   final tOrder = domain.Order(
     id: 'test-order-id',
     userId: tUserId,
+    orderNumber: 'DLZ-20250609-0001',
     items: [tOrderItem],
     subtotal: 199.98,
     tax: 20.00,
@@ -176,8 +177,8 @@ void main() {
       productId: 'product-1',
       productName: 'Complex Product 1',
       quantity: 3,
-      price: 149.99,
-      total: 449.97,
+      unitPrice: 149.99,
+      totalPrice: 449.97,
       imageUrl: 'https://example.com/image1.jpg',
     );
 
@@ -186,8 +187,8 @@ void main() {
       productId: 'product-2',
       productName: 'Complex Product 2',
       quantity: 1,
-      price: 299.99,
-      total: 299.99,
+      unitPrice: 299.99,
+      totalPrice: 299.99,
       imageUrl: 'https://example.com/image2.jpg',
     );
 

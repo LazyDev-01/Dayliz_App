@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/app_config.dart';
-import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/unified_app_bar.dart';
 
 /// A clean architecture development settings screen that allows toggling between
 /// different implementations and feature flags
@@ -21,7 +21,7 @@ class _CleanSettingsScreenState extends ConsumerState<CleanSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CommonAppBars.withBackButton(
+      appBar: UnifiedAppBars.withBackButton(
         title: 'Developer Settings',
         fallbackRoute: '/clean/debug/menu',
       ),

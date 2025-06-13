@@ -1,9 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_it/get_it.dart';
 import 'package:dartz/dartz.dart';
-
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/failures.dart';
+import '../../core/services/order_service.dart';
 import '../../domain/entities/order.dart' as domain;
 import '../../domain/usecases/orders/get_orders_usecase.dart';
 import '../../domain/usecases/orders/get_order_by_id_usecase.dart';
@@ -323,28 +325,33 @@ final statusFilterProvider = Provider<String?>((ref) {
   return ref.watch(ordersNotifierProvider).statusFilter;
 });
 
-/// Async provider for user orders - modified to not modify state during initialization
+/// Async provider for user orders - uses OrderService directly
 final userOrdersProvider = FutureProvider.autoDispose<List<domain.Order>>((ref) async {
-  ref.onDispose(() {
-    // Clean up any resources if needed
-  });
+  try {
+    // Create OrderService instance
+    final orderService = OrderService(supabaseClient: Supabase.instance.client);
 
-  // Return an empty list initially
-  return <domain.Order>[];
+    // Get current user ID from Supabase auth
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // Fetch orders using OrderService
+    final orders = await orderService.getUserOrders(user.id);
+    debugPrint('OrderProvider: Fetched ${orders.length} orders for user ${user.id}');
+
+    return orders;
+  } catch (e) {
+    debugPrint('OrderProvider: Error fetching orders: $e');
+    rethrow;
+  }
 });
 
 /// Helper method to manually fetch orders
 void fetchOrders(WidgetRef ref) {
-  // Get the orders notifier manually
-  final ordersNotifier = ref.read(ordersNotifierProvider.notifier);
-
-  // Create a new FutureProvider that will fetch orders when called
-  final _ = ref.refresh(userOrdersProvider);
-
-  // Schedule a microtask to avoid modifying providers during build
-  Future.microtask(() async {
-    await ordersNotifier.getOrders();
-  });
+  // Simply refresh the provider to trigger a new fetch
+  ref.refresh(userOrdersProvider);
 }
 
 /// Async provider for order details by ID - modified to not modify state during initialization

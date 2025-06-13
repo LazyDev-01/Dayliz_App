@@ -10,7 +10,7 @@ import '../presentation/screens/cart/modern_cart_screen.dart';
 import '../presentation/screens/checkout/clean_checkout_screen.dart';
 import '../presentation/screens/debug/debug_menu_screen.dart';
 import '../presentation/screens/checkout/payment_methods_screen.dart';
-import '../presentation/screens/test/product_card_test_screen.dart';
+
 import '../presentation/screens/categories/clean_categories_screen.dart';
 
 import '../presentation/screens/profile/clean_user_profile_screen.dart';
@@ -247,11 +247,8 @@ class CleanRoutes {
         );
 
       case 'test/product-card':
-        // Product card test screen
-        return MaterialPageRoute(
-          builder: (_) => const ProductCardTestScreen(),
-          settings: settings,
-        );
+        // Product card test screen - REMOVED (file not found)
+        return _errorRoute(settings);
 
       default:
         // Check if the path is like 'address/edit/{id}'

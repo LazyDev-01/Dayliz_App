@@ -5,7 +5,7 @@ import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import '../../../domain/entities/product.dart';
 import '../../providers/optimized_product_providers.dart';
 import '../../widgets/product/optimized_product_grid.dart';
-import '../../widgets/common/common_app_bars.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
 import '../../../core/performance/performance_monitor.dart';
@@ -66,8 +66,9 @@ class _OptimizedProductListingScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: CommonAppBars.withBackButton(
+      appBar: UnifiedAppBars.withBackButton(
         title: widget.title,
+        fallbackRoute: '/home',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

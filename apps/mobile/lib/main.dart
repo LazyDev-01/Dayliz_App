@@ -1,10 +1,13 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'firebase_options.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dayliz_app/core/config/app_config.dart';
 import 'package:dayliz_app/core/services/supabase_service.dart';
+import 'package:dayliz_app/core/services/firebase_notification_service.dart';
 import 'package:dayliz_app/core/utils/image_preloader.dart';
 import 'package:dayliz_app/core/storage/hive_config.dart';
 // Clean architecture imports
@@ -14,7 +17,7 @@ import 'package:dayliz_app/presentation/screens/dev/clean_settings_screen.dart';
 import 'package:dayliz_app/presentation/screens/debug/supabase_connection_test_screen.dart';
 import 'package:dayliz_app/presentation/screens/debug/debug_menu_screen.dart';
 import 'package:dayliz_app/presentation/screens/debug/clean_google_sign_in_debug_screen.dart';
-import 'debug_google_signin.dart';
+
 
 import 'package:dayliz_app/presentation/screens/debug/cart_dependency_test_screen.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
@@ -35,7 +38,7 @@ import 'di/dependency_injection.dart' show sl;
 // Clean architecture screens
 import 'package:dayliz_app/presentation/screens/product/clean_product_listing_screen.dart';
 import 'package:dayliz_app/presentation/screens/product/clean_product_details_screen.dart';
-import 'package:dayliz_app/presentation/screens/product/product_feature_testing_screen.dart';
+
 import 'package:dayliz_app/presentation/screens/wishlist/clean_wishlist_screen.dart';
 import 'package:dayliz_app/presentation/screens/main/clean_main_screen.dart';
 import 'package:dayliz_app/presentation/widgets/common/common_bottom_nav_bar.dart';
@@ -54,9 +57,9 @@ import 'presentation/screens/cart/modern_cart_screen.dart';
 import 'presentation/screens/cart/payment_selection_screen.dart';
 import 'presentation/screens/checkout/clean_checkout_screen.dart';
 import 'presentation/screens/checkout/payment_methods_screen.dart';
-import 'presentation/screens/payment/payment_options_screen.dart';
+
 import 'presentation/screens/categories/clean_categories_screen.dart';
-import 'presentation/screens/clean_demo_screen.dart';
+
 import 'presentation/screens/profile/clean_address_list_screen.dart';
 import 'presentation/screens/profile/clean_address_form_screen.dart';
 import 'presentation/screens/profile/clean_user_profile_screen.dart';
@@ -66,9 +69,12 @@ import 'presentation/screens/location/location_setup_screen.dart';
 import 'presentation/screens/location/location_search_screen.dart';
 import 'presentation/screens/location/optimal_location_setup_screen.dart';
 import 'presentation/screens/debug/location_setup_test_screen.dart';
-import 'test_gps_integration.dart';
-import 'test_google_maps_integration.dart';
-// import 'test_google_maps_integration.dart'; // Removed - migrated to Mapbox
+import 'presentation/screens/debug/test_gps_integration_screen.dart';
+import 'presentation/screens/debug/test_google_maps_integration_screen.dart';
+
+import 'presentation/screens/notifications/notifications_screen.dart';
+import 'presentation/screens/notifications/notification_settings_screen.dart';
+import 'presentation/screens/coupons/coupons_screen.dart';
 
 // Splash screen temporarily disabled
 // import 'presentation/screens/splash/clean_splash_screen.dart';
@@ -88,6 +94,21 @@ Future<void> main() async {
 
   // Initialize high-performance local storage
   await HiveConfig.initialize();
+
+  // Initialize Firebase for notifications
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint('Firebase initialized successfully');
+
+    // Initialize Firebase notification service
+    final notificationService = FirebaseNotificationService.instance;
+    await notificationService.initialize();
+    debugPrint('Firebase notification service initialized successfully');
+  } catch (e) {
+    debugPrint('Error initializing Firebase: $e');
+  }
 
   // Initialize Supabase service first
   try {
@@ -920,20 +941,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // Testing screen for clean architecture product feature
-      GoRoute(
-        path: '/test/product-feature',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const ProductFeatureTestingScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
-          },
-        ),
-      ),
+
       // Development tools routes
       GoRoute(
         path: '/dev/database-seeder',
@@ -990,20 +998,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
-      // Debug Google Sign-In screen
-      GoRoute(
-        path: '/debug/google-signin',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const DebugGoogleSignIn(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
-          },
-        ),
-      ),
+
       GoRoute(
         path: '/dev/settings',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
@@ -1034,23 +1029,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
-      // Clean Architecture Demo Screen
-      GoRoute(
-        path: '/clean-demo',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanDemoScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
-                child: child,
-              ),
-            );
-          },
-        ),
-      ),
+
 
       // Orders route
       GoRoute(
@@ -1098,12 +1077,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // Modern Payment Options Route
+      // Coupons Route
       GoRoute(
-        path: '/payment-options',
+        path: '/coupons',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
-          child: const PaymentOptionsScreen(),
+          child: const CouponsScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) =>
               SlideTransition(
             position: Tween<Offset>(
@@ -1235,6 +1214,40 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           );
         },
+      ),
+
+      // Notifications routes
+      GoRoute(
+        path: '/notifications',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const NotificationsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/notifications/settings',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const NotificationSettingsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
       ),
 
     ],

@@ -15,6 +15,7 @@ import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/primary_button.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/payment/payment_method_card.dart';
 import '../../widgets/payment/modern_payment_options_widget.dart';
 import 'order_processing_screen.dart';
@@ -42,8 +43,9 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
     final isAuthenticated = authState.isAuthenticated;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Checkout'),
+      appBar: UnifiedAppBars.withBackButton(
+        title: 'Checkout',
+        fallbackRoute: '/cart',
       ),
       body: !isAuthenticated
           ? _buildNotLoggedInState()
@@ -237,7 +239,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
 
         // Add payment method button
         OutlinedButton.icon(
-          onPressed: () => context.push('/payment-options'),
+          onPressed: () => context.push('/payment-methods'),
           icon: const Icon(Icons.add),
           label: const Text('Choose Payment Method'),
         ),
@@ -266,7 +268,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
             const SizedBox(height: 16),
             PrimaryButton(
               text: 'Choose Payment Method',
-              onPressed: () => context.push('/payment-options'),
+              onPressed: () => context.push('/payment-methods'),
               isFullWidth: false,
             ),
           ],

@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/services/order_service.dart';
+import '../../../domain/entities/order.dart' as domain;
+import '../../widgets/common/unified_app_bar.dart';
 
 /// Order Summary Screen - Shows detailed order information
 /// Displays order items, billing details, delivery info, and tracking
 class OrderSummaryScreen extends ConsumerStatefulWidget {
-  final String orderId;
+  final String? orderId;
   final Map<String, dynamic>? orderData;
+  final domain.Order? order;  // Direct order object
 
   const OrderSummaryScreen({
     super.key,
-    required this.orderId,
+    this.orderId,
     this.orderData,
-  });
+    this.order,
+  }) : assert(orderId != null || order != null, 'Either orderId or order must be provided');
 
   @override
   ConsumerState<OrderSummaryScreen> createState() => _OrderSummaryScreenState();
@@ -21,17 +27,89 @@ class OrderSummaryScreen extends ConsumerStatefulWidget {
 class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
   late Map<String, dynamic> orderData;
   final DateFormat dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
+  bool isLoading = true;
+  String? errorMessage;
+  domain.Order? realOrder;
 
   @override
   void initState() {
     super.initState();
-    // Use provided order data or create sample data
-    orderData = widget.orderData ?? _createSampleOrderData();
+
+    // If order object is provided directly, use it
+    if (widget.order != null) {
+      realOrder = widget.order;
+      orderData = _convertOrderToMap(widget.order!);
+      isLoading = false;
+    } else {
+      // Use provided order data initially, then fetch real data
+      orderData = widget.orderData ?? _createSampleOrderData();
+      _fetchOrderData();
+    }
+  }
+
+  Future<void> _fetchOrderData() async {
+    // Only fetch if we don't already have the order
+    if (widget.order != null) return;
+
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final orderService = OrderService(supabaseClient: Supabase.instance.client);
+      final order = await orderService.getOrderById(widget.orderId!);
+
+      setState(() {
+        realOrder = order;
+        orderData = _convertOrderToMap(order);
+        isLoading = false;
+      });
+
+      debugPrint('OrderSummaryScreen: Order data fetched successfully');
+
+    } catch (e) {
+      debugPrint('OrderSummaryScreen: Error fetching order: $e');
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Failed to load order details. Please try again.';
+      });
+    }
+  }
+
+  Map<String, dynamic> _convertOrderToMap(domain.Order order) {
+    return {
+      'orderId': order.id,
+      'orderNumber': order.orderNumber ?? order.id,  // Add order number
+      'status': order.status,
+      'items': order.items.map((item) => {
+        'productName': item.productName,
+        'quantity': item.quantity,
+        'price': item.unitPrice,
+        'total': item.totalPrice,
+        'image': item.imageUrl ?? 'https://via.placeholder.com/50',
+      }).toList(),
+      'subtotal': order.subtotal,
+      'tax': order.tax,
+      'shipping': order.shipping,
+      'total': order.total,
+      'paymentMethod': order.paymentMethod.type,
+      'shippingAddress': {
+        'addressLine1': order.shippingAddress.addressLine1,
+        'addressLine2': order.shippingAddress.addressLine2,
+        'city': order.shippingAddress.city,
+        'state': order.shippingAddress.state,
+        'postalCode': order.shippingAddress.postalCode,
+        'country': order.shippingAddress.country,
+      },
+      'estimatedDelivery': DateTime.now().add(const Duration(hours: 2)),
+      'createdAt': order.createdAt,
+    };
   }
 
   Map<String, dynamic> _createSampleOrderData() {
     return {
-      'orderId': widget.orderId,
+      'orderId': widget.orderId ?? 'sample-order',
       'status': 'confirmed',
       'items': [
         {
@@ -72,34 +150,90 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: _buildAppBar(context, theme),
-      body: _buildBody(context, theme),
-      bottomNavigationBar: _buildBottomButton(context, theme),
+      body: isLoading
+          ? _buildLoadingState()
+          : errorMessage != null
+              ? _buildErrorState(theme)
+              : _buildBody(context, theme),
+      bottomNavigationBar: isLoading || errorMessage != null
+          ? null
+          : _buildBottomButton(context, theme),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text(
+            'Loading order details...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(ThemeData theme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Error Loading Order',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              errorMessage ?? 'Something went wrong',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _fetchOrderData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   /// Builds the app bar with back button and title
   PreferredSizeWidget _buildAppBar(BuildContext context, ThemeData theme) {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 4,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      surfaceTintColor: Colors.transparent,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.black),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      title: const Text(
-        'Order Summary',
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      centerTitle: false,
+    return UnifiedAppBars.withBackButton(
+      title: 'Order Summary',
+      fallbackRoute: '/home',
       actions: [
         IconButton(
-          icon: const Icon(Icons.share, color: Colors.black),
+          icon: const Icon(Icons.share, color: Color(0xFF374151)),
           onPressed: () => _shareOrder(),
         ),
       ],
@@ -121,11 +255,11 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
         children: [
           _buildOrderStatusSection(theme),
           const SizedBox(height: 16),
-          _buildOrderInvoiceSection(theme),
-          const SizedBox(height: 16),
           _buildItemsSection(theme),
           const SizedBox(height: 16),
           _buildBillDetailsSection(theme),
+          const SizedBox(height: 16),
+          _buildOrderInvoiceSection(theme),
           const SizedBox(height: 100), // Space for bottom button
         ],
       ),
@@ -135,7 +269,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
   /// Builds the order status section
   Widget _buildOrderStatusSection(ThemeData theme) {
     final status = orderData['status'] ?? 'pending';
-    final orderId = orderData['orderId'] ?? 'N/A';
+    final orderNumber = orderData['orderNumber'] ?? orderData['orderId'] ?? 'N/A';
 
     // Note: estimatedDelivery parsing removed as we no longer display the date/time
 
@@ -227,7 +361,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Order ID: #$orderId',
+                'Order ID: #$orderNumber',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[600],
@@ -267,7 +401,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
 
   /// Builds the order invoice section
   Widget _buildOrderInvoiceSection(ThemeData theme) {
-    final orderId = orderData['orderId'] ?? 'N/A';
+    final orderNumber = orderData['orderNumber'] ?? orderData['orderId'] ?? 'N/A';
     final paymentMethod = orderData['paymentMethod'] ?? 'cod';
     final shippingAddress = orderData['shippingAddress'] as Map<String, dynamic>? ?? {};
     final createdAt = orderData['createdAt'] as DateTime? ?? DateTime.now();
@@ -325,7 +459,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildInvoiceRow('Order ID', '#$orderId'),
+          _buildInvoiceRow('Order ID', '#$orderNumber'),
           const SizedBox(height: 12),
           _buildInvoiceRow('Mode of Payment', getPaymentMethodText(paymentMethod)),
           const SizedBox(height: 12),

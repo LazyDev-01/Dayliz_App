@@ -11,6 +11,7 @@ import '../domain/repositories/product_repository.dart';
 import '../domain/usecases/get_product_by_id_usecase.dart';
 import '../domain/usecases/get_products_by_subcategory_usecase.dart';
 import '../domain/usecases/get_products_usecase.dart';
+import '../domain/usecases/get_products_paginated_usecase.dart';
 import '../domain/usecases/get_related_products_usecase.dart';
 import '../domain/usecases/search_products_usecase.dart';
 import 'dependency_injection.dart' show sl;
@@ -79,6 +80,11 @@ Future<void> initProductDependencies() async {
     sl.registerLazySingleton(() => SearchProductsUseCase(sl()));
     debugPrint('Registered SearchProductsUseCase');
   }
-  
+
+  if (!sl.isRegistered<GetProductsPaginatedUseCase>()) {
+    sl.registerLazySingleton(() => GetProductsPaginatedUseCase(sl()));
+    debugPrint('Registered GetProductsPaginatedUseCase');
+  }
+
   debugPrint('Product dependencies initialization completed');
 }

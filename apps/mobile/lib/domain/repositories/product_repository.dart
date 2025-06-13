@@ -1,10 +1,24 @@
 import 'package:dartz/dartz.dart';
 import '../entities/product.dart';
 import '../../core/errors/failures.dart';
+import '../../core/models/pagination_models.dart';
 
 /// Product repository interface defining methods for product operations
 abstract class ProductRepository {
-  /// Get a list of products with optional filters
+  /// Get a list of products with optional filters and pagination
+  /// Returns a [Either] with a [Failure] or a [PaginatedResponse] of [Product] entities
+  Future<Either<Failure, PaginatedResponse<Product>>> getProductsPaginated({
+    PaginationParams? pagination,
+    String? categoryId,
+    String? subcategoryId,
+    String? searchQuery,
+    String? sortBy,
+    bool? ascending,
+    double? minPrice,
+    double? maxPrice,
+  });
+
+  /// Get a list of products with optional filters (legacy method for backward compatibility)
   /// Returns a [Either] with a [Failure] or a list of [Product] entities
   Future<Either<Failure, List<Product>>> getProducts({
     int? page,

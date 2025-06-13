@@ -69,8 +69,8 @@ class CommonDrawer extends ConsumerWidget {
           _buildDrawerItem(
             context,
             icon: Icons.payment_outlined,
-            title: 'Payment Options',
-            onTap: () => _navigateTo(context, '/payment-options'),
+            title: 'Payment Methods',
+            onTap: () => _navigateTo(context, '/payment-methods'),
           ),
 
           const Divider(),

@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../domain/entities/order.dart' as domain;
-import '../../../domain/entities/order_item.dart';
-import '../../../domain/entities/address.dart';
-import '../../../domain/entities/payment_method.dart';
-import '../../providers/order_providers.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/services/order_service.dart';
 import '../order/order_summary_screen.dart';
 
 /// Order processing screen with beautiful animations
@@ -113,24 +110,112 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
 
   Future<void> _processOrder() async {
     try {
-      // TODO: Replace with actual order creation logic
-      // For now, simulate processing
-      await Future.delayed(const Duration(seconds: 1));
+      debugPrint('OrderProcessingScreen: Starting order processing');
 
-      // Simulate random success/failure for demo
-      final isSuccess = DateTime.now().millisecond % 10 != 0; // 90% success rate
-
-      if (isSuccess) {
-        _showSuccess();
-      } else {
-        _showError('Payment failed. Please try again.');
+      // Get current user
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        _showError('User not authenticated. Please login again.');
+        return;
       }
+
+      // Extract order data
+      final orderData = widget.orderData;
+      final items = orderData['items'] as List<dynamic>;
+      final subtotal = (orderData['subtotal'] as num).toDouble();
+      final tax = (orderData['tax'] as num).toDouble();
+      final shipping = (orderData['shipping'] as num).toDouble();
+      final total = (orderData['total'] as num).toDouble();
+      final paymentMethod = orderData['paymentMethod'] as String;
+
+      debugPrint('OrderProcessingScreen: Order data extracted - Total: $total, Items: ${items.length}');
+
+      // Validate required data
+      if (items.isEmpty) {
+        _showError('No items in cart. Please add items before placing order.');
+        return;
+      }
+
+      if (total <= 0) {
+        _showError('Invalid order total. Please check your cart.');
+        return;
+      }
+
+      // Find delivery address ID (for now, we'll use the first address or create one)
+      String? deliveryAddressId;
+      try {
+        final addressResponse = await Supabase.instance.client
+            .from('addresses')
+            .select('id')
+            .eq('user_id', user.id)
+            .limit(1);
+
+        if (addressResponse.isNotEmpty) {
+          deliveryAddressId = addressResponse.first['id'];
+        }
+      } catch (e) {
+        debugPrint('OrderProcessingScreen: Error getting address: $e');
+      }
+
+      if (deliveryAddressId == null) {
+        _showError('No delivery address found. Please add an address first.');
+        return;
+      }
+
+      // Prepare order items for database
+      final orderItems = items.map((item) => {
+        'product_id': item['productId'],
+        'product_name': item['productName'],
+        'quantity': item['quantity'],
+        'price': (item['price'] as num).toDouble(),
+        'total': (item['total'] as num).toDouble(),
+      }).toList();
+
+      debugPrint('OrderProcessingScreen: Creating order with ${orderItems.length} items');
+
+      // Create order service
+      final orderService = OrderService(supabaseClient: Supabase.instance.client);
+
+      // Create order
+      final order = await orderService.createOrder(
+        userId: user.id,
+        items: orderItems,
+        subtotal: subtotal,
+        tax: tax,
+        shipping: shipping,
+        total: total,
+        paymentMethod: paymentMethod,
+        deliveryAddressId: deliveryAddressId,
+        notes: 'Order placed via mobile app',
+      );
+
+      debugPrint('OrderProcessingScreen: Order created successfully - ID: ${order.id}');
+
+      // Clear cart after successful order
+      widget.onSuccess?.call();
+
+      // Show success and navigate to order summary
+      _showSuccess(order.id);
+
     } catch (e) {
-      _showError('Something went wrong. Please try again.');
+      debugPrint('OrderProcessingScreen: Error processing order: $e');
+      String errorMessage = 'Something went wrong. Please try again.';
+
+      if (e.toString().contains('Product not found')) {
+        errorMessage = 'Some products in your cart are no longer available.';
+      } else if (e.toString().contains('out of stock')) {
+        errorMessage = 'Some products in your cart are out of stock.';
+      } else if (e.toString().contains('Insufficient stock')) {
+        errorMessage = 'Insufficient stock for some products in your cart.';
+      } else if (e.toString().contains('User not authenticated')) {
+        errorMessage = 'Please login again to place your order.';
+      }
+
+      _showError(errorMessage);
     }
   }
 
-  void _showSuccess() {
+  void _showSuccess(String orderId) {
     if (!mounted) return;
 
     setState(() {
@@ -145,8 +230,7 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         widget.onSuccess?.call();
-        // Navigate to order summary with generated order ID
-        final orderId = DateTime.now().millisecondsSinceEpoch.toString();
+        // Navigate to order summary with real order ID
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => OrderSummaryScreen(

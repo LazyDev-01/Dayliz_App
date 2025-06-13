@@ -68,7 +68,15 @@ final optimizedProductsBySubcategoryProvider =
 
     // Fetch from repository if no cache
     final getProductsBySubcategoryUseCase = sl<GetProductsBySubcategoryUseCase>();
-    final result = await getProductsBySubcategoryUseCase.call(subcategoryId);
+    final result = await getProductsBySubcategoryUseCase.call(
+      GetProductsBySubcategoryParams(
+        subcategoryId: subcategoryId,
+        limit: null, // No limit - get all products
+        page: null,  // No pagination
+        sortBy: 'created_at',
+        ascending: false,
+      ),
+    );
     
     return result.fold(
       (failure) {

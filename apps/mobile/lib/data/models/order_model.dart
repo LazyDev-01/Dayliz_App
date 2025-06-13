@@ -19,6 +19,7 @@ class OrderModel extends Order {
   const OrderModel({
     required String id,
     required String userId,
+    String? orderNumber,
     required List<OrderItem> items,
     required double subtotal,
     required double tax,
@@ -37,6 +38,7 @@ class OrderModel extends Order {
   }) : super(
           id: id,
           userId: userId,
+          orderNumber: orderNumber,
           items: items,
           subtotal: subtotal,
           tax: tax,
@@ -59,6 +61,7 @@ class OrderModel extends Order {
     return OrderModel(
       id: json['id'],
       userId: json['user_id'],
+      orderNumber: json['order_number'],
       items: (json['items'] as List)
           .map((item) => OrderItemModel.fromJson(item))
           .toList(),
@@ -91,6 +94,7 @@ class OrderModel extends Order {
     return {
       'id': id,
       'user_id': userId,
+      'order_number': orderNumber,
       'items': items
           .map((item) => (item as OrderItemModel).toJson())
           .toList(),
@@ -118,6 +122,7 @@ class OrderModel extends Order {
   OrderModel copyWith({
     String? id,
     String? userId,
+    String? orderNumber,
     List<OrderItem>? items,
     double? subtotal,
     double? tax,
@@ -137,6 +142,7 @@ class OrderModel extends Order {
     return OrderModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      orderNumber: orderNumber ?? this.orderNumber,
       items: items ?? this.items,
       subtotal: subtotal ?? this.subtotal,
       tax: tax ?? this.tax,

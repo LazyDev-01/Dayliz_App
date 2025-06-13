@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/order.dart' as domain;
 import '../../providers/order_providers.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/unified_app_bar.dart';
+import '../order/order_summary_screen.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
-import '../../widgets/common/common_app_bar.dart';
 
 class CleanOrderListScreen extends ConsumerStatefulWidget {
   const CleanOrderListScreen({Key? key}) : super(key: key);
@@ -28,17 +28,31 @@ class _CleanOrderListScreenState extends ConsumerState<CleanOrderListScreen> {
     });
   }
 
+  /// Handle back navigation from order list screen
+  void _handleBackNavigation(BuildContext context) {
+    debugPrint('🔙 Handling back navigation from order list');
+
+    // Check if we can pop (there's a previous screen)
+    if (Navigator.of(context).canPop()) {
+      debugPrint('🔙 Can pop - going to previous screen');
+      Navigator.of(context).pop();
+    } else {
+      debugPrint('🔙 Cannot pop - navigating to categories instead of home');
+      // Instead of going to home (which shows bottom nav), go to categories
+      // This provides a better UX as categories is the main shopping entry point
+      context.go('/clean/categories');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ordersAsyncValue = ref.watch(userOrdersProvider);
 
     return Scaffold(
-      appBar: CommonAppBars.withBackButton(
+      appBar: UnifiedAppBars.withBackButton(
         title: 'My Orders',
+        onBackPressed: () => _handleBackNavigation(context),
         fallbackRoute: '/home',
-        backButtonTooltip: 'Back to Home',
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.grey[800],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -100,12 +114,12 @@ class _OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final currencyFormat = NumberFormat.currency(symbol: '₹', locale: 'en_IN');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
-        onTap: () => context.push('/orders/${order.id}'),
+        onTap: () => _navigateToOrderSummary(context, order),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -114,12 +128,16 @@ class _OrderCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Order #${order.id}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Text(
+                      'Order #${order.orderNumber ?? order.id}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 8),
                   _buildStatusChip(context, order.status),
                 ],
               ),
@@ -127,7 +145,12 @@ class _OrderCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('${order.items.length} ${order.items.length == 1 ? 'item' : 'items'}'),
+                  Expanded(
+                    child: Text(
+                      '${order.items.length} ${order.items.length == 1 ? 'item' : 'items'}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   Text(
                     currencyFormat.format(order.total),
                     style: theme.textTheme.titleMedium,
@@ -190,5 +213,14 @@ class _OrderCard extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return DateFormat('MMM d, yyyy').format(date);
+  }
+
+  void _navigateToOrderSummary(BuildContext context, domain.Order order) {
+    // Navigate to order summary screen with the order object
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => OrderSummaryScreen(order: order),
+      ),
+    );
   }
 }

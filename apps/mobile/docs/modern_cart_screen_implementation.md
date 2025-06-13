@@ -27,7 +27,7 @@ This screen is currently **UI-only** with no functional backend integration. All
 
 ### **1. Delivery Time Section**
 - Green time icon with background
-- "Delivery in 12 minutes" text
+- "Delivery in 30 minutes" text
 - "Shipment of 2 items" subtitle
 - Rounded top corners, square bottom corners for seamless connection
 - Minimal spacing (2px) to cart items for cohesive layout

@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../providers/auth_providers.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../../core/utils/constants.dart';
 
 
@@ -123,21 +124,13 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        // UI/UX FIX: Only show back button for Step 2, hide for Step 1
-        leading: _currentStep == 0 ? null : IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Color(0xFF4CAF50),
+      appBar: _currentStep == 0
+        ? UnifiedAppBars.simple(title: '') // Step 1: No back button
+        : UnifiedAppBars.withBackButton( // Step 2: Show back button
+            title: '',
+            onBackPressed: () => _goToPreviousStep(),
+            fallbackRoute: '/auth/login',
           ),
-          onPressed: _goToPreviousStep,
-        ),
-        // UI/UX FIX: Remove "Create Account" title as requested
-        title: null,
-        centerTitle: true,
-      ),
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,

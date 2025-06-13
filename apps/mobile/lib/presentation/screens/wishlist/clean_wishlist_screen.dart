@@ -8,7 +8,7 @@ import '../../providers/wishlist_providers.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
-import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/product/clean_product_grid.dart';
 
 /// Clean Wishlist Screen that displays the user's wishlist
@@ -40,16 +40,13 @@ class _CleanWishlistScreenState extends ConsumerState<CleanWishlistScreen> {
     final errorMessage = ref.watch(wishlistErrorProvider);
 
     return Scaffold(
-      appBar: CommonAppBars.withBackButton(
+      appBar: UnifiedAppBars.withBackButton(
         title: 'My Wishlist',
-        fallbackRoute: '/clean/profile',
-        backButtonTooltip: 'Back to Profile',
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.grey[800],
+        fallbackRoute: '/home',
         actions: wishlistProducts.isNotEmpty
             ? [
                 IconButton(
-                  icon: const Icon(Icons.delete_sweep),
+                  icon: const Icon(Icons.delete_sweep, color: Color(0xFF374151)),
                   onPressed: () => _showClearWishlistDialog(context),
                   tooltip: 'Clear wishlist',
                 ),

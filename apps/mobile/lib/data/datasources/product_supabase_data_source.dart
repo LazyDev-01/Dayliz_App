@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/exceptions.dart';
+import '../../core/models/pagination_models.dart';
 import '../../domain/entities/product.dart';
 import '../models/product_model.dart';
 import 'product_remote_data_source.dart';
@@ -11,6 +12,98 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
   final SupabaseClient supabaseClient;
 
   ProductSupabaseDataSource({required this.supabaseClient});
+
+  /// Get products with pagination support
+  Future<PaginatedResponse<ProductModel>> getProductsPaginated({
+    PaginationParams? pagination,
+    String? categoryId,
+    String? subcategoryId,
+    String? searchQuery,
+    String? sortBy,
+    bool? ascending,
+    double? minPrice,
+    double? maxPrice,
+  }) async {
+    try {
+      final paginationParams = pagination ?? const PaginationParams.defaultProducts();
+      debugPrint('ProductSupabaseDataSource: Fetching paginated products (page: ${paginationParams.page}, limit: ${paginationParams.limit})');
+
+      // Build the base query
+      var query = supabaseClient
+          .from('products')
+          .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)');
+
+      // Apply filters
+      if (categoryId != null) {
+        query = query.eq('category_id', categoryId);
+      }
+
+      if (subcategoryId != null) {
+        query = query.eq('subcategory_id', subcategoryId);
+      }
+
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        query = query.ilike('name', '%$searchQuery%');
+      }
+
+      if (minPrice != null) {
+        query = query.gte('price', minPrice);
+      }
+
+      if (maxPrice != null) {
+        query = query.lte('price', maxPrice);
+      }
+
+      // Apply sorting
+      String orderBy = sortBy ?? 'created_at';
+      bool orderAscending = ascending ?? false;
+
+      // Get total count for pagination metadata
+      // For now, we'll use a simplified approach to get total count
+      // In production, you might want to implement a more efficient counting method
+      var countQuery = supabaseClient.from('products').select('id');
+
+      // Apply same filters to count query
+      if (categoryId != null) {
+        countQuery = countQuery.eq('category_id', categoryId);
+      }
+      if (subcategoryId != null) {
+        countQuery = countQuery.eq('subcategory_id', subcategoryId);
+      }
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        countQuery = countQuery.ilike('name', '%$searchQuery%');
+      }
+      if (minPrice != null) {
+        countQuery = countQuery.gte('price', minPrice);
+      }
+      if (maxPrice != null) {
+        countQuery = countQuery.lte('price', maxPrice);
+      }
+
+      final countResponse = await countQuery;
+      final totalItems = countResponse.length;
+
+      // Execute the main query with pagination
+      final response = await query
+          .order(orderBy, ascending: orderAscending)
+          .range(paginationParams.offset, paginationParams.offset + paginationParams.limit - 1);
+
+      debugPrint('ProductSupabaseDataSource: Retrieved ${response.length} products (total: $totalItems)');
+
+      final products = _parseProductsResponse(response);
+      final meta = PaginationMeta.fromParams(
+        params: paginationParams,
+        totalItems: totalItems,
+      );
+
+      return PaginatedResponse(data: products, meta: meta);
+    } catch (e) {
+      debugPrint('ProductSupabaseDataSource: Error fetching paginated products: $e');
+      throw ServerException(
+        message: 'Failed to fetch products from Supabase: ${e.toString()}',
+      );
+    }
+  }
 
   /// Get a list of products with optional filters
   @override

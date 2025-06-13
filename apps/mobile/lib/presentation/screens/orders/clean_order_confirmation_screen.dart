@@ -8,7 +8,7 @@ import 'dart:math';
 
 import '../../../domain/entities/order.dart' as domain;
 import '../../providers/order_providers.dart';
-import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
 
@@ -61,10 +61,9 @@ class _CleanOrderConfirmationScreenState extends ConsumerState<CleanOrderConfirm
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: CommonAppBars.withBackButton(
+      appBar: UnifiedAppBars.withBackButton(
         title: 'Order Confirmation',
         fallbackRoute: '/',
-        backButtonTooltip: 'Back to Home',
         actions: [
           IconButton(
             icon: const Icon(Icons.home),

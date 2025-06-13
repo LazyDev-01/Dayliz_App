@@ -7,6 +7,7 @@ import 'payment_method.dart';
 class Order extends Equatable {
   final String id;
   final String userId;
+  final String? orderNumber;  // Human-readable order number like DLZ-20250609-0007
   final List<OrderItem> items;
   final double subtotal;
   final double tax;
@@ -26,6 +27,7 @@ class Order extends Equatable {
   const Order({
     required this.id,
     required this.userId,
+    this.orderNumber,
     required this.items,
     required this.subtotal,
     required this.tax,
@@ -67,6 +69,7 @@ class Order extends Equatable {
   Order copyWith({
     String? id,
     String? userId,
+    String? orderNumber,
     List<OrderItem>? items,
     double? subtotal,
     double? tax,
@@ -86,6 +89,7 @@ class Order extends Equatable {
     return Order(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      orderNumber: orderNumber ?? this.orderNumber,
       items: items ?? this.items,
       subtotal: subtotal ?? this.subtotal,
       tax: tax ?? this.tax,
@@ -108,6 +112,7 @@ class Order extends Equatable {
   List<Object?> get props => [
         id,
         userId,
+        orderNumber,
         items,
         subtotal,
         tax,

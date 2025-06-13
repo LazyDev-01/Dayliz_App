@@ -5,7 +5,7 @@ import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
-import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/unified_app_bar.dart';
 
 /// A Clean Architecture implementation of the user preferences screen
 class CleanPreferencesScreen extends ConsumerStatefulWidget {
@@ -60,10 +60,9 @@ class _CleanPreferencesScreenState extends ConsumerState<CleanPreferencesScreen>
     final currentUser = ref.watch(currentUserProvider);
 
     return Scaffold(
-      appBar: CommonAppBars.withBackButton(
+      appBar: UnifiedAppBars.withBackButton(
         title: 'Preferences',
         fallbackRoute: '/profile',
-        backButtonTooltip: 'Back to Profile',
       ),
       body: userProfileState.isLoading || _isLoading
           ? const LoadingIndicator(message: 'Loading preferences...')

@@ -1,11 +1,13 @@
 import 'package:dartz/dartz.dart';
 import '../../core/errors/failures.dart';
 import '../../core/errors/exceptions.dart';
+import '../../core/models/pagination_models.dart';
 import '../../core/network/network_info.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/repositories/product_repository.dart';
 import '../datasources/product_local_data_source.dart';
 import '../datasources/product_remote_data_source.dart';
+import '../datasources/product_supabase_data_source.dart';
 import '../models/product_model.dart';
 
 /// Implementation of the product repository
@@ -20,6 +22,98 @@ class ProductRepositoryImpl implements ProductRepository {
     required this.localDataSource,
     required this.networkInfo,
   });
+
+  /// Get products with pagination support
+  @override
+  Future<Either<Failure, PaginatedResponse<Product>>> getProductsPaginated({
+    PaginationParams? pagination,
+    String? categoryId,
+    String? subcategoryId,
+    String? searchQuery,
+    String? sortBy,
+    bool? ascending,
+    double? minPrice,
+    double? maxPrice,
+  }) async {
+    if (await networkInfo.isConnected) {
+      try {
+        // Check if remote data source supports pagination
+        if (remoteDataSource is ProductSupabaseDataSource) {
+          final supabaseDataSource = remoteDataSource as ProductSupabaseDataSource;
+          final paginatedResponse = await supabaseDataSource.getProductsPaginated(
+            pagination: pagination,
+            categoryId: categoryId,
+            subcategoryId: subcategoryId,
+            searchQuery: searchQuery,
+            sortBy: sortBy,
+            ascending: ascending,
+            minPrice: minPrice,
+            maxPrice: maxPrice,
+          );
+
+          // Cache the products for offline access
+          _cacheProducts(paginatedResponse.data);
+
+          return Right(paginatedResponse);
+        } else {
+          // Fallback to legacy method and wrap in pagination response
+          final products = await remoteDataSource.getProducts(
+            page: pagination?.page,
+            limit: pagination?.limit,
+            categoryId: categoryId,
+            subcategoryId: subcategoryId,
+            searchQuery: searchQuery,
+            sortBy: sortBy,
+            ascending: ascending,
+            minPrice: minPrice,
+            maxPrice: maxPrice,
+          );
+
+          // Create pagination metadata (estimated)
+          final meta = PaginationMeta.fromParams(
+            params: pagination ?? const PaginationParams.defaultProducts(),
+            totalItems: products.length, // This is an estimate
+          );
+
+          _cacheProducts(products);
+          return Right(PaginatedResponse(data: products, meta: meta));
+        }
+      } on ServerException catch (e) {
+        // Try to get from local cache if server fails
+        try {
+          final localProducts = await localDataSource.getCachedProducts();
+          final meta = PaginationMeta.fromParams(
+            params: pagination ?? const PaginationParams.defaultProducts(),
+            totalItems: localProducts.length,
+          );
+          return Right(PaginatedResponse(data: localProducts, meta: meta));
+        } catch (_) {
+          return Left(ServerFailure(message: e.message));
+        }
+      }
+    } else {
+      // Try to get from local cache if offline
+      try {
+        final localProducts = await localDataSource.getCachedProducts();
+        final meta = PaginationMeta.fromParams(
+          params: pagination ?? const PaginationParams.defaultProducts(),
+          totalItems: localProducts.length,
+        );
+        return Right(PaginatedResponse(data: localProducts, meta: meta));
+      } on CacheException catch (e) {
+        return Left(CacheFailure(message: e.message));
+      }
+    }
+  }
+
+  /// Cache products for offline access
+  Future<void> _cacheProducts(List<ProductModel> products) async {
+    try {
+      await localDataSource.cacheProducts(products);
+    } catch (_) {
+      // Silently fail if caching is not supported or fails
+    }
+  }
 
   /// Helper method to handle product operations and manage caching
   Future<Either<Failure, List<Product>>> _getProducts({

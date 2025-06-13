@@ -13,6 +13,7 @@ import '../../providers/order_providers.dart';
 import '../../widgets/common/error_message.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
+import '../../widgets/common/unified_app_bar.dart';
 
 class CleanOrderDetailScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -35,27 +36,35 @@ class _CleanOrderDetailScreenState extends ConsumerState<CleanOrderDetailScreen>
       fetchOrderDetails(ref, widget.orderId);
     });
   }
-  
+
+  /// Handle back navigation from order detail screen
+  void _handleBackNavigation(BuildContext context) {
+    debugPrint('🔙 Handling back navigation from order detail');
+
+    // Check if we can pop (there's a previous screen)
+    if (Navigator.of(context).canPop()) {
+      debugPrint('🔙 Can pop - going to previous screen');
+      Navigator.of(context).pop();
+    } else {
+      debugPrint('🔙 Cannot pop - navigating to categories instead of home');
+      // Instead of going to home (which shows bottom nav), go to categories
+      // This provides a better UX as categories is the main shopping entry point
+      context.go('/clean/categories');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final orderAsyncValue = ref.watch(orderDetailProvider(widget.orderId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Order Details',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        iconTheme: IconThemeData(color: Colors.black),
+      appBar: UnifiedAppBars.withBackButton(
+        title: 'Order Details',
+        onBackPressed: () => _handleBackNavigation(context),
+        fallbackRoute: '/home',
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Color(0xFF374151)),
             onPressed: () => fetchOrderDetails(ref, widget.orderId),
             tooltip: 'Refresh order',
           ),
