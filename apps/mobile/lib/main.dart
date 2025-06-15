@@ -64,7 +64,7 @@ import 'presentation/screens/profile/clean_address_list_screen.dart';
 import 'presentation/screens/profile/clean_address_form_screen.dart';
 import 'presentation/screens/profile/clean_user_profile_screen.dart';
 import 'presentation/screens/profile/clean_preferences_screen.dart';
-import 'presentation/screens/search/clean_search_screen.dart';
+import 'presentation/screens/search/enhanced_search_screen.dart';
 import 'presentation/screens/location/location_setup_screen.dart';
 import 'presentation/screens/location/location_search_screen.dart';
 import 'presentation/screens/location/optimal_location_setup_screen.dart';
@@ -1040,22 +1040,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // Search Route
+      // Search Route - Enhanced Search with Context Support
       GoRoute(
         path: '/search',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanSearchScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 1),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-        ),
+        pageBuilder: (context, state) {
+          // Extract context parameters from query parameters
+          final contextSubcategoryId = state.uri.queryParameters['subcategoryId'];
+          final contextCategoryId = state.uri.queryParameters['categoryId'];
+          final contextName = state.uri.queryParameters['contextName'];
+          final initialQuery = state.uri.queryParameters['q'];
+
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: EnhancedSearchScreen(
+              contextSubcategoryId: contextSubcategoryId,
+              contextCategoryId: contextCategoryId,
+              contextName: contextName,
+              initialQuery: initialQuery,
+            ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
+        },
       ),
 
       // Payment Methods Route

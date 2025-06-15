@@ -155,7 +155,7 @@ class _CleanOrderConfirmationScreenState extends ConsumerState<CleanOrderConfirm
   Widget _buildOrderConfirmation(BuildContext context, domain.Order order) {
     final theme = Theme.of(context);
     final dateFormat = DateFormat('MMMM d, yyyy');
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final currencyFormat = NumberFormat.currency(symbol: '₹');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),

@@ -6,7 +6,10 @@ import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/product/clean_product_grid.dart';
+import '../../../navigation/routes.dart';
 
+/// Clean product listing screen with optimized paginated architecture
+/// Features: RepaintBoundary optimization, smart state management, context-aware search
 class CleanProductListingScreen extends ConsumerStatefulWidget {
   final String? categoryId;
   final String? subcategoryId;
@@ -32,6 +35,17 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
     debugPrint('CleanProductListingScreen: Initialized with new paginated architecture');
   }
 
+  void _openScopedSearch() {
+    debugPrint('🔍 Opening context-aware search for subcategory: ${widget.subcategoryId}, category: ${widget.categoryId}');
+
+    CleanRoutes.navigateToContextSearch(
+      context,
+      subcategoryId: widget.subcategoryId,
+      categoryId: widget.categoryId,
+      contextName: _getScreenTitle(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Watch the appropriate provider based on screen type
@@ -46,9 +60,7 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
     return Scaffold(
       appBar: UnifiedAppBars.withSearch(
         title: _getScreenTitle(),
-        onSearchPressed: () {
-          debugPrint('Search icon tapped - functionality to be implemented');
-        },
+        onSearchPressed: _openScopedSearch,
         backButtonType: BackButtonType.previousPage,
         fallbackRoute: '/home',
       ),
@@ -62,6 +74,32 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
     if (widget.subcategoryId != null) return 'Products';
     if (widget.categoryId != null) return 'Category Products';
     return 'All Products';
+  }
+
+  /// Refresh products with pull-to-refresh
+  Future<void> _refreshProducts() async {
+    if (widget.subcategoryId != null) {
+      await ref.read(paginatedProductsBySubcategoryProvider(widget.subcategoryId!).notifier).refreshProducts();
+    } else if (widget.categoryId != null) {
+      await ref.read(paginatedProductsByCategoryProvider(widget.categoryId!).notifier).refreshProducts();
+    } else if (widget.searchQuery != null) {
+      await ref.read(paginatedSearchProductsProvider(widget.searchQuery!).notifier).refreshProducts();
+    } else {
+      await ref.read(paginatedAllProductsProvider.notifier).refreshProducts();
+    }
+  }
+
+  /// Load more products for infinite scroll
+  void _loadMoreProducts() {
+    if (widget.subcategoryId != null) {
+      ref.read(paginatedProductsBySubcategoryProvider(widget.subcategoryId!).notifier).loadMoreProducts();
+    } else if (widget.categoryId != null) {
+      ref.read(paginatedProductsByCategoryProvider(widget.categoryId!).notifier).loadMoreProducts();
+    } else if (widget.searchQuery != null) {
+      ref.read(paginatedSearchProductsProvider(widget.searchQuery!).notifier).loadMoreProducts();
+    } else {
+      ref.read(paginatedAllProductsProvider.notifier).loadMoreProducts();
+    }
   }
 
   Widget _buildContent(PaginatedProductsState state) {
@@ -91,9 +129,18 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
       return _buildEmptyState();
     }
 
-    return CleanProductGrid(
-      products: state.products.toList(),
-      padding: const EdgeInsets.all(16),
+    return RefreshIndicator(
+      onRefresh: _refreshProducts,
+      child: CleanProductGrid(
+        products: state.products.toList(),
+        isLoading: state.isLoading,
+        isLoadingMore: state.isLoadingMore,
+        hasMore: !state.hasReachedEnd,
+        errorMessage: state.errorMessage,
+        onRetry: () => _refreshProducts(),
+        onLoadMore: _loadMoreProducts,
+        padding: const EdgeInsets.all(16),
+      ),
     );
   }
 

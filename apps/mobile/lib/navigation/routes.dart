@@ -19,10 +19,11 @@ import '../presentation/screens/profile/clean_address_form_screen.dart';
 import '../presentation/screens/profile/clean_preferences_screen.dart';
 import '../presentation/screens/orders/clean_order_list_screen.dart';
 import '../presentation/screens/orders/clean_order_detail_screen.dart';
-import '../presentation/screens/search/clean_search_screen.dart';
+import '../presentation/screens/search/enhanced_search_screen.dart';
 import '../presentation/screens/wishlist/clean_wishlist_screen.dart';
 import '../presentation/screens/debug/supabase_connection_test_screen.dart';
 import '../presentation/screens/debug/supabase_auth_test_screen.dart';
+import '../presentation/screens/debug/search_demo_screen.dart';
 import 'package:go_router/go_router.dart';
 
 /// Handles navigation routes for the clean architecture implementation
@@ -232,10 +233,24 @@ class CleanRoutes {
           settings: settings,
         );
 
-      case 'search':
-        // Clean search screen
+      case 'debug/search-demo':
+        // Search system demo screen
         return MaterialPageRoute(
-          builder: (_) => const CleanSearchScreen(),
+          builder: (_) => const SearchDemoScreen(),
+          settings: settings,
+        );
+
+      case 'search':
+        // Enhanced search screen (now the default search)
+        return MaterialPageRoute(
+          builder: (_) => const EnhancedSearchScreen(),
+          settings: settings,
+        );
+
+      case 'enhanced-search':
+        // Enhanced search screen with advanced features
+        return MaterialPageRoute(
+          builder: (_) => const EnhancedSearchScreen(),
           settings: settings,
         );
 
@@ -348,9 +363,31 @@ class CleanRoutes {
     GoRouter.of(context).push('/clean/debug');
   }
 
-  // Navigation method for search
-  static void navigateToSearch(BuildContext context) {
-    GoRouter.of(context).push('/clean/search');
+  // Navigation method for search (global)
+  static void navigateToSearch(BuildContext context, {String? initialQuery}) {
+    final queryParams = initialQuery != null ? '?q=$initialQuery' : '';
+    GoRouter.of(context).push('/search$queryParams');
+  }
+
+  // Navigation method for context-aware search
+  static void navigateToContextSearch(
+    BuildContext context, {
+    String? subcategoryId,
+    String? categoryId,
+    String? contextName,
+    String? initialQuery,
+  }) {
+    final params = <String, String>{};
+    if (subcategoryId != null) params['subcategoryId'] = subcategoryId;
+    if (categoryId != null) params['categoryId'] = categoryId;
+    if (contextName != null) params['contextName'] = contextName;
+    if (initialQuery != null) params['q'] = initialQuery;
+
+    final queryString = params.isNotEmpty
+        ? '?${params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}'
+        : '';
+
+    GoRouter.of(context).push('/search$queryString');
   }
 
   // Navigation method for wishlist

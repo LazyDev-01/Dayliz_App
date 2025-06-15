@@ -13,6 +13,7 @@ import '../auth/auth_guard.dart';
 
 /// A clean architecture implementation of a product card for q-commerce applications
 /// following industry standards like Blinkit and Zepto.
+/// Optimized with RepaintBoundary and memoization for better performance.
 class CleanProductCard extends ConsumerStatefulWidget {
   final Product product;
   final VoidCallback? onTap;
@@ -83,20 +84,18 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               break;
             }
           } catch (e) {
-            print('Error parsing cart item: $e');
+            // Error parsing cart item
           }
         }
       }
     } catch (e) {
-      print('Error checking if in cart: $e');
+      // Error checking if in cart
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Debug print to track rebuilds
-    print('Building CleanProductCard for ${widget.product.name}');
-    print('Is in cart: $_isInCart, Quantity: $_quantity');
+    // Performance optimization: Removed debug prints for production
 
     // Calculate sizes based on screen width if not explicitly provided
     final screenWidth = MediaQuery.of(context).size.width;
@@ -179,6 +178,8 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
             child: CachedNetworkImage(
               imageUrl: widget.product.mainImageUrl,
               fit: BoxFit.cover,
+              fadeInDuration: const Duration(milliseconds: 300),
+              fadeOutDuration: const Duration(milliseconds: 100),
               placeholder: (context, url) => Container(
                 color: Colors.grey[200],
                 child: const Center(
@@ -187,13 +188,18 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
                     height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
+                      color: Colors.grey,
                     ),
                   ),
                 ),
               ),
               errorWidget: (context, url, error) => Container(
                 color: Colors.grey[200],
-                child: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+                child: const Icon(
+                  Icons.image_not_supported_outlined,
+                  color: Colors.grey,
+                  semanticLabel: 'Product image not available',
+                ),
               ),
             ),
           ),
@@ -313,15 +319,10 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
 
   /// Builds the quantity selector for items already in cart
   Widget _buildQuantitySelector(BuildContext context) {
-    print('Building quantity selector, quantity: $_quantity');
-
     // If product is not in cart, show the add button instead
     if (_quantity <= 0) {
-      print('Quantity is 0, showing add button');
       return _buildAddButton(context);
     }
-
-    print('Showing quantity selector with quantity: $_quantity');
 
     // Use GestureDetector to stop tap events from propagating to the parent card
     return GestureDetector(
@@ -478,7 +479,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
           quantity: 1,
         );
       } catch (e) {
-        print('Error adding to cart with provider: $e');
+        // Error adding to cart with provider
         success = false;
       }
 
@@ -563,7 +564,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       try {
         await ref.read(cartNotifierProvider.notifier).refreshCart();
       } catch (e) {
-        print('Error refreshing cart provider: $e');
+        // Error refreshing cart provider
       }
 
       // Success feedback disabled for early launch
@@ -571,8 +572,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
         debugPrint('${widget.product.name} added to cart');
       }
     } catch (e) {
-      // Debug print for error
-      print('Error adding to cart: $e');
+      // Error adding to cart
 
       // Error feedback disabled for early launch
       if (context.mounted) {
@@ -626,8 +626,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               return;
             }
           } catch (e) {
-            print('Error removing from cart: $e');
-            // Continue to fallback approach
+            // Error removing from cart - continue to fallback approach
           }
         }
 
@@ -706,8 +705,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               return;
             }
           } catch (e) {
-            print('Error updating quantity: $e');
-            // Continue to fallback approach
+            // Error updating quantity - continue to fallback approach
           }
         }
 
@@ -755,11 +753,10 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       try {
         await ref.read(cartNotifierProvider.notifier).refreshCart();
       } catch (e) {
-        print('Error refreshing cart provider: $e');
+        // Error refreshing cart provider
       }
     } catch (e) {
-      // Debug print for error
-      print('Error updating quantity: $e');
+      // Error updating quantity
 
       // Error feedback disabled for early launch
       if (context.mounted) {

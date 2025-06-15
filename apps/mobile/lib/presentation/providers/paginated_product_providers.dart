@@ -140,9 +140,9 @@ class PaginatedProductsNotifier extends StateNotifier<PaginatedProductsState> {
   Future<void> refreshProducts() async {
     if (_currentParams == null) return;
 
-    // Reset to first page
+    // Reset to first page with optimized limit
     final firstPageParams = GetProductsPaginatedParams(
-      pagination: PaginationParams(page: 1, limit: _currentParams!.pagination?.limit ?? 50),
+      pagination: PaginationParams(page: 1, limit: _currentParams!.pagination?.limit ?? 100),
       categoryId: _currentParams!.categoryId,
       subcategoryId: _currentParams!.subcategoryId,
       searchQuery: _currentParams!.searchQuery,
@@ -166,7 +166,7 @@ class PaginatedProductsNotifier extends StateNotifier<PaginatedProductsState> {
     if (_currentParams == null) return;
 
     final updatedParams = GetProductsPaginatedParams(
-      pagination: PaginationParams(page: 1, limit: _currentParams!.pagination?.limit ?? 50),
+      pagination: PaginationParams(page: 1, limit: _currentParams!.pagination?.limit ?? 100),
       categoryId: _currentParams!.categoryId,
       subcategoryId: _currentParams!.subcategoryId,
       searchQuery: _currentParams!.searchQuery,
@@ -187,10 +187,13 @@ final paginatedProductsBySubcategoryProvider =
     final useCase = sl<GetProductsPaginatedUseCase>();
     final notifier = PaginatedProductsNotifier(useCase);
     
-    // Auto-load products for this subcategory
+    // Auto-load products for this subcategory with optimized pagination
     WidgetsBinding.instance.addPostFrameCallback((_) {
       notifier.loadProducts(
-        GetProductsPaginatedParams.forSubcategory(subcategoryId: subcategoryId),
+        GetProductsPaginatedParams.forSubcategory(
+          subcategoryId: subcategoryId,
+          pagination: const PaginationParams.defaultProducts(), // Load 100 products initially
+        ),
       );
     });
     
@@ -205,10 +208,13 @@ final paginatedProductsByCategoryProvider =
     final useCase = sl<GetProductsPaginatedUseCase>();
     final notifier = PaginatedProductsNotifier(useCase);
     
-    // Auto-load products for this category
+    // Auto-load products for this category with optimized pagination
     WidgetsBinding.instance.addPostFrameCallback((_) {
       notifier.loadProducts(
-        GetProductsPaginatedParams.forCategory(categoryId: categoryId),
+        GetProductsPaginatedParams.forCategory(
+          categoryId: categoryId,
+          pagination: const PaginationParams.defaultProducts(), // Load 100 products initially
+        ),
       );
     });
     
@@ -223,10 +229,13 @@ final paginatedSearchProductsProvider =
     final useCase = sl<GetProductsPaginatedUseCase>();
     final notifier = PaginatedProductsNotifier(useCase);
     
-    // Auto-load search results
+    // Auto-load search results with higher limit
     WidgetsBinding.instance.addPostFrameCallback((_) {
       notifier.loadProducts(
-        GetProductsPaginatedParams.forSearch(searchQuery: searchQuery),
+        GetProductsPaginatedParams.forSearch(
+          searchQuery: searchQuery,
+          pagination: const PaginationParams(page: 1, limit: 200), // More search results
+        ),
       );
     });
     

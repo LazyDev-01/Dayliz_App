@@ -11,28 +11,28 @@ class PaginationParams extends Equatable {
     required this.limit,
   }) : offset = (page - 1) * limit;
 
-  /// Default pagination for product listings
+  /// Default pagination for product listings (true lazy loading)
   const PaginationParams.defaultProducts()
       : page = 1,
-        limit = 50,
+        limit = 20, // Optimized for lazy loading - smaller initial load
         offset = 0;
 
-  /// Pagination for search results
+  /// Pagination for search results (lazy loading)
   const PaginationParams.search()
       : page = 1,
-        limit = 30,
+        limit = 15, // Smaller chunks for faster search results
         offset = 0;
 
-  /// Pagination for featured products
+  /// Pagination for featured products (lazy loading)
   const PaginationParams.featured()
       : page = 1,
-        limit = 20,
+        limit = 10, // Small initial load for featured items
         offset = 0;
 
-  /// No pagination - get all items
+  /// Large batch loading (for specific use cases only)
   const PaginationParams.all()
       : page = 1,
-        limit = 1000,
+        limit = 50, // Reduced from 1000 - still large but manageable
         offset = 0;
 
   /// Create next page
@@ -151,14 +151,19 @@ class PaginatedResponse<T> extends Equatable {
   String toString() => 'PaginatedResponse(${data.length} items, $meta)';
 }
 
-/// Pagination configuration for different use cases
+/// Pagination configuration for different use cases (optimized for lazy loading)
 class PaginationConfig {
-  static const int defaultProductLimit = 50;
-  static const int searchLimit = 30;
-  static const int featuredLimit = 20;
-  static const int relatedLimit = 8;
-  static const int maxLimit = 100;
-  static const int minLimit = 10;
+  // True lazy loading limits - smaller chunks for better performance
+  static const int defaultProductLimit = 20; // Reduced from 50
+  static const int searchLimit = 15; // Reduced from 30
+  static const int featuredLimit = 10; // Reduced from 20
+  static const int relatedLimit = 6; // Reduced from 8
+  static const int maxLimit = 50; // Reduced from 100
+  static const int minLimit = 5; // Reduced from 10
+
+  // Progressive loading thresholds
+  static const double loadMoreThreshold = 0.8; // Load when 80% scrolled
+  static const int loadMoreOffset = 200; // Load when 200px from bottom
 
   /// Get appropriate limit for use case
   static int getLimitForUseCase(ProductListingType type) {

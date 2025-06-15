@@ -14,6 +14,7 @@ import '../domain/usecases/get_products_usecase.dart';
 import '../domain/usecases/get_products_paginated_usecase.dart';
 import '../domain/usecases/get_related_products_usecase.dart';
 import '../domain/usecases/search_products_usecase.dart';
+import '../core/services/search_service.dart';
 import 'dependency_injection.dart' show sl;
 
 /// Initialize product-related dependencies with Supabase implementation
@@ -84,6 +85,12 @@ Future<void> initProductDependencies() async {
   if (!sl.isRegistered<GetProductsPaginatedUseCase>()) {
     sl.registerLazySingleton(() => GetProductsPaginatedUseCase(sl()));
     debugPrint('Registered GetProductsPaginatedUseCase');
+  }
+
+  // Register SearchService for enhanced search functionality
+  if (!sl.isRegistered<SearchService>()) {
+    sl.registerLazySingleton(() => SearchService(sl<ProductRepository>()));
+    debugPrint('Registered SearchService');
   }
 
   debugPrint('Product dependencies initialization completed');
