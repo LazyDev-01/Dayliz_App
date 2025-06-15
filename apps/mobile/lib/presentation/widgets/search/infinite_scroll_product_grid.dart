@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../domain/entities/product.dart';
 import '../../providers/paginated_search_providers.dart';
 import '../common/error_state.dart';
-import '../product/product_card.dart';
+import '../product/clean_product_card.dart';
 
 /// Infinite scroll product grid with lazy loading
 class InfiniteScrollProductGrid extends ConsumerStatefulWidget {
@@ -119,7 +119,7 @@ class _InfiniteScrollProductGridState extends ConsumerState<InfiniteScrollProduc
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 final product = state.products[index];
-                return ProductCard(
+                return CleanProductCard(
                   product: product,
                   onTap: () => context.push('/clean/product/${product.id}'),
                 );

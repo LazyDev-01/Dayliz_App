@@ -6,6 +6,7 @@ import '../../providers/enhanced_search_providers.dart';
 import '../../providers/paginated_search_providers.dart';
 import '../../providers/scoped_search_providers.dart';
 import '../../widgets/search/infinite_scroll_product_grid.dart';
+import '../../widgets/product/clean_product_card.dart';
 
 
 /// Enhanced search screen with advanced search capabilities and context awareness
@@ -505,50 +506,9 @@ class _EnhancedSearchScreenState extends ConsumerState<EnhancedSearchScreen> {
         }
 
         final product = state.products[index];
-        return GestureDetector(
+        return CleanProductCard(
+          product: product,
           onTap: () => context.push('/clean/product/${product.id}'),
-          child: Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Product image placeholder
-                Container(
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.image, size: 40, color: Colors.grey),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.name,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '₹${product.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          color: Colors.green[600],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
         );
       },
     );
