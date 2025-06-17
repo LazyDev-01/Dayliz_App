@@ -14,6 +14,8 @@ import '../domain/usecases/get_products_usecase.dart';
 import '../domain/usecases/get_products_paginated_usecase.dart';
 import '../domain/usecases/get_related_products_usecase.dart';
 import '../domain/usecases/search_products_usecase.dart';
+import '../domain/usecases/get_featured_products_usecase.dart';
+import '../domain/usecases/get_sale_products_usecase.dart';
 import '../core/services/search_service.dart';
 import 'dependency_injection.dart' show sl;
 
@@ -85,6 +87,16 @@ Future<void> initProductDependencies() async {
   if (!sl.isRegistered<GetProductsPaginatedUseCase>()) {
     sl.registerLazySingleton(() => GetProductsPaginatedUseCase(sl()));
     debugPrint('Registered GetProductsPaginatedUseCase');
+  }
+
+  if (!sl.isRegistered<GetFeaturedProductsUseCase>()) {
+    sl.registerLazySingleton(() => GetFeaturedProductsUseCase(sl()));
+    debugPrint('Registered GetFeaturedProductsUseCase');
+  }
+
+  if (!sl.isRegistered<GetSaleProductsUseCase>()) {
+    sl.registerLazySingleton(() => GetSaleProductsUseCase(sl()));
+    debugPrint('Registered GetSaleProductsUseCase');
   }
 
   // Register SearchService for enhanced search functionality

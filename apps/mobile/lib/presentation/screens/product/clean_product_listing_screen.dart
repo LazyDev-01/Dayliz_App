@@ -10,18 +10,23 @@ import '../../../navigation/routes.dart';
 
 /// Clean product listing screen with optimized paginated architecture
 /// Features: RepaintBoundary optimization, smart state management, context-aware search
+/// Supports both single subcategory and virtual categories (multiple subcategories)
 class CleanProductListingScreen extends ConsumerStatefulWidget {
   final String? categoryId;
   final String? subcategoryId;
+  final List<String>? subcategoryIds; // For virtual categories
   final String? searchQuery;
   final String? title;
+  final bool isVirtual; // Indicates if this is a virtual category
 
   const CleanProductListingScreen({
     Key? key,
     this.categoryId,
     this.subcategoryId,
+    this.subcategoryIds,
     this.searchQuery,
     this.title,
+    this.isVirtual = false,
   }) : super(key: key);
 
   @override
@@ -49,13 +54,7 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
   @override
   Widget build(BuildContext context) {
     // Watch the appropriate provider based on screen type
-    final state = widget.subcategoryId != null
-        ? ref.watch(paginatedProductsBySubcategoryProvider(widget.subcategoryId!))
-        : widget.categoryId != null
-            ? ref.watch(paginatedProductsByCategoryProvider(widget.categoryId!))
-            : widget.searchQuery != null
-                ? ref.watch(paginatedSearchProductsProvider(widget.searchQuery!))
-                : ref.watch(paginatedAllProductsProvider);
+    final state = _getProductsState();
 
     return Scaffold(
       appBar: UnifiedAppBars.withSearch(
@@ -66,6 +65,48 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
       ),
       body: _buildContent(state),
     );
+  }
+
+  /// Get the appropriate products state based on screen configuration
+  PaginatedProductsState _getProductsState() {
+    debugPrint('📱 PRODUCT_LISTING: ========== PROVIDER SELECTION DEBUG ==========');
+    debugPrint('📱 PRODUCT_LISTING: isVirtual: ${widget.isVirtual}');
+    debugPrint('📱 PRODUCT_LISTING: subcategoryIds: ${widget.subcategoryIds}');
+    debugPrint('📱 PRODUCT_LISTING: subcategoryId: ${widget.subcategoryId}');
+    debugPrint('📱 PRODUCT_LISTING: categoryId: ${widget.categoryId}');
+    debugPrint('📱 PRODUCT_LISTING: title: ${widget.title}');
+
+    // Handle virtual categories (multiple subcategories)
+    if (widget.isVirtual && widget.subcategoryIds != null && widget.subcategoryIds!.isNotEmpty) {
+      debugPrint('📱 PRODUCT_LISTING: Using multiple subcategories provider');
+      debugPrint('📱 PRODUCT_LISTING: Subcategory IDs: ${widget.subcategoryIds}');
+      return ref.watch(paginatedProductsByMultipleSubcategoriesProvider(widget.subcategoryIds!));
+    }
+
+    // Handle single subcategory
+    if (widget.subcategoryId != null) {
+      debugPrint('📱 PRODUCT_LISTING: Using single subcategory provider');
+      debugPrint('📱 PRODUCT_LISTING: Subcategory ID: ${widget.subcategoryId}');
+      return ref.watch(paginatedProductsBySubcategoryProvider(widget.subcategoryId!));
+    }
+
+    // Handle category
+    if (widget.categoryId != null) {
+      debugPrint('📱 PRODUCT_LISTING: Using category provider');
+      debugPrint('📱 PRODUCT_LISTING: Category ID: ${widget.categoryId}');
+      return ref.watch(paginatedProductsByCategoryProvider(widget.categoryId!));
+    }
+
+    // Handle search
+    if (widget.searchQuery != null) {
+      debugPrint('📱 PRODUCT_LISTING: Using search provider');
+      debugPrint('📱 PRODUCT_LISTING: Search query: ${widget.searchQuery}');
+      return ref.watch(paginatedSearchProductsProvider(widget.searchQuery!));
+    }
+
+    // Default to all products
+    debugPrint('📱 PRODUCT_LISTING: Using all products provider (default)');
+    return ref.watch(paginatedAllProductsProvider);
   }
 
   String _getScreenTitle() {

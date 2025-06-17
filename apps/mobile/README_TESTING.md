@@ -1,18 +1,67 @@
-# Dayliz App - Testing Instructions
+# Dayliz App - Testing Guide
 
 ## Overview
-Dayliz is a Q-commerce grocery delivery app. This guide provides instructions for testing the application's checkout and order flow.
+Dayliz is a Q-commerce grocery delivery app. This guide provides comprehensive instructions for testing the application using our organized test structure.
 
 ## Prerequisites
-- Flutter SDK installed (version 3.0.0 or higher)
+- Flutter SDK installed (version 3.32.0 or higher)
 - Android Studio or VS Code with Flutter/Dart plugins
 - An emulator or physical device for testing
+
+## Test Structure
+
+Our tests are organized following Flutter best practices:
+
+```
+test/
+├── unit/                    # Unit tests for business logic
+│   ├── core/               # Core functionality tests
+│   ├── data/               # Data layer tests
+│   ├── domain/             # Domain layer tests
+│   └── presentation/       # Presentation layer tests
+├── widget/                 # Widget tests for UI components
+│   └── screens/           # Screen-specific widget tests
+├── integration/            # Integration tests for complete flows
+├── fixtures/               # Test data and mock objects
+├── helpers/                # Test utilities and helpers
+└── docs/                   # Test documentation
+```
+
+## Running Tests
+
+### All Tests
+```bash
+# Run all tests
+flutter test
+
+# Or using workspace script
+npm run mobile:test
+```
+
+### Specific Test Types
+```bash
+# Unit tests only
+flutter test test/unit
+npm run mobile:test:unit
+
+# Widget tests only
+flutter test test/widget
+npm run mobile:test:widget
+
+# Integration tests only
+flutter test test/integration
+npm run mobile:test:integration
+
+# With coverage report
+flutter test --coverage
+npm run mobile:test:coverage
+```
 
 ## Setup Instructions
 
 ### Running the App
 1. Clone the repository
-2. Navigate to the `frontend` directory
+2. Navigate to the `apps/mobile` directory
 3. Run one of the following commands:
    - Windows: `run_app.bat`
    - Mac/Linux: `sh run_app.sh`

@@ -10,6 +10,9 @@ import 'google_maps_api_test.dart';
 import '../profile/clean_address_form_screen.dart';
 import '../order/order_summary_screen.dart';
 import '../categories/optimized_categories_screen.dart';
+import '../auth/premium_auth_landing_screen.dart';
+import '../auth/phone_auth_screen.dart';
+import '../auth/otp_verification_screen.dart';
 
 import '../dev/cart_sync_test_screen.dart';
 import '../../../navigation/routes.dart';
@@ -22,11 +25,138 @@ class DebugMenuScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: UnifiedAppBars.simple(
-        title: 'Debug Menu',
+        title: '🚀 UPDATED DEBUG MENU 🚀',
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          // SUPER OBVIOUS TEST BUTTON
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.green, Colors.green.shade700],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.green.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: InkWell(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('🎉 SUCCESS!'),
+                    content: const Text('The debug menu has been successfully updated!\n\nYou can now see the new authentication testing options below.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Awesome!'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.celebration,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '🚀 DEBUG MENU UPDATED!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Tap here to confirm you can see this update!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Authentication Testing Section
+          _buildSectionHeader('🔐 Authentication Testing'),
+          _buildDebugTile(
+            context,
+            title: 'Premium Auth Landing Screen',
+            subtitle: 'Test the new premium authentication landing screen with modern UI',
+            icon: Icons.login,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PremiumAuthLandingScreen(),
+                ),
+              );
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Phone Authentication Flow',
+            subtitle: 'Test phone number input and OTP verification flow',
+            icon: Icons.phone_android,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PhoneAuthScreen(),
+                ),
+              );
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'OTP Verification Screen',
+            subtitle: 'Test OTP input screen with sample phone number',
+            icon: Icons.sms,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OtpVerificationScreen(
+                    phoneNumber: '+1 (555) 123-4567',
+                    countryCode: '+1',
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // Backend Testing Section
+          _buildSectionHeader('☁️ Backend Testing'),
           _buildDebugTile(
             context,
             title: 'Supabase Connection Test',
@@ -101,6 +231,9 @@ class DebugMenuScreen extends ConsumerWidget {
               CleanRoutes.navigateToSearch(context);
             },
           ),
+
+          // Location & Maps Testing Section
+          _buildSectionHeader('🗺️ Location & Maps Testing'),
           _buildDebugTile(
             context,
             title: 'GPS Integration Test',
@@ -161,6 +294,9 @@ class DebugMenuScreen extends ConsumerWidget {
               context.push('/test-google-maps');
             },
           ),
+
+          // UI/UX Testing Section
+          _buildSectionHeader('🎨 UI/UX Testing'),
           _buildDebugTile(
             context,
             title: 'Modern Cart Screen',
@@ -216,6 +352,22 @@ class DebugMenuScreen extends ConsumerWidget {
     );
   }
 
+
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 24, 8, 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
+
   Widget _buildDebugTile(
     BuildContext context, {
     required String title,
@@ -224,13 +376,48 @@ class DebugMenuScreen extends ConsumerWidget {
     required VoidCallback onTap,
   }) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16.0),
+      margin: const EdgeInsets.only(bottom: 12.0),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: ListTile(
-        leading: Icon(icon, size: 32),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 24,
+            color: Theme.of(context).primaryColor,
+          ),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 14,
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Colors.grey.shade400,
+        ),
         onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
+        ),
       ),
     );
   }

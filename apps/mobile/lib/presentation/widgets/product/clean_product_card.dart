@@ -100,8 +100,8 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
     // Calculate sizes based on screen width if not explicitly provided
     final screenWidth = MediaQuery.of(context).size.width;
     final cardWidth = widget.width ?? (screenWidth / 2) - 16;
-    final cardHeight = widget.height ?? cardWidth * 1.8; // 1:1.8 aspect ratio
-    final imageSize = cardWidth;
+    final cardHeight = widget.height ?? cardWidth * 1.8; // 1:1.8 aspect ratio (restored)
+    final imageSize = cardWidth; // Full width image (restored)
 
     return Container(
       width: cardWidth,
@@ -122,7 +122,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               // Info section
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(8.0), // Restored original padding
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -130,13 +130,13 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
                       Text(
                         _getQuantityText(),
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 11, // Restored original size
                           color: Colors.grey[600],
                           fontWeight: FontWeight.normal,
                         ),
                       ),
 
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 4), // Restored original spacing
 
                       // Product name
                       Text(
@@ -144,7 +144,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 13, // Restored original size
                           fontWeight: FontWeight.w500,
                           color: Colors.black,
                         ),
@@ -262,7 +262,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               Text(
                 '₹${widget.product.discountedPrice.toStringAsFixed(0)}',
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 14, // Restored original size
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
@@ -273,7 +273,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
                 Text(
                   '₹${widget.product.price.toStringAsFixed(0)}',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 12, // Restored original size
                     decoration: TextDecoration.lineThrough,
                     color: Colors.grey[600],
                   ),
@@ -293,14 +293,14 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
   /// Builds the ADD button
   Widget _buildAddButton(BuildContext context) {
     return SizedBox(
-      height: 32,
-      width: 70, // Increased width from default to 70
+      height: 32, // Restored original size
+      width: 70, // Restored original size
       child: ElevatedButton(
         onPressed: widget.product.inStock ? () => _addToCart(context) : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary, // Using standard green #4CAF50
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 16), // Increased horizontal padding
+          padding: const EdgeInsets.symmetric(horizontal: 16), // Restored original padding
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(4),
           ),
@@ -309,7 +309,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
         child: const Text(
           'ADD',
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 12, // Restored original size
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -333,8 +333,8 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       // This ensures the gesture detector doesn't interfere with other gestures
       behavior: HitTestBehavior.opaque,
       child: Container(
-        height: 32,
-        width: 70, // Same width as the ADD button
+        height: 32, // Restored original size
+        width: 70, // Restored original size
         decoration: BoxDecoration(
           border: Border.all(color: Theme.of(context).primaryColor),
           borderRadius: BorderRadius.circular(4),
@@ -374,13 +374,13 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
 
             // Quantity display
             Container(
-              width: 22,
+              width: 22, // Restored original size
               alignment: Alignment.center,
               child: Text(
                 '$_quantity',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 14, // Restored original size
                   fontWeight: FontWeight.bold,
                 ),
               ),

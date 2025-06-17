@@ -39,6 +39,9 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Bottom widget (e.g., TabBar)
   final PreferredSizeWidget? bottom;
 
+  /// Whether to show shadow effect
+  final bool showShadow;
+
   const UnifiedAppBar({
     Key? key,
     required this.title,
@@ -50,21 +53,22 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.centerTitle = true,
     this.leading,
     this.bottom,
+    this.showShadow = true,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
+        boxShadow: showShadow ? [
+          const BoxShadow(
             color: Color(0x1A000000), // 10% black opacity for subtle shadow
             offset: Offset(0, 2),
             blurRadius: 4,
             spreadRadius: 0,
           ),
-        ],
+        ] : null,
       ),
       child: AppBar(
         title: Text(
@@ -172,6 +176,7 @@ class UnifiedAppBars {
     List<Widget>? actions,
     bool centerTitle = true,
     PreferredSizeWidget? bottom,
+    bool showShadow = true,
   }) {
     return UnifiedAppBar(
       title: title,
@@ -179,6 +184,7 @@ class UnifiedAppBars {
       actions: actions,
       centerTitle: centerTitle,
       bottom: bottom,
+      showShadow: showShadow,
     );
   }
 
@@ -200,6 +206,28 @@ class UnifiedAppBars {
       actions: actions,
       centerTitle: centerTitle,
       bottom: bottom,
+    );
+  }
+
+  /// Creates an app bar with standard back navigation (previous page) without shadow
+  static UnifiedAppBar withBackButtonNoShadow({
+    required String title,
+    String fallbackRoute = '/home',
+    VoidCallback? onBackPressed,
+    List<Widget>? actions,
+    bool centerTitle = true,
+    PreferredSizeWidget? bottom,
+  }) {
+    return UnifiedAppBar(
+      title: title,
+      showBackButton: true,
+      backButtonType: BackButtonType.previousPage,
+      fallbackRoute: fallbackRoute,
+      onBackPressed: onBackPressed,
+      actions: actions,
+      centerTitle: centerTitle,
+      bottom: bottom,
+      showShadow: false,
     );
   }
 

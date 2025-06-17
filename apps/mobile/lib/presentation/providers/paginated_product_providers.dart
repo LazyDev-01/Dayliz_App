@@ -181,14 +181,16 @@ class PaginatedProductsNotifier extends StateNotifier<PaginatedProductsState> {
 }
 
 /// Provider for paginated products by subcategory
-final paginatedProductsBySubcategoryProvider = 
+final paginatedProductsBySubcategoryProvider =
     StateNotifierProvider.family<PaginatedProductsNotifier, PaginatedProductsState, String>(
   (ref, subcategoryId) {
+    debugPrint('🔄 PROVIDER: Creating single subcategory provider for ID: $subcategoryId');
     final useCase = sl<GetProductsPaginatedUseCase>();
     final notifier = PaginatedProductsNotifier(useCase);
-    
+
     // Auto-load products for this subcategory with optimized pagination
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('🔄 PROVIDER: Loading products for subcategory: $subcategoryId');
       notifier.loadProducts(
         GetProductsPaginatedParams.forSubcategory(
           subcategoryId: subcategoryId,
@@ -196,7 +198,39 @@ final paginatedProductsBySubcategoryProvider =
         ),
       );
     });
-    
+
+    return notifier;
+  },
+);
+
+/// Provider for paginated products by multiple subcategories (for virtual categories)
+/// Note: Currently loads products from the first subcategory only
+/// TODO: Implement proper multi-subcategory support in the backend
+final paginatedProductsByMultipleSubcategoriesProvider =
+    StateNotifierProvider.family<PaginatedProductsNotifier, PaginatedProductsState, List<String>>(
+  (ref, subcategoryIds) {
+    debugPrint('🔄 PROVIDER: Creating multiple subcategories provider for IDs: $subcategoryIds');
+    final useCase = sl<GetProductsPaginatedUseCase>();
+    final notifier = PaginatedProductsNotifier(useCase);
+
+    // Auto-load products for the first subcategory (temporary solution)
+    // TODO: Implement proper multi-subcategory query support
+    if (subcategoryIds.isNotEmpty) {
+      final firstSubcategoryId = subcategoryIds.first;
+      debugPrint('🔄 PROVIDER: Using first subcategory ID: $firstSubcategoryId (from ${subcategoryIds.length} total)');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        debugPrint('🔄 PROVIDER: Loading products for first subcategory: $firstSubcategoryId');
+        notifier.loadProducts(
+          GetProductsPaginatedParams.forSubcategory(
+            subcategoryId: firstSubcategoryId, // Use first subcategory for now
+            pagination: const PaginationParams.defaultProducts(),
+          ),
+        );
+      });
+    } else {
+      debugPrint('🔄 PROVIDER: WARNING: Empty subcategory IDs list!');
+    }
+
     return notifier;
   },
 );

@@ -6,8 +6,15 @@ import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
+import '../../providers/home_providers.dart';
+import '../../providers/category_providers.dart';
+// import '../../widgets/product/clean_product_card.dart'; // Removed for now
+import '../../widgets/home/home_categories_section.dart';
+import '../../../domain/entities/product.dart';
+import '../../../domain/entities/category.dart';
 
 /// A clean architecture implementation of the home screen
+/// Updated with compact product cards and improved category alignment
 class CleanHomeScreen extends ConsumerStatefulWidget {
   const CleanHomeScreen({Key? key}) : super(key: key);
 
@@ -23,7 +30,10 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    // Schedule the data loading for after the build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialData();
+    });
   }
 
   @override
@@ -33,22 +43,33 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
   }
 
   Future<void> _loadInitialData() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      // Load data for the home screen
-      // This will be implemented in future steps
-      await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
+      debugPrint('🏠 HOME: Starting to load initial data...');
+      
+      // Load featured products
+      debugPrint('🏠 HOME: Loading featured products...');
+      await ref.read(featuredProductsNotifierProvider.notifier).loadFeaturedProducts(limit: 10);
+      
+      // Load sale products
+      debugPrint('🏠 HOME: Loading sale products...');
+      await ref.read(saleProductsNotifierProvider.notifier).loadSaleProducts(limit: 10);
 
+      debugPrint('🏠 HOME: Initial data loading completed successfully');
+      
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
+      debugPrint('🏠 HOME: Error loading initial data: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -59,8 +80,12 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
   }
 
   void _onRefresh() async {
-    // Refresh data
+    // Refresh all data
     await _loadInitialData();
+    
+    // Also refresh categories
+    ref.invalidate(categoriesProvider);
+    
     _refreshController.refreshCompleted();
   }
 
@@ -104,14 +129,16 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
           // Banner carousel placeholder
           _buildBannerPlaceholder(),
 
-          // Categories section placeholder
-          _buildCategoriesPlaceholder(),
+          // Categories section with improved alignment
+          const SliverToBoxAdapter(
+            child: HomeCategoriesSection(),
+          ),
 
-          // Featured products section placeholder
-          _buildFeaturedProductsPlaceholder(),
+          // Featured products section with compact cards
+          _buildFeaturedProductsSection(),
 
-          // Sale products section placeholder
-          _buildSaleProductsPlaceholder(),
+          // Sale products section with compact cards
+          _buildSaleProductsSection(),
 
           // Bottom padding
           const SliverToBoxAdapter(
@@ -157,71 +184,9 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
     );
   }
 
-  Widget _buildCategoriesPlaceholder() {
-    return SliverToBoxAdapter(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Categories',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => context.push('/categories'),
-                  child: const Text('See All'),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 100,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return Container(
-                  width: 80,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.category, color: Colors.grey[500]),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Category ${index + 1}',
-                        style: const TextStyle(fontSize: 12),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildFeaturedProductsSection() {
+    final featuredProductsState = ref.watch(featuredProductsNotifierProvider);
 
-  Widget _buildFeaturedProductsPlaceholder() {
     return SliverToBoxAdapter(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,89 +210,34 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
               ],
             ),
           ),
-          SizedBox(
-            height: 220,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return Container(
-                  width: 160,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(26), // Using withAlpha instead of withOpacity
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+          Container(
+            height: 120,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.shopping_bag_outlined,
+                    size: 32,
+                    color: Colors.grey,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(12),
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(Icons.image, size: 40, color: Colors.grey[500]),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: double.infinity,
-                              height: 16,
-                              color: Colors.grey[300],
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              width: 80,
-                              height: 16,
-                              color: Colors.grey[300],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  width: 60,
-                                  height: 16,
-                                  color: Colors.grey[300],
-                                ),
-                                Container(
-                                  width: 30,
-                                  height: 30,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).primaryColor.withAlpha(51), // Using withAlpha instead of withOpacity
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.add_shopping_cart,
-                                    size: 16,
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  SizedBox(height: 8),
+                  Text(
+                    'Featured Products Coming Soon',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                );
-              },
+                ],
+              ),
             ),
           ),
         ],
@@ -335,7 +245,13 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
     );
   }
 
-  Widget _buildSaleProductsPlaceholder() {
+  // Widget _buildFeaturedProductsList(FeaturedProductsState state) {
+  //   // Removed - using placeholder for now
+  // }
+
+  Widget _buildSaleProductsSection() {
+    // final saleProductsState = ref.watch(saleProductsNotifierProvider); // Removed - using placeholder
+
     return SliverToBoxAdapter(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,126 +275,47 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
               ],
             ),
           ),
-          SizedBox(
-            height: 220,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return Container(
-                  width: 160,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(26), // Using withAlpha instead of withOpacity
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+          Container(
+            height: 120,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.local_offer_outlined,
+                    size: 32,
+                    color: Colors.grey,
                   ),
-                  child: Stack(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(12),
-                              ),
-                            ),
-                            child: Center(
-                              child: Icon(Icons.image, size: 40, color: Colors.grey[500]),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: double.infinity,
-                                  height: 16,
-                                  color: Colors.grey[300],
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 60,
-                                      height: 16,
-                                      color: Colors.grey[300],
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      width: 40,
-                                      height: 16,
-                                      color: Colors.grey[200],
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      width: 60,
-                                      height: 16,
-                                      color: Colors.grey[300],
-                                    ),
-                                    Container(
-                                      width: 30,
-                                      height: 30,
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).primaryColor.withAlpha(51), // Using withAlpha instead of withOpacity
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.add_shopping_cart,
-                                        size: 16,
-                                        color: Theme.of(context).primaryColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            '20% OFF',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  SizedBox(height: 8),
+                  Text(
+                    'Sale Products Coming Soon',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                );
-              },
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
   }
+
+  // Widget _buildSaleProductsList(SaleProductsState state) {
+  //   // Removed - using placeholder for now
+  // }
+
+  // Product-related methods removed - using placeholders for now
+  // Widget _buildProductsLoading() { ... }
+  // Widget _buildProductsError(String message) { ... }
+  // Widget _buildProductsEmpty(String message) { ... }
 }

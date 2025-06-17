@@ -8,7 +8,7 @@ import '../presentation/screens/auth/clean_forgot_password_screen.dart';
 import '../presentation/screens/auth/clean_register_screen.dart';
 import '../presentation/screens/cart/modern_cart_screen.dart';
 import '../presentation/screens/checkout/clean_checkout_screen.dart';
-import '../presentation/screens/debug/debug_menu_screen.dart';
+import '../debug/screens/debug_menu_screen.dart';
 import '../presentation/screens/checkout/payment_methods_screen.dart';
 
 import '../presentation/screens/categories/clean_categories_screen.dart';
