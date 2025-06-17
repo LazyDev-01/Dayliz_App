@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/product.dart';
-import '../../providers/product_providers.dart';
+import '../../providers/product_detail_providers.dart';
 import '../../providers/cart_providers.dart';
 import '../../providers/wishlist_providers.dart';
-import '../../providers/auth_providers.dart';
 import '../../widgets/auth/auth_guard.dart';
 import '../../widgets/common/unified_app_bar.dart';
 
@@ -29,9 +27,6 @@ class CleanProductDetailsScreen extends ConsumerWidget {
 
     // Watch if product is in cart
     final isInCartFuture = ref.watch(isProductInCartProvider(productId));
-
-    // Watch if product is in wishlist
-    final isInWishlistFuture = ref.watch(isProductInWishlistProvider(productId));
 
     return Scaffold(
       appBar: UnifiedAppBars.withBackButton(
@@ -84,10 +79,14 @@ class CleanProductDetailsScreen extends ConsumerWidget {
 
     if (isInWishlist) {
       await ref.read(wishlistNotifierProvider.notifier).removeFromWishlist(productId);
-      _showSnackBar(context, '${product.name} removed from wishlist');
+      if (context.mounted) {
+        _showSnackBar(context, '${product.name} removed from wishlist');
+      }
     } else {
       await ref.read(wishlistNotifierProvider.notifier).addToWishlist(productId);
-      _showSnackBar(context, '${product.name} added to wishlist');
+      if (context.mounted) {
+        _showSnackBar(context, '${product.name} added to wishlist');
+      }
     }
   }
 
@@ -126,7 +125,7 @@ class CleanProductDetailsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                ref.read(productByIdNotifierProvider(productId).notifier).getProduct();
+                ref.read(productByIdNotifierProvider(productId).notifier).getProduct(productId);
               },
               child: const Text('Retry'),
             ),

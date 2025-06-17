@@ -63,6 +63,16 @@ abstract class ProductRepository {
     int? page,
     int? limit,
   });
+
+  /// Search products within specific scope (subcategory or category)
+  /// Returns a [Either] with a [Failure] or a list of [Product] entities
+  Future<Either<Failure, List<Product>>> searchProductsScoped({
+    required String query,
+    String? subcategoryId,
+    String? categoryId,
+    int? page,
+    int? limit,
+  });
   
   /// Get products by category ID
   /// Returns a [Either] with a [Failure] or a list of [Product] entities

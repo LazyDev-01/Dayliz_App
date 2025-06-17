@@ -28,10 +28,10 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       final paginationParams = pagination ?? const PaginationParams.defaultProducts();
       debugPrint('ProductSupabaseDataSource: Fetching paginated products (page: ${paginationParams.page}, limit: ${paginationParams.limit})');
 
-      // Build the base query
+      // Build the base query - temporarily simplified to avoid relationship issues
       var query = supabaseClient
           .from('products')
-          .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)');
+          .select('*');
 
       // Apply filters
       if (categoryId != null) {
@@ -121,10 +121,10 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
     try {
       debugPrint('ProductSupabaseDataSource: Fetching products from Supabase');
 
-      // Start building the query
+      // Start building the query - temporarily simplified to avoid relationship issues
       var query = supabaseClient
           .from('products')
-          .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)');
+          .select('*');
 
       // Apply filters
       if (categoryId != null) {
@@ -177,30 +177,12 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
   /// Parse the response from Supabase into a list of ProductModel objects
   List<ProductModel> _parseProductsResponse(List<dynamic> response) {
     return response.map((json) {
-      // Extract the main image URL from product_images
-      String? imageUrl;
-      if (json['product_images'] != null && json['product_images'].isNotEmpty) {
-        // Find the primary image first
-        var primaryImage = json['product_images'].firstWhere(
-          (img) => img['is_primary'] == true,
-          orElse: () => json['product_images'].isNotEmpty ? json['product_images'][0] : null,
-        );
+      // Use main_image_url from products table directly
+      String? imageUrl = json['main_image_url'];
 
-        if (primaryImage != null) {
-          imageUrl = primaryImage['image_url'];
-        }
-      }
-
-      // Extract category and subcategory names
-      String? categoryName;
-      if (json['categories'] != null) {
-        categoryName = json['categories']['name'];
-      }
-
-      String? subcategoryName;
-      if (json['subcategories'] != null) {
-        subcategoryName = json['subcategories']['name'];
-      }
+      // Use category and subcategory names from products table directly
+      String? categoryName = json['category_name'];
+      String? subcategoryName = json['subcategory_name'];
 
       // Create a ProductModel from the JSON data
       final isOnSale = json['discount_percentage'] != null && (json['discount_percentage'] as num) > 0;
@@ -208,17 +190,23 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       // Create a Product entity first
       final product = Product(
         id: json['id'].toString(),
-        name: json['name'] as String,
+        name: json['product_name'] ?? json['name'] ?? '',
         description: json['description'] ?? '',
-        price: (json['price'] as num).toDouble(),
+        price: json['retail_sale_price'] != null
+            ? (json['retail_sale_price'] as num).toDouble()
+            : json['price'] != null
+                ? (json['price'] as num).toDouble()
+                : 0.0,
         discountPercentage: json['discount_percentage'] != null
             ? (json['discount_percentage'] as num).toDouble()
             : null,
-        rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
-        reviewCount: json['review_count'] != null ? (json['review_count'] as num).toInt() : null,
+        rating: json['ratings_avg'] != null ? (json['ratings_avg'] as num).toDouble() : null,
+        reviewCount: json['ratings_count'] != null ? (json['ratings_count'] as num).toInt() : null,
         mainImageUrl: imageUrl ?? 'https://via.placeholder.com/150',
-        additionalImages: _extractAdditionalImages(json['product_images']),
-        inStock: json['stock_quantity'] != null ? (json['stock_quantity'] as num) > 0 : false,
+        additionalImages: json['additional_images'] != null
+            ? List<String>.from(json['additional_images'])
+            : null,
+        inStock: json['in_stock'] == true || (json['stock_quantity'] != null && (json['stock_quantity'] as num) > 0),
         stockQuantity: json['stock_quantity'] != null ? (json['stock_quantity'] as num).toInt() : null,
         categoryId: json['category_id']?.toString() ?? '',
         subcategoryId: json['subcategory_id']?.toString(),
@@ -396,7 +384,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
     }
   }
 
-  /// Search products by query
+  /// Search products by query with robust error handling
   @override
   Future<List<ProductModel>> searchProducts({
     required String query,
@@ -404,45 +392,116 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
     int? limit,
   }) async {
     try {
-      debugPrint('ProductSupabaseDataSource: Searching products with query: $query');
+      debugPrint('ProductSupabaseDataSource: Searching products with query: $query (page: $page, limit: $limit)');
 
       // Apply pagination
       int? offset;
       if (page != null && limit != null) {
         offset = (page - 1) * limit;
+        debugPrint('ProductSupabaseDataSource: Pagination - offset: $offset, limit: $limit');
       }
 
-      // Use Supabase's full-text search capabilities
-      final response = await supabaseClient
-          .from('products')
-          .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)')
-          .textSearch('name', query, config: 'english')
-          .order('created_at', ascending: false)
-          .range(offset ?? 0, offset != null && limit != null ? offset + limit - 1 : 999)
-          .limit(limit ?? 20);
+      // Sanitize query to prevent tsquery syntax errors
+      final sanitizedQuery = _sanitizeSearchQuery(query);
 
-      // If no results with name search, try description search
-      if (response.isEmpty) {
-        final descriptionResponse = await supabaseClient
+      // Try multiple search strategies in order of preference
+      List<dynamic> response = [];
+
+      // Strategy 1: Try ILIKE search (most reliable for partial matches)
+      try {
+        response = await supabaseClient
             .from('products')
-            .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)')
-            .textSearch('description', query, config: 'english')
+            .select('*')
+            .or('name.ilike.%$sanitizedQuery%,description.ilike.%$sanitizedQuery%,brand.ilike.%$sanitizedQuery%')
             .order('created_at', ascending: false)
             .range(offset ?? 0, offset != null && limit != null ? offset + limit - 1 : 999)
             .limit(limit ?? 20);
 
-        return _parseProductsResponse(descriptionResponse);
+        debugPrint('ProductSupabaseDataSource: ILIKE search found ${response.length} products');
+      } catch (e) {
+        debugPrint('ProductSupabaseDataSource: ILIKE search failed: $e');
+      }
+
+      // Strategy 2: If ILIKE fails or returns no results, try full-text search with proper formatting
+      if (response.isEmpty && _isValidForFullTextSearch(sanitizedQuery)) {
+        try {
+          final formattedQuery = _formatQueryForFullTextSearch(sanitizedQuery);
+          response = await supabaseClient
+              .from('products')
+              .select('*')
+              .textSearch('name', formattedQuery, config: 'english')
+              .order('created_at', ascending: false)
+              .range(offset ?? 0, offset != null && limit != null ? offset + limit - 1 : 999)
+              .limit(limit ?? 20);
+
+          debugPrint('ProductSupabaseDataSource: Full-text search found ${response.length} products');
+        } catch (e) {
+          debugPrint('ProductSupabaseDataSource: Full-text search failed: $e');
+        }
+      }
+
+      // Strategy 3: If still no results, try description search
+      if (response.isEmpty) {
+        try {
+          response = await supabaseClient
+              .from('products')
+              .select('*')
+              .ilike('description', '%$sanitizedQuery%')
+              .order('created_at', ascending: false)
+              .range(offset ?? 0, offset != null && limit != null ? offset + limit - 1 : 999)
+              .limit(limit ?? 20);
+
+          debugPrint('ProductSupabaseDataSource: Description search found ${response.length} products');
+        } catch (e) {
+          debugPrint('ProductSupabaseDataSource: Description search failed: $e');
+        }
       }
 
       debugPrint('ProductSupabaseDataSource: Found ${response.length} products matching query: $query');
-
       return _parseProductsResponse(response);
+
     } catch (e) {
       debugPrint('ProductSupabaseDataSource: Error searching products: $e');
       throw ServerException(
         message: 'Failed to search products from Supabase: ${e.toString()}',
       );
     }
+  }
+
+  /// Sanitize search query to prevent SQL injection and syntax errors
+  String _sanitizeSearchQuery(String query) {
+    // Remove special characters that can cause tsquery syntax errors
+    return query
+        .trim()
+        .replaceAll(RegExp(r'[^\w\s]'), ' ') // Remove special chars except word chars and spaces
+        .replaceAll(RegExp(r'\s+'), ' ') // Replace multiple spaces with single space
+        .trim();
+  }
+
+  /// Check if query is valid for full-text search
+  bool _isValidForFullTextSearch(String query) {
+    // Full-text search works best with complete words
+    final words = query.split(' ').where((word) => word.length >= 2).toList();
+    return words.isNotEmpty && words.every((word) => word.length >= 2);
+  }
+
+  /// Format query for PostgreSQL full-text search
+  String _formatQueryForFullTextSearch(String query) {
+    final words = query.split(' ').where((word) => word.length >= 2).toList();
+
+    if (words.isEmpty) return query;
+
+    // For partial words, add wildcard suffix
+    final formattedWords = words.map((word) {
+      // If word looks incomplete (common partial typing), add wildcard
+      if (word.length < 4) {
+        return '$word:*';
+      }
+      return word;
+    }).toList();
+
+    // Join with AND operator for better matching
+    return formattedWords.join(' & ');
   }
 
   /// Get products by category ID
@@ -453,7 +512,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
 
       final response = await supabaseClient
           .from('products')
-          .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)')
+          .select('*')
           .eq('category_id', categoryId)
           .order('created_at', ascending: false);
 
@@ -485,7 +544,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       for (final id in ids) {
         final response = await supabaseClient
             .from('products')
-            .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)')
+            .select('*')
             .eq('id', id);
 
         if (response.isNotEmpty) {

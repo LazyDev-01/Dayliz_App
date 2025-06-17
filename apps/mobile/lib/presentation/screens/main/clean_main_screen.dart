@@ -37,10 +37,10 @@ class _CleanMainScreenState extends ConsumerState<CleanMainScreen> {
   @override
   void initState() {
     super.initState();
-    // Perform smart location detection after the widget is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _performSmartLocationCheck();
-    });
+    // TEMPORARILY DISABLED: Perform smart location detection after the widget is built
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   _performSmartLocationCheck();
+    // });
   }
 
   /// Perform smart location detection - check GPS status and validate zone automatically

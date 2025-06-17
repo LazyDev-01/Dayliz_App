@@ -254,6 +254,28 @@ class ProductRepositoryImpl implements ProductRepository {
     );
   }
 
+  /// Search products within specific scope (subcategory or category)
+  @override
+  Future<Either<Failure, List<Product>>> searchProductsScoped({
+    required String query,
+    String? subcategoryId,
+    String? categoryId,
+    int? page,
+    int? limit,
+  }) async {
+    return await _getProducts(
+      getRemoteData: () => remoteDataSource.getProducts(
+        searchQuery: query,
+        subcategoryId: subcategoryId,
+        categoryId: categoryId,
+        page: page,
+        limit: limit,
+      ),
+      getCachedData: () => localDataSource.getCachedSearchResults('${query}_scoped'),
+      cacheData: (products) => localDataSource.cacheSearchResults('${query}_scoped', products),
+    );
+  }
+
   /// Get products by category
   @override
   Future<Either<Failure, List<Product>>> getProductsByCategory(String categoryId) async {

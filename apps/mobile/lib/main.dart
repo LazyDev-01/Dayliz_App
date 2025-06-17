@@ -49,6 +49,10 @@ import 'di/dependency_injection.dart' as di;
 import 'di/product_dependency_injection.dart' as product_di;
 
 import 'presentation/screens/auth/clean_login_screen.dart';
+import 'presentation/screens/auth/premium_auth_landing_screen.dart';
+import 'presentation/screens/auth/phone_auth_screen.dart';
+import 'presentation/screens/auth/otp_verification_screen.dart';
+import 'presentation/screens/debug/direct_auth_test_screen.dart';
 import 'presentation/screens/auth/clean_register_screen.dart';
 import 'presentation/screens/auth/clean_forgot_password_screen.dart';
 import 'presentation/screens/auth/clean_update_password_screen.dart';
@@ -64,7 +68,7 @@ import 'presentation/screens/profile/clean_address_list_screen.dart';
 import 'presentation/screens/profile/clean_address_form_screen.dart';
 import 'presentation/screens/profile/clean_user_profile_screen.dart';
 import 'presentation/screens/profile/clean_preferences_screen.dart';
-import 'presentation/screens/search/clean_search_screen.dart';
+import 'presentation/screens/search/enhanced_search_screen.dart';
 import 'presentation/screens/location/location_setup_screen.dart';
 import 'presentation/screens/location/location_search_screen.dart';
 import 'presentation/screens/location/optimal_location_setup_screen.dart';
@@ -389,12 +393,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           return '/home';
         }
 
-        return '/login';
+        return '/login'; // Keep original flow for now, test via debug menu
       }
 
       // CRITICAL FIX: Never auto-redirect from auth screens
       // Let them handle their own navigation after success/error
-      if (state.uri.path == '/login' || state.uri.path == '/signup' || state.uri.path == '/reset-password') {
+      if (state.uri.path == '/auth' ||
+          state.uri.path == '/login' ||
+          state.uri.path == '/signup' ||
+          state.uri.path == '/reset-password' ||
+          state.uri.path == '/phone-auth' ||
+          state.uri.path == '/otp-verification') {
         debugPrint('ROUTER: On auth screen, allowing manual navigation control');
         return null;
       }
@@ -407,9 +416,12 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // GUEST MODE: Define guest-accessible routes (browsing without authentication)
       final guestAccessibleRoutes = [
+        '/auth',            // NEW: Premium auth landing screen
         '/login',
         '/signup',
         '/reset-password',
+        '/phone-auth',      // NEW: Phone authentication
+        '/otp-verification', // NEW: OTP verification
         '/location-setup',  // NEW: Allow location setup for guests too
         '/location-search', // NEW: Allow location search screen
         // NOTE: /home is now protected by location setup
@@ -434,7 +446,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
 
         debugPrint('ROUTER: Redirecting unauthenticated user to login');
-        return '/login';
+        return '/login'; // Keep original flow for now, test via debug menu
       }
 
       return null;
@@ -457,7 +469,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           // But provide a fallback just in case
           return CustomTransitionPage<void>(
             key: state.pageKey,
-            child: const CleanLoginScreen(),
+            child: const CleanLoginScreen(), // Keep original for now
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },
@@ -475,12 +487,118 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
+      // Premium Auth Landing Screen (New Entry Point)
+      GoRoute(
+        path: '/auth',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const PremiumAuthLandingScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
       // Login route now uses clean architecture implementation
       GoRoute(
         path: '/login',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
           child: const CleanLoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
+
+      // Phone Authentication Route
+      GoRoute(
+        path: '/phone-auth',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const PhoneAuthScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
+
+      // OTP Verification Route
+      GoRoute(
+        path: '/otp-verification',
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final phoneNumber = extra?['phoneNumber'] as String? ?? '';
+          final countryCode = extra?['countryCode'] as String? ?? '+1';
+
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: OtpVerificationScreen(
+              phoneNumber: phoneNumber,
+              countryCode: countryCode,
+            ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+
+      // DIRECT TESTING ROUTES (Remove after testing)
+      GoRoute(
+        path: '/test-premium-auth',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const PremiumAuthLandingScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
+      GoRoute(
+        path: '/test-phone-auth',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const PhoneAuthScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
+
+      GoRoute(
+        path: '/test-otp',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const OtpVerificationScreen(
+            phoneNumber: '+1 (555) 123-4567',
+            countryCode: '+1',
+          ),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return SlideTransition(
               position: Tween<Offset>(
@@ -999,6 +1117,66 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
+      // DIRECT ACCESS ROUTES FOR TESTING (REMOVE AFTER TESTING)
+      GoRoute(
+        path: '/direct-auth-test',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const DirectAuthTestScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
+      GoRoute(
+        path: '/test-premium-auth',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const PremiumAuthLandingScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
+      GoRoute(
+        path: '/test-phone-auth',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const PhoneAuthScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
+
+      GoRoute(
+        path: '/test-otp',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const OtpVerificationScreen(
+            phoneNumber: '+1 (555) 123-4567',
+            countryCode: '+1',
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
+
       GoRoute(
         path: '/dev/settings',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
@@ -1040,22 +1218,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // Search Route
+      // Search Route - Enhanced Search with Context Support
       GoRoute(
         path: '/search',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanSearchScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 1),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-        ),
+        pageBuilder: (context, state) {
+          // Extract context parameters from query parameters
+          final contextSubcategoryId = state.uri.queryParameters['subcategoryId'];
+          final contextCategoryId = state.uri.queryParameters['categoryId'];
+          final contextName = state.uri.queryParameters['contextName'];
+          final initialQuery = state.uri.queryParameters['q'];
+
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: EnhancedSearchScreen(
+              contextSubcategoryId: contextSubcategoryId,
+              contextCategoryId: contextCategoryId,
+              contextName: contextName,
+              initialQuery: initialQuery,
+            ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          );
+        },
       ),
 
       // Payment Methods Route

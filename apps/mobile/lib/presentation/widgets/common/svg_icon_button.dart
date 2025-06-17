@@ -174,10 +174,13 @@ class SvgIconButtons {
     required VoidCallback onPressed,
     String? tooltip,
   }) {
-    return SvgIconButton(
-      icon: DaylizIcons.search,
+    // Temporarily use Material icon to avoid SVG loading issues on web
+    return IconButton(
       onPressed: onPressed,
-      color: const Color(0xFF374151), // Explicit dark grey color
+      icon: const Icon(
+        Icons.search,
+        color: Color(0xFF374151), // Explicit dark grey color
+      ),
       tooltip: tooltip ?? 'Search',
     );
   }

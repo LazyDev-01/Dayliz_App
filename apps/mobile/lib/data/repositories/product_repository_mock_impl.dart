@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/errors/failures.dart';
+import '../../core/models/pagination_models.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/repositories/product_repository.dart';
 import '../mock/mock_products.dart';
@@ -147,6 +148,82 @@ class ProductRepositoryMockImpl implements ProductRepository {
       return Right(productModels);
     } catch (e) {
       return Left(ServerFailure(message: 'Failed to search products: ${e.toString()}'));
+    }
+  }
+
+  /// Search products within specific scope (subcategory or category)
+  @override
+  Future<Either<Failure, List<Product>>> searchProductsScoped({
+    required String query,
+    String? subcategoryId,
+    String? categoryId,
+    int? page,
+    int? limit,
+  }) async {
+    try {
+      debugPrint('ProductRepositoryMockImpl: Scoped search for "$query" (subcategory: $subcategoryId, category: $categoryId)');
+
+      var products = MockProducts.getMockProducts();
+
+      // Apply scope filtering first
+      if (subcategoryId != null) {
+        products = products.where((p) => p.subcategoryId == subcategoryId).toList();
+      } else if (categoryId != null) {
+        products = products.where((p) => p.categoryId == categoryId).toList();
+      }
+
+      // Then apply search filtering
+      final searchResults = products
+          .where((p) =>
+            p.name.toLowerCase().contains(query.toLowerCase()) ||
+            p.description.toLowerCase().contains(query.toLowerCase()))
+          .take(limit ?? 10)
+          .toList();
+
+      // Convert to ProductModel which extends Product
+      final productModels = searchResults.map((product) =>
+        ProductModel.fromProduct(product)
+      ).toList();
+
+      debugPrint('ProductRepositoryMockImpl: Found ${productModels.length} scoped products');
+      return Right(productModels);
+    } catch (e) {
+      return Left(ServerFailure(message: 'Failed to search scoped products: ${e.toString()}'));
+    }
+  }
+
+  /// Get products with pagination (mock implementation)
+  @override
+  Future<Either<Failure, PaginatedResponse<Product>>> getProductsPaginated({
+    PaginationParams? pagination,
+    String? categoryId,
+    String? subcategoryId,
+    String? searchQuery,
+    String? sortBy,
+    bool? ascending,
+    double? minPrice,
+    double? maxPrice,
+  }) async {
+    try {
+      // Mock implementation - return simple paginated response
+      final products = MockProducts.getMockProducts().take(10).toList();
+      final productModels = products.map((product) => ProductModel.fromProduct(product)).toList();
+
+      final response = PaginatedResponse<Product>(
+        data: productModels,
+        meta: const PaginationMeta(
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 10,
+          itemsPerPage: 10,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        ),
+      );
+
+      return Right(response);
+    } catch (e) {
+      return Left(ServerFailure(message: 'Failed to get paginated products: ${e.toString()}'));
     }
   }
 

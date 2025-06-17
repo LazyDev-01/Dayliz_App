@@ -413,6 +413,164 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(clearError: true);
   }
 
+  /// Send OTP to phone number for authentication
+  Future<void> sendPhoneOtp(String phoneNumber) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      // Import Supabase client
+      final supabase = Supabase.instance.client;
+
+      await supabase.auth.signInWithOtp(
+        phone: phoneNumber,
+        shouldCreateUser: true,
+      );
+
+      state = state.copyWith(
+        isLoading: false,
+        clearError: true,
+      );
+
+      debugPrint('✅ OTP sent successfully to $phoneNumber');
+    } on AuthException catch (e) {
+      debugPrint('❌ Phone OTP error: ${e.message}');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: _mapPhoneAuthError(e),
+      );
+    } catch (e) {
+      debugPrint('❌ Unexpected phone OTP error: $e');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Failed to send OTP. Please try again.',
+      );
+    }
+  }
+
+  /// Verify OTP and complete phone authentication
+  Future<void> verifyPhoneOtp(String phoneNumber, String otpCode) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      // Import Supabase client
+      final supabase = Supabase.instance.client;
+
+      final response = await supabase.auth.verifyOTP(
+        phone: phoneNumber,
+        token: otpCode,
+        type: OtpType.sms,
+      );
+
+      if (response.user != null) {
+        // Create user profile if needed
+        await _createUserProfileIfNeeded(response.user!);
+
+        // Get user data from domain layer
+        final userResult = await getCurrentUser();
+        userResult.fold(
+          (failure) {
+            debugPrint('Error getting user after phone auth: ${failure.message}');
+            state = state.copyWith(
+              isLoading: false,
+              errorMessage: 'Authentication successful but failed to load user data.',
+            );
+          },
+          (user) {
+            if (user != null) {
+              state = state.copyWith(
+                isAuthenticated: true,
+                user: user,
+                isLoading: false,
+                clearError: true,
+              );
+              debugPrint('✅ Phone authentication successful for user: ${user.id}');
+            } else {
+              state = state.copyWith(
+                isLoading: false,
+                errorMessage: 'Authentication successful but user data not found.',
+              );
+            }
+          },
+        );
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Verification failed. Please try again.',
+        );
+      }
+    } on AuthException catch (e) {
+      debugPrint('❌ OTP verification error: ${e.message}');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: _mapOtpVerificationError(e),
+      );
+    } catch (e) {
+      debugPrint('❌ Unexpected OTP verification error: $e');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Verification failed. Please try again.',
+      );
+    }
+  }
+
+  /// Create user profile in profiles table if needed
+  Future<void> _createUserProfileIfNeeded(User user) async {
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Check if profile already exists
+      final existingProfile = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (existingProfile == null) {
+        // Create new profile
+        await supabase.from('profiles').insert({
+          'id': user.id,
+          'phone': user.phone,
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+
+        debugPrint('✅ User profile created for: ${user.id}');
+      } else {
+        debugPrint('ℹ️ User profile already exists for: ${user.id}');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to create user profile: $e');
+      // Don't throw error as auth was successful
+    }
+  }
+
+  /// Map phone auth errors to user-friendly messages
+  String _mapPhoneAuthError(AuthException error) {
+    switch (error.message.toLowerCase()) {
+      case 'invalid phone number':
+        return 'Please enter a valid phone number';
+      case 'phone rate limit exceeded':
+        return 'Too many attempts. Please try again later';
+      case 'sms not configured':
+        return 'SMS service is currently unavailable';
+      default:
+        return 'Failed to send OTP. Please try again';
+    }
+  }
+
+  /// Map OTP verification errors to user-friendly messages
+  String _mapOtpVerificationError(AuthException error) {
+    switch (error.message.toLowerCase()) {
+      case 'invalid otp':
+      case 'otp expired':
+        return 'Invalid or expired code. Please try again.';
+      case 'too many requests':
+        return 'Too many attempts. Please wait before trying again.';
+      default:
+        return 'Verification failed. Please try again.';
+    }
+  }
+
   /// Check if an email already exists in the system
   Future<bool> checkEmailExists(String email) async {
     try {

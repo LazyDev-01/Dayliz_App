@@ -143,18 +143,17 @@ Widget _buildSearchBar() {
 
 ```dart
 void _showSearch(BuildContext context) {
-  // Navigate to dedicated search screen
-  context.push('/search');
-  
-  // Alternatively, show search delegate
-  // showSearch(
-  //   context: context,
-  //   delegate: ProductSearchDelegate(ref),
-  // );
+  // Navigate to enhanced search screen
+  context.push('/search'); // Now uses enhanced search by default
+
+  // Or explicitly use enhanced search
+  context.push('/clean/enhanced-search');
 }
 ```
 
-### 4.3 Search Delegate (Alternative Approach)
+### 4.3 Search Delegate (Legacy - Replaced by Enhanced Search)
+
+> **Note**: This approach has been replaced by the Enhanced Search System. The code below is kept for reference but is no longer used in the application.
 
 ```dart
 class ProductSearchDelegate extends SearchDelegate<String> {

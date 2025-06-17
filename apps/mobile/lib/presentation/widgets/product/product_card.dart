@@ -155,7 +155,7 @@ class ProductCard extends ConsumerWidget {
                 // Original price if discounted
                 if (product.discountPercentage != null && product.discountPercentage! > 0)
                   Text(
-                    '\$${product.price.toStringAsFixed(2)}',
+                    '₹${product.price.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 12,
                       decoration: TextDecoration.lineThrough,
@@ -165,7 +165,7 @@ class ProductCard extends ConsumerWidget {
 
                 // Current price (discounted if applicable)
                 Text(
-                  '\$${product.discountedPrice.toStringAsFixed(2)}',
+                  '₹${product.discountedPrice.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

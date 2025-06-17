@@ -743,7 +743,7 @@ class _OrderDetailView extends StatelessWidget {
   }
 
   Widget _buildOrderSummary(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final currencyFormat = NumberFormat.currency(symbol: '₹');
     
     return Card(
       child: Padding(

@@ -58,13 +58,15 @@ This document outlines the final, optimized provider architecture for the Dayliz
   - `orderDetailProvider` - Order details by ID
   - `ordersByStatusProvider` - Orders filtered by status
 
-#### **7. Search (`search_providers.dart`)**
-- **Purpose**: Product search functionality
+#### **7. Enhanced Search (`enhanced_search_providers.dart`)**
+- **Purpose**: Advanced product search functionality with analytics and caching
 - **Key Providers**:
-  - `searchQueryProvider` - Current search query
-  - `debouncedSearchQueryProvider` - Debounced search
-  - `searchResultsProvider` - Search results
-  - `recentSearchesProvider` - Recent search history
+  - `searchServiceProvider` - Unified search service
+  - `searchStateProvider` - Comprehensive search state
+  - `enhancedSearchResultsProvider` - Cached search results
+  - `searchHistoryProvider` - Persistent search history
+  - `searchSuggestionsProvider` - Intelligent suggestions
+  - `searchActionsProvider` - Search action abstraction
 
 #### **8. Wishlist (`wishlist_providers.dart`)**
 - **Purpose**: User wishlist management

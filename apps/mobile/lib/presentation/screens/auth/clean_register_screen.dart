@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../providers/auth_providers.dart';
-import '../../widgets/common/unified_app_bar.dart';
+import '../../widgets/auth/auth_background.dart';
 import '../../../core/utils/constants.dart';
 
 
@@ -122,31 +122,23 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
       return _buildLottieSuccessScreen();
     }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: _currentStep == 0
-        ? UnifiedAppBars.simple(title: '') // Step 1: No back button
-        : UnifiedAppBars.withBackButton( // Step 2: Show back button
-            title: '',
-            onBackPressed: () => _goToPreviousStep(),
-            fallbackRoute: '/auth/login',
-          ),
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: PageView(
-            controller: _pageController,
-            physics: const NeverScrollableScrollPhysics(),
-            onPageChanged: (index) {
-              setState(() {
-                _currentStep = index;
-              });
-            },
-            children: [
-              _buildStep1(),
-              _buildStep2(),
-            ],
-          ),
+    return AuthBackground(
+      showBackButton: _currentStep > 0,
+      onBackPressed: () => _goToPreviousStep(),
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: PageView(
+          controller: _pageController,
+          physics: const NeverScrollableScrollPhysics(),
+          onPageChanged: (index) {
+            setState(() {
+              _currentStep = index;
+            });
+          },
+          children: [
+            _buildStep1(),
+            _buildStep2(),
+          ],
         ),
       ),
     );
@@ -192,7 +184,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
           Icon(
             Icons.person_add_outlined,
             size: 60,
-            color: const Color(0xFF4CAF50),
+            color: Colors.white,
           ),
 
           const SizedBox(height: 16),
@@ -203,7 +195,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF4CAF50),
+              color: Colors.white,
             ),
             textAlign: TextAlign.center,
           ),
@@ -242,23 +234,6 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
           _buildContinueButton(),
 
           const SizedBox(height: 20),
-
-          // Or divider
-          const Row(
-            children: [
-              Expanded(child: Divider()),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text('OR'),
-              ),
-              Expanded(child: Divider()),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Google sign-in button
-          _buildGoogleSignInButton(),
 
           const SizedBox(height: 20),
 
@@ -657,14 +632,17 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
       child: ElevatedButton(
         onPressed: _isCheckingEmail ? null : _validateStep1AndContinue,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF4CAF50),
+          backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: Colors.white.withValues(alpha: 0.3),
+              width: 1,
+            ),
           ),
-          elevation: 2,
-          shadowColor: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+          elevation: 0,
           minimumSize: const Size(double.infinity, 52),
         ),
         child: _isCheckingEmail
@@ -1154,125 +1132,21 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
     );
   }
 
-  Widget _buildGoogleSignInButton() {
-    final isLoading = ref.watch(authLoadingProvider);
 
-    return AnimatedContainer(
-      duration: AppConstants.defaultAnimationDuration,
-      child: ElevatedButton.icon(
-        onPressed: isLoading ? null : _handleGoogleSignIn,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.grey.shade300),
-          ),
-          elevation: 1,
-          shadowColor: Colors.black.withValues(alpha: 0.1),
-        ),
-        icon: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
-                ),
-              )
-            : SvgPicture.asset(
-                'assets/images/google_logo.svg',
-                height: 24,
-                width: 24,
-              ),
-        label: Text(
-          isLoading ? 'Signing in...' : 'Sign up with Google',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
 
-  // Google Sign-In handler
-  Future<void> _handleGoogleSignIn() async {
-    try {
-      debugPrint('🔄 Starting Google Sign-in from registration screen');
 
-      // Use the auth provider to handle Google sign-in
-      await ref.read(authNotifierProvider.notifier).signInWithGoogle();
-
-      // Check if sign-in was successful
-      final authState = ref.read(authNotifierProvider);
-      if (authState.isAuthenticated && authState.user != null) {
-        debugPrint('✅ Google Sign-in successful, navigating to home');
-
-        if (mounted) {
-          // Navigate to home screen
-          context.go('/home');
-        }
-      } else {
-        debugPrint('❌ Google Sign-in failed - user not authenticated');
-
-        // Check if there's an error message in the auth state
-        final authState = ref.read(authNotifierProvider);
-
-        // CRITICAL FIX: Don't show error for user cancellation
-        if (authState.errorMessage != null && authState.errorMessage!.isNotEmpty) {
-          // Check if it's a cancellation error
-          if (authState.errorMessage!.contains('cancelled by user') ||
-              authState.errorMessage!.contains('UserCancellationException')) {
-            debugPrint('🔍 User cancellation detected in auth state - handling silently');
-            // Clear the error from auth state
-            ref.read(authNotifierProvider.notifier).clearErrors();
-          } else {
-            // Show error for actual issues
-            if (mounted) {
-              _showValidationError('Google Sign-in Error: ${authState.errorMessage}');
-            }
-          }
-        } else {
-          // No error message means user likely cancelled - handle silently
-          debugPrint('🔍 No error message - likely user cancellation, handling silently');
-        }
-      }
-    } catch (e) {
-      debugPrint('❌ Error during Google Sign-in: $e');
-
-      // CRITICAL FIX: Handle user cancellation gracefully
-      if (e.toString().contains('UserCancellationException') ||
-          e.toString().contains('cancelled by user')) {
-        debugPrint('🔍 User cancelled Google Sign-in - handling silently');
-        // Don't show any error message for user cancellation
-        return;
-      }
-
-      // Provide more specific error messages for actual errors
-      String userFriendlyMessage;
-      if (e.toString().contains('ServerException')) {
-        userFriendlyMessage = 'Server configuration error. Please contact support.';
-      } else if (e.toString().contains('NetworkFailure')) {
-        userFriendlyMessage = 'Network error. Please check your internet connection.';
-      } else if (e.toString().contains('AuthException')) {
-        userFriendlyMessage = 'Authentication error. Please try again.';
-      } else {
-        userFriendlyMessage = 'Google sign-in failed: ${e.toString()}';
-      }
-
-      if (mounted) {
-        _showValidationError(userFriendlyMessage);
-      }
-    }
-  }
 
   Widget _buildLoginOption() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text('Already have an account?'),
+        Text(
+          'Already have an account?',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.8),
+            fontSize: 16,
+          ),
+        ),
         TextButton(
           onPressed: () {
             // Check if we're already authenticated
@@ -1291,7 +1165,13 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
               }
             }
           },
-          child: const Text('Sign In'),
+          child: const Text(
+            'Sign In',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ],
     );
