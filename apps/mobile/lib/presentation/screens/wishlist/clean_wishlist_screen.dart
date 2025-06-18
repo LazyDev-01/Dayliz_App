@@ -9,6 +9,7 @@ import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/unified_app_bar.dart';
+import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/product/clean_product_grid.dart';
 
 /// Clean Wishlist Screen that displays the user's wishlist
@@ -70,8 +71,12 @@ class _CleanWishlistScreenState extends ConsumerState<CleanWishlistScreen> {
     required List<Product> wishlistProducts,
   }) {
     if (isLoading && wishlistProducts.isEmpty) {
-      return const Center(
-        child: LoadingIndicator(message: 'Loading wishlist...'),
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: ProductGridSkeleton(
+          columns: 2,
+          itemCount: 6,
+        ),
       );
     }
 

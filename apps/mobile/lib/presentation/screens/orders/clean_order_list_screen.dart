@@ -10,6 +10,7 @@ import '../../widgets/common/unified_app_bar.dart';
 import '../order/order_summary_screen.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/skeleton_loaders.dart';
 
 class CleanOrderListScreen extends ConsumerStatefulWidget {
   const CleanOrderListScreen({Key? key}) : super(key: key);
@@ -64,8 +65,9 @@ class _CleanOrderListScreenState extends ConsumerState<CleanOrderListScreen> {
               // If we have a state with no orders, check if we're still loading
               final isLoading = ref.watch(ordersLoadingProvider);
               if (isLoading) {
-                return const Center(
-                  child: LoadingIndicator(message: 'Loading orders...'),
+                return const ListSkeleton(
+                  itemSkeleton: OrderSkeleton(),
+                  itemCount: 3,
                 );
               }
 
@@ -77,8 +79,9 @@ class _CleanOrderListScreenState extends ConsumerState<CleanOrderListScreen> {
             }
             return _buildOrderList(context, orders, ref);
           },
-          loading: () => const Center(
-            child: LoadingIndicator(message: 'Loading orders...'),
+          loading: () => const ListSkeleton(
+            itemSkeleton: OrderSkeleton(),
+            itemCount: 5,
           ),
           error: (error, stackTrace) => ErrorState(
             error: error.toString(),

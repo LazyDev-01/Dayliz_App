@@ -126,7 +126,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen>
   Widget _buildHeaderSection(ThemeData theme) {
     return Column(
       children: [
-        // Phone Icon
+        // Phone Icon only
         Container(
           width: 70,
           height: 70,
@@ -140,23 +140,6 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen>
             color: Colors.white,
           ),
         ),
-
-        const SizedBox(height: 20),
-
-        // Single simplified text
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            'Enter your phone number to continue',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
-              fontSize: 18,
-              height: 1.3,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
       ],
     );
   }
@@ -165,6 +148,21 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Instruction text above form field
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Text(
+            'Enter your phone number to continue',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+              fontSize: 16,
+              height: 1.3,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+
         // Phone Number Input - Single unified form field
         Container(
           height: 56, // Fixed height matching login screen

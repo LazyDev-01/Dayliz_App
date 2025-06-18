@@ -111,10 +111,13 @@ class _PremiumAuthLandingScreenState extends ConsumerState<PremiumAuthLandingScr
                       ),
                     ),
                   ),
-                  
+
+                  // Reduced spacing between slogan and buttons
+                  const SizedBox(height: 20),
+
                   // Authentication Buttons Section
                   Expanded(
-                    flex: 3,
+                    flex: 2, // Reduced from 3 to 2 to center buttons better
                     child: FadeTransition(
                       opacity: _fadeAnimation,
                       child: SlideTransition(
@@ -128,14 +131,13 @@ class _PremiumAuthLandingScreenState extends ConsumerState<PremiumAuthLandingScr
                   if (errorMessage != null && errorMessage.isNotEmpty)
                     _buildErrorMessage(errorMessage, theme),
                   
-                  // Bottom Section
-                  Expanded(
-                    flex: 1,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: _buildBottomSection(theme),
-                    ),
+                  // Bottom Section - Reduced to fix overflow
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: _buildBottomSection(theme),
                   ),
+
+                  const SizedBox(height: 8), // Small bottom padding
                 ],
               ),
             ),
@@ -301,13 +303,13 @@ class _PremiumAuthLandingScreenState extends ConsumerState<PremiumAuthLandingScr
           ),
         ),
         
-        const SizedBox(height: 16),
-        
-        // Terms and Privacy with Checkbox
+        const SizedBox(height: 12),
+
+        // Terms and Privacy with Checkbox - Smaller text to fit in one line
         Row(
           children: [
             Transform.scale(
-              scale: 0.9,
+              scale: 0.8,
               child: Checkbox(
                 value: _acceptTerms,
                 onChanged: (value) {
@@ -324,53 +326,61 @@ class _PremiumAuthLandingScreenState extends ConsumerState<PremiumAuthLandingScr
               ),
             ),
             Expanded(
-              child: Wrap(
-                children: [
-                  Text(
-                    'I agree to the ',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 14,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _showTermsAndPrivacy('terms'),
-                    child: Text(
-                      'Terms of Service',
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'I agree to ',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        decoration: TextDecoration.underline,
-                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 11,
                       ),
                     ),
-                  ),
-                  Text(
-                    ' and ',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 14,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _showTermsAndPrivacy('privacy'),
-                    child: Text(
-                      'Privacy Policy',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        decoration: TextDecoration.underline,
-                        fontWeight: FontWeight.w500,
+                    WidgetSpan(
+                      child: GestureDetector(
+                        onTap: () => _showTermsAndPrivacy('terms'),
+                        child: const Text(
+                          'Terms',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            decoration: TextDecoration.underline,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    TextSpan(
+                      text: ' & ',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 11,
+                      ),
+                    ),
+                    WidgetSpan(
+                      child: GestureDetector(
+                        onTap: () => _showTermsAndPrivacy('privacy'),
+                        child: const Text(
+                          'Privacy',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            decoration: TextDecoration.underline,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
-        
-        const SizedBox(height: 16),
+
+        const SizedBox(height: 8),
       ],
     );
   }

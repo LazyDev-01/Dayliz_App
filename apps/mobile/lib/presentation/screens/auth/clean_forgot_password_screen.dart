@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../widgets/common/unified_app_bar.dart';
-
 import '../../providers/auth_providers.dart';
 import '../../../core/validators/validators.dart';
 
@@ -31,27 +29,50 @@ class _CleanForgotPasswordScreenState extends ConsumerState<CleanForgotPasswordS
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: UnifiedAppBars.withBackButton(
-        title: 'Forgot Password',
-        onBackPressed: () {
-          // Use Navigator.pop() for smooth back transition
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          } else {
-            // Fallback to context.go if no previous route exists
-            context.go('/auth/login');
-          }
-        },
-        fallbackRoute: '/auth/login',
-      ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: _emailSent
-                ? _buildSuccessView()
-                : _buildForgotPasswordForm(),
-          ),
+        child: Column(
+          children: [
+            // Custom back button at top
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0, top: 16.0, right: 16.0),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      // Use Navigator.pop() for smooth back transition
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      } else {
+                        // Fallback to context.go if no previous route exists
+                        context.go('/auth/login');
+                      }
+                    },
+                    icon: Icon(
+                      Icons.arrow_back,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      size: 24,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ),
+                  const Spacer(),
+                ],
+              ),
+            ),
+            // Main content
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: _emailSent
+                      ? _buildSuccessView()
+                      : _buildForgotPasswordForm(),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

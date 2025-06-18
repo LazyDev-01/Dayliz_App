@@ -20,9 +20,9 @@ class HomeCategoriesSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Shop by Category',
+                'What are you looking for?',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF374151),
                 ),
@@ -41,12 +41,16 @@ class HomeCategoriesSection extends StatelessWidget {
           ),
         ),
         
-        // Horizontal scrolling categories
+        // Horizontal scrolling categories with partial 5th icon visibility
         SizedBox(
-          height: 140, // Increased height for better text alignment
+          height: 120, // Reduced height for compact design with 4 icons + partial 5th
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            // Calculated padding to show exactly 4 full icons + partial 5th icon
+            padding: EdgeInsets.only(
+              left: 16,
+              right: MediaQuery.of(context).size.width * 0.15, // Show ~15% of 5th icon
+            ),
             itemCount: HomeCategoriesConfig.homeCategories.length,
             itemBuilder: (context, index) {
               final category = HomeCategoriesConfig.homeCategories[index];
@@ -100,8 +104,8 @@ class _HomeCategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 95, // Slightly increased width for better text fit
-      margin: const EdgeInsets.symmetric(horizontal: 6),
+      width: 75, // Further reduced width for tighter layout
+      margin: const EdgeInsets.symmetric(horizontal: 2), // Reduced gap between cards
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -114,25 +118,25 @@ class _HomeCategoryCard extends StatelessWidget {
               children: [
                 // Category icon with background
                 Container(
-                  width: 60,
-                  height: 60,
+                  width: 58, // Increased size for better visibility while keeping card size same
+                  height: 58,
                   decoration: BoxDecoration(
-                    color: category.color.withOpacity(0.1),
+                    color: category.color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: category.color.withOpacity(0.2),
+                      color: category.color.withValues(alpha: 0.2),
                       width: 1,
                     ),
                   ),
                   child: Icon(
                     category.icon,
-                    size: 28,
+                    size: 26, // Increased icon size to match container
                     color: category.color,
                   ),
                 ),
                 
-                const SizedBox(height: 12), // Increased spacing
-                
+                const SizedBox(height: 8), // Reduced spacing for compact design
+
                 // Category name with better text handling
                 Expanded(
                   child: Container(
@@ -140,10 +144,10 @@ class _HomeCategoryCard extends StatelessWidget {
                     child: Text(
                       category.name,
                       textAlign: TextAlign.center,
-                      maxLines: 3, // Allow up to 3 lines
+                      maxLines: 2, // Reduced to 2 lines for compact design
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 11, // Slightly smaller font
+                        fontSize: 10, // Smaller font for compact design
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF374151),
                         height: 1.1, // Tighter line height

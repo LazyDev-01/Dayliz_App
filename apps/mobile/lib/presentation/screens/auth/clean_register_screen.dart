@@ -123,8 +123,8 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
     }
 
     return AuthBackground(
-      showBackButton: _currentStep > 0,
-      onBackPressed: () => _goToPreviousStep(),
+      showBackButton: true, // Always show back button
+      onBackPressed: () => _currentStep > 0 ? _goToPreviousStep() : context.pop(),
       child: FadeTransition(
         opacity: _fadeAnimation,
         child: PageView(
@@ -259,7 +259,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF2E2E2E),
+              color: Colors.white,
             ),
             textAlign: TextAlign.center,
           ),
@@ -398,33 +398,14 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
 
   // Minimal password requirements display
   Widget _buildPasswordRequirements() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE9ECEF)),
+    return Text(
+      'Use 8+ characters with mix of letters, numbers & symbols',
+      style: TextStyle(
+        fontSize: 13,
+        color: Colors.white.withValues(alpha: 0.8),
+        height: 1.3,
       ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.info_outline,
-            size: 16,
-            color: Color(0xFF6C757D),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Use 8+ characters with uppercase, lowercase, number & symbol',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                height: 1.3,
-              ),
-            ),
-          ),
-        ],
-      ),
+      textAlign: TextAlign.center,
     );
   }
 
@@ -466,20 +447,20 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
             ),
           ),
 
-        // Professional button with comfortable spacing
+        // Transparent button consistent with other auth screens
         AnimatedContainer(
           duration: AppConstants.defaultAnimationDuration,
           child: ElevatedButton(
             onPressed: isLoading ? null : _handleRegister,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4CAF50),
+              backgroundColor: Colors.transparent,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
               ),
-              elevation: 2,
-              shadowColor: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+              elevation: 0,
               minimumSize: const Size(double.infinity, 52),
             ),
             child: isLoading
@@ -878,68 +859,95 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
     );
   }
 
-  // Lottie success screen
+  // Enhanced success screen with better visual appeal
   Widget _buildLottieSuccessScreen() {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // TODO: Add Lottie animation here
-            Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 80,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF4CAF50),
+              Color(0xFF66BB6A),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Animated success icon
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.check_circle,
+                      color: Color(0xFF4CAF50),
+                      size: 60,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  const Text(
+                    'Welcome to Dayliz!',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Your account has been created successfully.\nLet\'s start your grocery journey!',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 50),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.go('/home');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF4CAF50),
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      elevation: 5,
+                      minimumSize: const Size(200, 56),
+                    ),
+                    child: const Text(
+                      'Start Shopping',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 32),
-            const Text(
-              'Account Created!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF4CAF50),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Welcome to Dayliz! Your account has been created successfully.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () {
-                context.go('/home');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4CAF50),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Get Started',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1144,7 +1152,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
           'Already have an account?',
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.8),
-            fontSize: 16,
+            fontSize: 13,
           ),
         ),
         TextButton(
@@ -1169,6 +1177,7 @@ class _CleanRegisterScreenState extends ConsumerState<CleanRegisterScreen>
             'Sign In',
             style: TextStyle(
               color: Colors.white,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
           ),

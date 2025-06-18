@@ -8,6 +8,7 @@ import '../../providers/auth_providers.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/address/address_form_bottom_sheet.dart';
 import 'location_picker_screen_v2.dart';
 
@@ -171,7 +172,10 @@ class _CleanAddressListScreenState extends ConsumerState<CleanAddressListScreen>
         fallbackRoute: '/home',
       ),
       body: profileState.isAddressesLoading
-        ? const LoadingIndicator()
+        ? const ListSkeleton(
+            itemSkeleton: AddressSkeleton(),
+            itemCount: 3,
+          )
         : profileState.addressErrorMessage != null
           ? ErrorState(
               message: profileState.addressErrorMessage!,

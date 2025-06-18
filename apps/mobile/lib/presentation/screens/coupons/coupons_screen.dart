@@ -9,6 +9,7 @@ import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/coupons/coupon_card.dart';
 
 /// Coupons screen showing available and user coupons
@@ -83,7 +84,10 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen>
 
   Widget _buildAvailableCouponsTab(CouponState state) {
     if (state.isLoading && state.availableCoupons.isEmpty) {
-      return const Center(child: LoadingIndicator(message: 'Loading gifts...'));
+      return const ListSkeleton(
+        itemSkeleton: CouponSkeleton(),
+        itemCount: 4,
+      );
     }
 
     if (state.errorMessage != null && state.availableCoupons.isEmpty) {

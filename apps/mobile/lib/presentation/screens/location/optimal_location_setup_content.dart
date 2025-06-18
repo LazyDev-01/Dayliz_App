@@ -14,6 +14,7 @@ import '../../providers/geofencing_providers.dart';
 import '../../providers/location_providers.dart';
 import '../../providers/user_profile_providers.dart';
 import '../../widgets/common/loading_widget.dart';
+import '../../widgets/common/skeleton_loaders.dart';
 
 /// Location setup states for better state management
 enum LocationSetupState {
@@ -71,6 +72,7 @@ class _OptimalLocationSetupContentState extends ConsumerState<OptimalLocationSet
   bool _hasGPSPermission = false;
   bool _isGPSEnabled = false;
   bool _isFirstTimeUser = false;
+  bool _isEnableButtonLoading = false;
 
   @override
   void initState() {
@@ -295,25 +297,37 @@ class _OptimalLocationSetupContentState extends ConsumerState<OptimalLocationSet
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => _handleEnableAction(),
+        onTap: _isEnableButtonLoading ? null : () => _handleEnableAction(),
         borderRadius: BorderRadius.circular(6),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.orange.shade600,
+            color: _isEnableButtonLoading
+                ? Colors.orange.shade400
+                : Colors.orange.shade600,
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                isGPSIssue ? Icons.location_on : Icons.security,
-                size: 14,
-                color: Colors.white,
-              ),
+              if (_isEnableButtonLoading)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              else
+                Icon(
+                  isGPSIssue ? Icons.location_on : Icons.security,
+                  size: 14,
+                  color: Colors.white,
+                ),
               const SizedBox(width: 6),
               Text(
-                'Enable',
+                _isEnableButtonLoading ? 'Enabling...' : 'Enable',
                 style: AppTextStyles.bodySmall.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
@@ -329,32 +343,46 @@ class _OptimalLocationSetupContentState extends ConsumerState<OptimalLocationSet
 
   /// Handle enable button action
   void _handleEnableAction() async {
+    if (_isEnableButtonLoading) return; // Prevent multiple taps
+
     debugPrint('🔧 [EnableButton] User tapped enable button');
 
-    if (!_isGPSEnabled) {
-      // Show GPS settings dialog first
-      final shouldOpenSettings = await _showGPSSettingsDialog();
-      if (shouldOpenSettings) {
-        debugPrint('🔧 [EnableButton] Opening location settings');
-        await geo.Geolocator.openLocationSettings();
-      }
-    } else if (!_hasGPSPermission) {
-      // Show permission consent dialog first
-      final shouldRequestPermission = await _showLocationPermissionDialog();
-      if (shouldRequestPermission) {
-        debugPrint('🔧 [EnableButton] Requesting location permission');
-        final permission = await geo.Geolocator.requestPermission();
+    setState(() {
+      _isEnableButtonLoading = true;
+    });
 
-        setState(() {
-          _hasGPSPermission = permission == geo.LocationPermission.always ||
-                             permission == geo.LocationPermission.whileInUse;
-        });
-
-        // If permission granted and GPS is on, start auto-detection
-        if (_hasGPSPermission && _isGPSEnabled && !_isAutoDetecting) {
-          debugPrint('🚀 [EnableButton] Permission granted - starting auto-detection');
-          _startAutomaticGPSDetection();
+    try {
+      if (!_isGPSEnabled) {
+        // Show GPS settings dialog first
+        final shouldOpenSettings = await _showGPSSettingsDialog();
+        if (shouldOpenSettings) {
+          debugPrint('🔧 [EnableButton] Opening location settings');
+          await geo.Geolocator.openLocationSettings();
         }
+      } else if (!_hasGPSPermission) {
+        // Show permission consent dialog first
+        final shouldRequestPermission = await _showLocationPermissionDialog();
+        if (shouldRequestPermission) {
+          debugPrint('🔧 [EnableButton] Requesting location permission');
+          final permission = await geo.Geolocator.requestPermission();
+
+          setState(() {
+            _hasGPSPermission = permission == geo.LocationPermission.always ||
+                               permission == geo.LocationPermission.whileInUse;
+          });
+
+          // If permission granted and GPS is on, start auto-detection
+          if (_hasGPSPermission && _isGPSEnabled && !_isAutoDetecting) {
+            debugPrint('🚀 [EnableButton] Permission granted - starting auto-detection');
+            _startAutomaticGPSDetection();
+          }
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isEnableButtonLoading = false;
+        });
       }
     }
   }
@@ -672,15 +700,17 @@ class _OptimalLocationSetupContentState extends ConsumerState<OptimalLocationSet
                   'Saved Addresses',
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: Colors.black87,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Expanded(
-                  child: _savedAddresses.isNotEmpty
-                      ? _buildSavedAddressesList()
-                      : _buildEmptyAddressesState(),
+                  child: !_addressesLoaded
+                      ? _buildAddressesSkeletonLoading()
+                      : _savedAddresses.isNotEmpty
+                          ? _buildSavedAddressesList()
+                          : _buildEmptyAddressesState(),
                 ),
               ],
             ),
@@ -779,20 +809,38 @@ class _OptimalLocationSetupContentState extends ConsumerState<OptimalLocationSet
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: _handleEnableAction,
+          onTap: _isEnableButtonLoading ? null : _handleEnableAction,
           borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: widget.isModal ? 12 : 16,
               vertical: widget.isModal ? 8 : 10,
             ),
-            child: Text(
-              'Enable',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-                fontSize: widget.isModal ? 13 : 14,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_isEnableButtonLoading) ...[
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  _isEnableButtonLoading ? 'Enabling...' : 'Enable',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: _isEnableButtonLoading
+                        ? AppColors.primary.withValues(alpha: 0.6)
+                        : AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: widget.isModal ? 13 : 14,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -913,6 +961,17 @@ class _OptimalLocationSetupContentState extends ConsumerState<OptimalLocationSet
 
 
         ],
+      ),
+    );
+  }
+
+  /// Build skeleton loading for saved addresses
+  Widget _buildAddressesSkeletonLoading() {
+    return ListView.builder(
+      itemCount: 2, // Show 2 skeleton address cards
+      itemBuilder: (context, index) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: const AddressSkeleton(),
       ),
     );
   }

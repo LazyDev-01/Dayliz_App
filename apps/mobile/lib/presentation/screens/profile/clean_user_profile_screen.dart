@@ -677,7 +677,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
           child: Text(
             'Account',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Colors.grey[800],
             ),
@@ -757,7 +757,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
           child: Text(
             'Settings & Preferences',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Colors.grey[800],
             ),

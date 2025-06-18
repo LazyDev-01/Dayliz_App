@@ -5,6 +5,7 @@ import '../../providers/paginated_product_providers.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
+import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/product/clean_product_grid.dart';
 import '../../../navigation/routes.dart';
 
@@ -145,7 +146,7 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
 
   Widget _buildContent(PaginatedProductsState state) {
     if (state.isLoading && state.products.isEmpty) {
-      return const LoadingIndicator(message: 'Loading products...');
+      return _buildProductsSkeleton();
     }
 
     if (state.errorMessage != null && state.products.isEmpty) {
@@ -215,5 +216,14 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
     );
   }
 
-
+  /// Build skeleton loading for products grid
+  Widget _buildProductsSkeleton() {
+    return const Padding(
+      padding: EdgeInsets.all(16),
+      child: ProductGridSkeleton(
+        columns: 2,
+        itemCount: 8, // Show 8 skeleton cards
+      ),
+    );
+  }
 }

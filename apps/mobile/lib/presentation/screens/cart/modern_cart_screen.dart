@@ -12,6 +12,8 @@ import '../../providers/user_profile_providers.dart';
 import '../../widgets/common/common_bottom_nav_bar.dart';
 import '../../widgets/common/navigation_handler.dart';
 import '../../widgets/common/unified_app_bar.dart';
+import '../../widgets/common/skeleton_loaders.dart';
+import '../../widgets/common/skeleton_loading.dart';
 import '../../../domain/entities/address.dart';
 import '../../../domain/entities/cart_item.dart';
 import '../../../domain/entities/product.dart';
@@ -101,9 +103,7 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     // Show loading state if cart is loading
     if (cartState.isLoading) {
       debugPrint('🛒 Showing loading state');
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.success),
-      );
+      return _buildCartSkeleton();
     }
 
     // Show error state if there's an error
@@ -1433,5 +1433,61 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     if (volume != null && volume.isNotEmpty) return volume;
 
     return '';
+  }
+
+  /// Build skeleton loading for cart screen
+  Widget _buildCartSkeleton() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Delivery time skeleton
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                SkeletonContainer(
+                  width: 24,
+                  height: 24,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonContainer(
+                        width: 150,
+                        height: 16,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      const SizedBox(height: 8),
+                      SkeletonContainer(
+                        width: 200,
+                        height: 14,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Cart items skeleton
+          const ListSkeleton(
+            itemSkeleton: CartItemSkeleton(),
+            itemCount: 3,
+            padding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
   }
 }

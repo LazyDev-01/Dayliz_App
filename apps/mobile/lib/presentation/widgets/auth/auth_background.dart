@@ -156,13 +156,13 @@ class _SimpleAuthBackgroundState extends State<SimpleAuthBackground>
     return Scaffold(
       body: Stack(
         children: [
-          // Simple Animated Background
+          // Simple Animated Background - matching home screen app bar colors
           SimpleAnimatedBackground(
             controller: _animationController,
-            gradientColors: [
-              theme.primaryColor,
-              theme.primaryColor.withValues(alpha: 0.7),
-              theme.primaryColor.withValues(alpha: 0.8),
+            gradientColors: const [
+              Color(0xFFB5E853), // Fresh green from home app bar
+              Color(0xFFFFD54F), // Sunny yellow from home app bar
+              Color(0xFFB5E853), // Fresh green
             ],
           ),
           

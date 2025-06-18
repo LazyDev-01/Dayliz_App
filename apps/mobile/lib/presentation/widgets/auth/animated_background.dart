@@ -19,25 +19,26 @@ class AnimatedBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
-    
-    final primary = primaryColor ?? theme.primaryColor;
-    final secondary = secondaryColor ?? theme.primaryColor.withValues(alpha: 0.7);
+
+    // Use home screen app bar colors for consistency
+    final primary = primaryColor ?? const Color(0xFFB5E853); // Fresh green from home app bar
+    final secondary = secondaryColor ?? const Color(0xFFFFD54F); // Sunny yellow from home app bar
 
     return SizedBox.expand(
       child: Stack(
         children: [
-          // Base Gradient Background
+          // Base Gradient Background - matching home screen app bar
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                begin: Alignment(-0.8, -1.0), // Same 120 degrees as home app bar
+                end: Alignment(0.8, 1.0),
                 colors: [
-                  primary,
-                  secondary,
-                  primary.withValues(alpha: 0.8),
+                  primary, // Fresh green
+                  secondary, // Sunny yellow
+                  primary.withValues(alpha: 0.9), // Slightly transparent fresh green
                 ],
-                stops: const [0.0, 0.5, 1.0],
+                stops: const [0.0, 0.6, 1.0],
               ),
             ),
           ),
@@ -96,8 +97,8 @@ class GroceryBackgroundPainter extends CustomPainter {
       ..style = PaintingStyle.fill
       ..strokeWidth = 2;
 
-    // Draw floating geometric shapes representing fresh produce
-    _drawFloatingShapes(canvas, size, paint);
+    // Draw floating geometric shapes representing fresh produce (disabled for cleaner auth experience)
+    // _drawFloatingShapes(canvas, size, paint);
     
     // Draw subtle grid pattern
     _drawGridPattern(canvas, size, paint);
@@ -381,15 +382,24 @@ class SimpleAnimatedBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Use home screen app bar colors if no custom colors provided
+    final colors = gradientColors.isNotEmpty
+        ? gradientColors
+        : [
+            const Color(0xFFB5E853), // Fresh green from home app bar
+            const Color(0xFFFFD54F), // Sunny yellow from home app bar
+            const Color(0xFFB5E853), // Fresh green
+          ];
+
     return AnimatedBuilder(
       animation: controller,
       builder: (context, child) {
         return Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: gradientColors,
+              begin: const Alignment(-0.8, -1.0), // Same 120 degrees as home app bar
+              end: const Alignment(0.8, 1.0),
+              colors: colors,
               transform: GradientRotation(controller.value * 2 * math.pi * 0.1),
             ),
           ),

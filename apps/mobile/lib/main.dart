@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:dayliz_app/core/config/app_config.dart';
 import 'package:dayliz_app/core/services/supabase_service.dart';
 import 'package:dayliz_app/core/services/firebase_notification_service.dart';
@@ -52,6 +53,7 @@ import 'presentation/screens/auth/clean_login_screen.dart';
 import 'presentation/screens/auth/premium_auth_landing_screen.dart';
 import 'presentation/screens/auth/phone_auth_screen.dart';
 import 'presentation/screens/auth/otp_verification_screen.dart';
+import 'presentation/screens/splash/splash_screen.dart';
 import 'presentation/screens/debug/direct_auth_test_screen.dart';
 import 'presentation/screens/auth/clean_register_screen.dart';
 import 'presentation/screens/auth/clean_forgot_password_screen.dart';
@@ -241,13 +243,20 @@ class _MyAppState extends ConsumerState<MyApp> {
     // Force clean auth notifier to initialize
     ref.watch(clean_auth.authNotifierProvider);
 
-    return MaterialApp.router(
-      title: 'Dayliz',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
-      routerConfig: router,
+    return ScreenUtilInit(
+      designSize: const Size(375, 812), // iPhone 11 Pro design size
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return MaterialApp.router(
+          title: 'Dayliz',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeMode,
+          routerConfig: router,
+        );
+      },
     );
   }
 }
@@ -355,8 +364,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   // CRITICAL FIX: Create a stable router that doesn't rebuild on auth changes
   return GoRouter(
-    // CRITICAL FIX: Don't set initialLocation to allow deep links to work properly
-    // initialLocation: '/login', // Removed to allow deep links
+    // Set splash screen as initial location
+    initialLocation: '/splash',
     debugLogDiagnostics: true, // Enable debug logging to track deep link issues
 
     // CRITICAL FIX: Simplified redirect logic that reads auth state when needed
@@ -461,6 +470,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     // Deep link debugging disabled to reduce noise
 
     routes: [
+      // Splash Screen Route - App Entry Point
+      GoRoute(
+        path: '/splash',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const SplashScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
       // CRITICAL FIX: Root path now handled by redirect logic only
       GoRoute(
         path: '/',

@@ -312,11 +312,11 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
                   _rememberMe = !_rememberMe;
                 });
               },
-              child: Text(
+              child: const Text(
                 'Remember Me',
                 style: TextStyle(
-                  color: Colors.grey.shade700,
-                  fontSize: 15,
+                  color: Colors.white,
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -337,7 +337,7 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
             'Forgot Password?',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.9),
-              fontSize: 15,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -412,7 +412,7 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
           "Don't have an account?",
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.8),
-            fontSize: 16,
+            fontSize: 13,
           ),
         ),
         TextButton(
@@ -427,7 +427,7 @@ class _CleanLoginScreenState extends ConsumerState<CleanLoginScreen> {
             'Sign Up',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 16,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
           ),

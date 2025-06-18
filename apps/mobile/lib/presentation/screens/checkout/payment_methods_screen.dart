@@ -11,6 +11,7 @@ import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/common/unified_app_bar.dart';
+import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/payment/payment_method_card.dart';
 import '../../widgets/payment/add_payment_method_dialog.dart';
 
@@ -87,7 +88,10 @@ class PaymentMethodsScreen extends ConsumerWidget {
   ) {
     // Show loading state
     if (state.isLoading) {
-      return const Center(child: LoadingIndicator());
+      return const ListSkeleton(
+        itemSkeleton: PaymentMethodSkeleton(),
+        itemCount: 3,
+      );
     }
 
     // Show error state
