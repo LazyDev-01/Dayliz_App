@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,8 +11,9 @@ import '../../../domain/entities/user_profile.dart';
 import '../../../domain/entities/user.dart' as domain;
 import '../../../core/constants/app_colors.dart';
 import '../../widgets/common/unified_app_bar.dart';
-import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
+import '../../widgets/common/skeleton_loaders.dart';
+import '../../widgets/common/skeleton_loading.dart';
 
 /// A Clean Architecture implementation of the user profile screen
 /// This is currently a placeholder for future implementation
@@ -129,7 +131,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
         fallbackRoute: '/home',
       ),
       body: userProfileState.isLoading
-          ? const LoadingIndicator(message: 'Loading profile...')
+          ? _buildProfileSkeleton()
           : userProfileState.errorMessage != null
               ? ErrorState(
                   message: userProfileState.errorMessage!,
@@ -229,7 +231,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                       Text(
                         displayName,
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16, // Reduced from 18 to 16 to match section titles
                           fontWeight: FontWeight.bold,
                           color: Colors.grey[800],
                         ),
@@ -431,7 +433,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                   Text(
                     displayName,
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 16, // Reduced from 18 to 16 to match section titles
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[800],
                     ),
@@ -634,20 +636,46 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
 
     return Expanded(
       child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          // Add haptic feedback
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(16), // Increased for square rounded design
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16), // Square rounded boundaries
+            border: Border.all(
+              color: Colors.grey[200]!,
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Icon without container
-              Icon(
-                icon,
-                color: primaryColor,
-                size: 28,
+              // Icon with background container
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: primaryColor,
+                  size: 24,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 label,
                 style: TextStyle(
@@ -753,7 +781,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
 
         // Settings & Preferences Section
         Padding(
-          padding: const EdgeInsets.only(bottom: 8.0, left: 16.0, top: 16.0),
+          padding: const EdgeInsets.only(bottom: 16.0, left: 16.0, top: 16.0), // Increased bottom padding from 8 to 16
           child: Text(
             'Settings & Preferences',
             style: TextStyle(
@@ -874,7 +902,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
           child: ElevatedButton(
             onPressed: _signOut,
             style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 12), // Reduced from 16 to 12
               backgroundColor: Colors.white,
               foregroundColor: Colors.red,
               elevation: 0,
@@ -946,6 +974,63 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
 
   void _navigateToLogin() {
     context.go('/login');
+  }
+
+  /// Builds skeleton loading for profile screen
+  Widget _buildProfileSkeleton() {
+    return SkeletonLoading(
+      isLoading: true,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Profile header skeleton
+            Row(
+              children: [
+                SkeletonContainer(
+                  width: 80,
+                  height: 80,
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonContainer(
+                        width: 120,
+                        height: 20,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      const SizedBox(height: 8),
+                      SkeletonContainer(
+                        width: 180,
+                        height: 16,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 32),
+
+            // Settings sections skeleton
+            ...List.generate(4, (index) => Column(
+              children: [
+                SkeletonContainer(
+                  width: double.infinity,
+                  height: 60,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                const SizedBox(height: 16),
+              ],
+            )),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _pickAndUploadImage() async {

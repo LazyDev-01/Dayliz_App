@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +11,7 @@ import '../../../domain/entities/product.dart';
 import '../../providers/cart_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../auth/auth_guard.dart';
+import 'enhanced_add_to_cart_button.dart';
 
 /// A clean architecture implementation of a product card for q-commerce applications
 /// following industry standards like Blinkit and Zepto.
@@ -290,30 +292,18 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
     );
   }
 
-  /// Builds the ADD button
+  /// Builds the ADD button with enhanced interactions
   Widget _buildAddButton(BuildContext context) {
-    return SizedBox(
-      height: 32, // Restored original size
-      width: 70, // Restored original size
-      child: ElevatedButton(
-        onPressed: widget.product.inStock ? () => _addToCart(context) : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary, // Using standard green #4CAF50
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 16), // Restored original padding
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
-          ),
-          elevation: 0,
-        ),
-        child: const Text(
-          'ADD',
-          style: TextStyle(
-            fontSize: 12, // Restored original size
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+    return EnhancedAddToCartButton(
+      onPressed: widget.product.inStock ? () => _addToCart(context) : () {},
+      isLoading: false, // You can add loading state if needed
+      isInCart: _isInCart,
+      quantity: _quantity,
+      addText: 'ADD',
+      inCartText: 'ADDED',
+      showQuantityControls: false, // We handle quantity separately
+      buttonSize: const Size(70, 34), // Reduced width to 70px to fix 6-pixel overflow
+      isCompact: true,
     );
   }
 
@@ -333,8 +323,8 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       // This ensures the gesture detector doesn't interfere with other gestures
       behavior: HitTestBehavior.opaque,
       child: Container(
-        height: 32, // Restored original size
-        width: 70, // Restored original size
+        height: 34, // Reduced to match add button height
+        width: 70, // Reduced to match add button width and fix overflow
         decoration: BoxDecoration(
           border: Border.all(color: Theme.of(context).primaryColor),
           borderRadius: BorderRadius.circular(4),
@@ -348,6 +338,9 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
+                  // Haptic feedback
+                  HapticFeedback.lightImpact();
+
                   // Update state immediately for better UX
                   if (mounted) {
                     setState(() {
@@ -360,8 +353,8 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
                   _updateQuantity(context, _quantity);
                 },
                 child: Container(
-                  width: 22,
-                  height: 32,
+                  width: 20, // Reduced to fit within 70px container
+                  height: 34, // Reduced to match container height
                   alignment: Alignment.center,
                   child: Icon(
                     Icons.remove,
@@ -374,7 +367,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
 
             // Quantity display
             Container(
-              width: 22, // Restored original size
+              width: 27, // Extra 1px safety buffer (20+27+20=67, leaves 3px buffer)
               alignment: Alignment.center,
               child: Text(
                 '$_quantity',
@@ -391,6 +384,9 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
+                  // Haptic feedback
+                  HapticFeedback.lightImpact();
+
                   // Update state immediately for better UX
                   if (mounted) {
                     setState(() {
@@ -400,8 +396,8 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
                   _updateQuantity(context, _quantity);
                 },
                 child: Container(
-                  width: 22,
-                  height: 32,
+                  width: 20, // Reduced to fit within 70px container
+                  height: 34, // Reduced to match container height
                   alignment: Alignment.center,
                   child: Icon(
                     Icons.add,
@@ -445,30 +441,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       });
     }
 
-    // Show loading indicator
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Text('Adding ${widget.product.name} to cart...'),
-            ],
-          ),
-          duration: const Duration(milliseconds: 500),
-          behavior: SnackBarBehavior.floating,
-          width: MediaQuery.of(context).size.width * 0.9,
-        ),
-      );
-    }
+    // Note: Loading indicator removed - floating cart button provides sufficient feedback
 
     try {
       // Try to use the clean architecture cart first

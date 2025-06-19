@@ -11,7 +11,8 @@ import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/skeleton_loading.dart';
 import '../../providers/home_providers.dart';
 import '../../providers/category_providers.dart';
-// import '../../widgets/product/clean_product_card.dart'; // Removed for now
+import '../../providers/paginated_product_providers.dart';
+import '../../widgets/product/clean_product_card.dart';
 import '../../widgets/home/home_categories_section.dart';
 import '../../../domain/entities/product.dart';
 import '../../../domain/entities/category.dart';
@@ -142,6 +143,9 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
 
           // Sale products section with compact cards
           _buildSaleProductsSection(),
+
+          // All products section with pagination
+          _buildAllProductsSection(),
 
           // Bottom padding
           const SliverToBoxAdapter(
@@ -384,6 +388,165 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Builds the all products section with grid layout and pagination
+  Widget _buildAllProductsSection() {
+    final allProductsState = ref.watch(paginatedAllProductsProvider);
+
+    return SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'All Products',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => context.push('/clean/products'),
+                  child: const Text('See All'),
+                ),
+              ],
+            ),
+          ),
+
+          // Products grid
+          _buildAllProductsContent(allProductsState),
+        ],
+      ),
+    );
+  }
+
+  /// Builds the content based on all products state
+  Widget _buildAllProductsContent(PaginatedProductsState state) {
+    if (state.isLoading && state.products.isEmpty) {
+      return _buildAllProductsLoading();
+    }
+
+    if (state.errorMessage != null && state.products.isEmpty) {
+      return _buildAllProductsError(state.errorMessage!);
+    }
+
+    if (state.products.isEmpty) {
+      return _buildAllProductsEmpty();
+    }
+
+    return _buildAllProductsGrid(state.products.toList());
+  }
+
+  /// Builds the products grid with pagination
+  Widget _buildAllProductsGrid(List<Product> products) {
+    // Show only first 14 products initially
+    final displayProducts = products.take(14).toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.65,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 16,
+        ),
+        itemCount: displayProducts.length,
+        itemBuilder: (context, index) {
+          final product = displayProducts[index];
+          return CleanProductCard(
+            product: product,
+            onTap: () => context.push('/clean/product/${product.id}'),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Builds loading state for all products
+  Widget _buildAllProductsLoading() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: ProductGridSkeleton(
+        columns: 2,
+        itemCount: 14,
+      ),
+    );
+  }
+
+  /// Builds error state for all products
+  Widget _buildAllProductsError(String message) {
+    return Container(
+      height: 120,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.red[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red[200]!),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 32,
+              color: Colors.red[400],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Failed to load products',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.red[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Builds empty state for all products
+  Widget _buildAllProductsEmpty() {
+    return Container(
+      height: 120,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 32,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'No products available',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

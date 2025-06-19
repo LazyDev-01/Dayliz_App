@@ -6,6 +6,7 @@ import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/skeleton_loaders.dart';
+import '../../widgets/common/floating_cart_button.dart';
 import '../../widgets/product/clean_product_grid.dart';
 import '../../../navigation/routes.dart';
 
@@ -64,7 +65,13 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
         backButtonType: BackButtonType.previousPage,
         fallbackRoute: '/home',
       ),
-      body: _buildContent(state),
+      body: Stack(
+        children: [
+          _buildContent(state),
+          // Floating cart button - appears when cart has items
+          const FloatingCartButton(),
+        ],
+      ),
     );
   }
 

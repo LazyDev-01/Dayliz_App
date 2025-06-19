@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/order_service.dart';
 import '../../../domain/entities/order.dart' as domain;
+import '../../widgets/common/unified_app_bar.dart';
 
 /// Order Summary Screen - Shows detailed order information
 /// Displays order items, billing details, delivery info, and tracking
@@ -211,38 +212,34 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
     );
   }
 
-  /// Builds the app bar with back button and title
+  /// Builds the app bar with unified design
   PreferredSizeWidget _buildAppBar(BuildContext context, ThemeData theme) {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 4,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      surfaceTintColor: Colors.transparent,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.black),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      title: const Text(
-        'Order Summary',
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      centerTitle: false,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.share, color: Colors.black),
-          onPressed: () => _shareOrder(),
-        ),
-      ],
+    return UnifiedAppBars.withBackButton(
+      title: 'Order Summary',
+      fallbackRoute: '/orders',
+      // Removed share icon as requested
     );
   }
 
-  void _shareOrder() {
-    // TODO: Implement share functionality
-    debugPrint('Share order: ${orderData['orderId']}');
+  // Share functionality removed as requested
+
+  /// Builds a dotted line for section separation
+  Widget _buildDottedLine() {
+    return Container(
+      height: 1,
+      child: Row(
+        children: List.generate(
+          50, // Number of dashes
+          (index) => Expanded(
+            child: Container(
+              height: 1,
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              color: Colors.grey[400],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   
@@ -255,11 +252,11 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
         children: [
           _buildOrderStatusSection(theme),
           const SizedBox(height: 16),
-          _buildOrderInvoiceSection(theme),
-          const SizedBox(height: 16),
           _buildItemsSection(theme),
           const SizedBox(height: 16),
           _buildBillDetailsSection(theme),
+          const SizedBox(height: 16),
+          _buildOrderInvoiceSection(theme), // Moved to last as requested
           const SizedBox(height: 100), // Space for bottom button
         ],
       ),
@@ -450,13 +447,20 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Order Invoice',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Order Invoice',
+                style: TextStyle(
+                  fontSize: 16, // Updated to 16px as requested
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700], // Dark grey as requested
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildDottedLine(), // Added dotted line
+            ],
           ),
           const SizedBox(height: 16),
           _buildInvoiceRow('Order ID', '#$orderId'),
@@ -479,7 +483,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 14, // 14px as requested
             fontWeight: FontWeight.w500,
             color: Colors.grey[600],
           ),
@@ -488,7 +492,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
         Text(
           value,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 14, // 14px as requested
             fontWeight: FontWeight.w500,
             color: Colors.black87,
             height: isAddress ? 1.4 : 1.0,
@@ -520,13 +524,20 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Order Items',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Order Details',
+                style: TextStyle(
+                  fontSize: 16, // 16px as requested
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700], // Dark grey as requested
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildDottedLine(), // Added dotted line
+            ],
           ),
           const SizedBox(height: 16),
           ...items.asMap().entries.map((entry) {
@@ -659,13 +670,20 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Bill details',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Bill Details',
+                style: TextStyle(
+                  fontSize: 16, // 16px as requested
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700], // Dark grey as requested
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildDottedLine(), // Added dotted line
+            ],
           ),
           const SizedBox(height: 16),
           _buildBillRow('Subtotal', '₹${(orderData['subtotal'] ?? 0.0).toStringAsFixed(2)}'),

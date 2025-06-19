@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -34,6 +35,10 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
   late AnimationController _animationController;
   int _previousIndex = 0;
   bool _isAnimating = false;
+
+  // Debounce functionality
+  DateTime _lastTapTime = DateTime.now();
+  static const Duration _debounceDuration = Duration(milliseconds: 300);
 
   @override
   void initState() {
@@ -115,10 +120,21 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> with Si
     );
   }
 
-  /// Optimized tap handling with proper state management
+  /// Optimized tap handling with debounce and haptic feedback
   void _handleTap(BuildContext context, int index) {
-    // Prevent rapid tapping during animation
+    final now = DateTime.now();
+
+    // Debounce: Prevent rapid tapping
+    if (now.difference(_lastTapTime) < _debounceDuration) {
+      return;
+    }
+    _lastTapTime = now;
+
+    // Prevent tapping during animation
     if (_isAnimating) return;
+
+    // Haptic feedback for better user experience
+    HapticFeedback.lightImpact();
 
     // Only update provider state if not using custom navigation
     if (!widget.useCustomNavigation) {

@@ -224,7 +224,7 @@ class AppTheme {
         background: AppColors.background,
         surface: AppColors.surface,
       ),
-      scaffoldBackgroundColor: AppColors.background,
+      scaffoldBackgroundColor: Colors.grey[50], // Light grey background for all screens
       appBarTheme: const AppBarTheme(
         elevation: 0,
         color: AppColors.appBarPrimary, // Use bright green for app bar

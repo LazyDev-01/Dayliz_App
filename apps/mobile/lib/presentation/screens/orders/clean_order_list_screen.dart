@@ -50,6 +50,7 @@ class _CleanOrderListScreenState extends ConsumerState<CleanOrderListScreen> {
     final ordersAsyncValue = ref.watch(userOrdersProvider);
 
     return Scaffold(
+      backgroundColor: Colors.grey[50], // Light grey background
       appBar: UnifiedAppBars.withBackButton(
         title: 'My Orders',
         onBackPressed: () => _handleBackNavigation(context),
@@ -121,6 +122,11 @@ class _OrderCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
+      elevation: 0, // Remove shadow effect
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[200]!, width: 1),
+      ),
       child: InkWell(
         onTap: () => _navigateToOrderSummary(context, order),
         child: Padding(
@@ -219,10 +225,10 @@ class _OrderCard extends StatelessWidget {
   }
 
   void _navigateToOrderSummary(BuildContext context, domain.Order order) {
-    // Navigate to order summary screen with the order object
+    // Navigate to order summary screen with the order ID
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => OrderSummaryScreen(order: order),
+        builder: (context) => OrderSummaryScreen(orderId: order.id),
       ),
     );
   }
