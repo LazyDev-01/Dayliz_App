@@ -66,10 +66,10 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Google Maps API Key - Active configuration -->
+        <!-- Google Maps API Key - Injected at build time -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBf-rFSTkhfN_Z6DB8PR4suHjimIMxxXg0" />
+            android:value="${GOOGLE_MAPS_API_KEY}" />
         <!-- Mapbox configuration - Legacy (commented out) -->
         <!-- <meta-data
             android:name="com.mapbox.token"

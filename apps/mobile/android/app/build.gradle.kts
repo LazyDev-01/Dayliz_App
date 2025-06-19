@@ -36,11 +36,12 @@ android {
         // Google Sign-In configuration
         manifestPlaceholders["com.google.android.gms.client_id"] = "@string/web_client_id"
 
-        // Google Maps API Key configuration
-        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = project.findProperty("GOOGLE_MAPS_API_KEY") ?: "your_google_maps_api_key"
+        // Google Maps API Key configuration - Secure environment injection
+        val googleMapsKey = project.findProperty("GOOGLE_MAPS_API_KEY") as String?
+            ?: System.getenv("GOOGLE_MAPS_API_KEY")
+            ?: throw GradleException("GOOGLE_MAPS_API_KEY not found in gradle.properties or environment variables")
 
-        // Mapbox Access Token configuration
-        manifestPlaceholders["MAPBOX_ACCESS_TOKEN"] = project.findProperty("MAPBOX_ACCESS_TOKEN") ?: "pk.eyJ1IjoiZGF5bGl6IiwiYSI6ImNtYmJ0a244bzB6YXUybHNiaHB1bGI4bDkifQ.ZJdfmD9NbE3zAaDACGtg_g"
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsKey
     }
 
     buildTypes {
