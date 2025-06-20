@@ -278,8 +278,9 @@ jobs:
             secrets_found=true
           fi
 
-          # Check for common API key patterns
-          if grep -r "AIza[0-9A-Za-z_-]\{35\}" . --exclude-dir=.git --exclude-dir=.github --exclude-dir=build; then
+          # Check for common API key patterns (using variable to avoid GitLeaks false positive)
+          GOOGLE_API_PATTERN="AIza[0-9A-Za-z_-]\{35\}"
+          if grep -r "$GOOGLE_API_PATTERN" . --exclude-dir=.git --exclude-dir=.github --exclude-dir=build; then
             echo "❌ Google API key pattern detected in code!"
             secrets_found=true
           fi
