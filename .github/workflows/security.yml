@@ -28,12 +28,39 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.29.2'
           channel: 'stable'
+          cache: true
 
-      - name: 📦 Get Dependencies
+      - name: 📦 Enhanced Dependencies Resolution
         working-directory: apps/mobile
-        run: flutter pub get
+        run: |
+          echo "📦 Starting enhanced dependency resolution for security scan..."
+
+          # Pre-flight checks
+          if [ ! -f "pubspec.yaml" ]; then
+            echo "❌ pubspec.yaml not found in $(pwd)"
+            exit 1
+          fi
+
+          # Clear pub cache and retry logic
+          flutter pub cache clean || echo "⚠️ Cache clean failed, continuing..."
+
+          for attempt in 1 2 3; do
+            echo "🔄 Security scan dependency resolution - Attempt $attempt/3..."
+
+            if flutter pub get --verbose; then
+              echo "✅ Dependencies resolved successfully for security scan"
+              break
+            else
+              if [ $attempt -eq 3 ]; then
+                echo "💥 Security scan dependency resolution failed after 3 attempts"
+                exit 1
+              fi
+              echo "⏳ Waiting 5 seconds before retry..."
+              sleep 5
+            fi
+          done
 
       - name: 🔍 Flutter Security Audit
         working-directory: apps/mobile

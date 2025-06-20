@@ -31,8 +31,8 @@
 
 #### **✅ Completed Actions:**
 1. **✅ Immediate Security Actions**:
-   - ✅ Rotated Google Maps API key: `AIzaSyBf-rFSTkhfN_Z6DB8PR4suHjimIMxxXg0` → `AIzaSyAqg190vhD1jq5Il3tw3eO_sUo3D_NobE4`
-   - ✅ Generated new Google OAuth secret: `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` → `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`
+   - ✅ Rotated Google Maps API key: `[OLD_KEY_REDACTED]` → `[NEW_KEY_SECURED]`
+   - ✅ Generated new Google OAuth secret: `[OLD_SECRET_REDACTED]` → `[NEW_SECRET_SECURED]`
    - ✅ Verified `.env` excluded from git tracking
    - ✅ Updated `.env.example` template with safe placeholders
 
