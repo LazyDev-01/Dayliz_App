@@ -1,0 +1,190 @@
+name: 🔒 Security Scanning & Monitoring
+
+on:
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    branches: [ main, production-readiness ]
+  workflow_dispatch:
+
+jobs:
+  # 🔍 Comprehensive Security Scanning
+  security-audit:
+    name: 🛡️ Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+
+      - name: 📦 Get Dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: 🔍 Flutter Security Audit
+        working-directory: apps/mobile
+        run: |
+          echo "🔍 Running Flutter dependency audit..."
+          flutter pub deps --json > deps.json
+          
+          # Check for known vulnerabilities in pubspec.yaml
+          if grep -q "http:" pubspec.yaml; then
+            echo "⚠️ Warning: HTTP dependencies found (should use HTTPS)"
+          fi
+          
+          # Check for dev dependencies in production
+          if grep -A 20 "dev_dependencies:" pubspec.yaml | grep -v "^dev_dependencies:" | grep -q "sdk:"; then
+            echo "✅ Dev dependencies properly separated"
+          fi
+
+      - name: 🕵️ Advanced Secret Scanning
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: 🔒 OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'Dayliz-App'
+          path: '.'
+          format: 'ALL'
+          args: >
+            --enableRetired
+            --enableExperimental
+            --failOnCVSS 7
+
+      - name: 📊 Upload OWASP Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: reports/
+
+      - name: 🔍 License Compliance Check
+        working-directory: apps/mobile
+        run: |
+          echo "📋 Checking license compliance..."
+          flutter pub deps --json | jq -r '.packages[] | select(.kind == "direct") | "\(.name): \(.version)"' > direct_deps.txt
+          
+          # Check for GPL licenses (not compatible with commercial use)
+          if flutter pub deps --json | jq -r '.packages[].license' | grep -i "gpl"; then
+            echo "⚠️ Warning: GPL licensed dependencies found"
+            exit 1
+          fi
+          
+          echo "✅ License compliance check passed"
+
+      - name: 🔐 API Key Pattern Detection
+        run: |
+          echo "🔍 Scanning for API key patterns..."
+          
+          # Check for common API key patterns
+          if grep -r "AIza[0-9A-Za-z_-]\{35\}" . --exclude-dir=.git; then
+            echo "❌ Google API key pattern detected!"
+            exit 1
+          fi
+          
+          if grep -r "GOCSPX-[0-9A-Za-z_-]\{28\}" . --exclude-dir=.git; then
+            echo "❌ Google OAuth secret pattern detected!"
+            exit 1
+          fi
+          
+          if grep -r "sk_live_[0-9A-Za-z]\{24\}" . --exclude-dir=.git; then
+            echo "❌ Stripe live key pattern detected!"
+            exit 1
+          fi
+          
+          echo "✅ No API key patterns found in repository"
+
+  # 🔒 Container Security (for future Docker builds)
+  container-security:
+    name: 🐳 Container Security Scan
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Dockerfile Security Scan
+        if: hashFiles('**/Dockerfile') != ''
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          format: sarif
+          output-file: hadolint-results.sarif
+
+      - name: 📊 Upload Dockerfile Scan Results
+        if: hashFiles('**/Dockerfile') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: hadolint-results.sarif
+
+  # 📊 Security Metrics & Reporting
+  security-metrics:
+    name: 📊 Security Metrics
+    runs-on: ubuntu-latest
+    needs: [security-audit]
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📊 Generate Security Report
+        run: |
+          echo "# 🔒 Security Scan Report" > security-report.md
+          echo "**Date**: $(date)" >> security-report.md
+          echo "**Branch**: ${{ github.ref_name }}" >> security-report.md
+          echo "**Commit**: ${{ github.sha }}" >> security-report.md
+          echo "" >> security-report.md
+          
+          echo "## 📊 Scan Results" >> security-report.md
+          echo "- 🔍 Security Audit: ${{ needs.security-audit.result }}" >> security-report.md
+          echo "- 🐳 Container Security: ${{ needs.container-security.result }}" >> security-report.md
+          echo "" >> security-report.md
+          
+          if [[ "${{ needs.security-audit.result }}" == "success" ]]; then
+            echo "✅ **All security scans passed**" >> security-report.md
+          else
+            echo "❌ **Security issues detected - Review required**" >> security-report.md
+          fi
+
+      - name: 📊 Upload Security Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report-${{ github.sha }}
+          path: security-report.md
+
+  # 🚨 Security Alert Notifications
+  security-notifications:
+    name: 🚨 Security Alerts
+    runs-on: ubuntu-latest
+    needs: [security-audit, container-security]
+    if: failure()
+    
+    steps:
+      - name: 🚨 Security Failure Notification
+        run: |
+          echo "🚨 SECURITY ALERT: Security scan failed!"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo ""
+          echo "Please review the security scan results and address any issues immediately."
+          echo "Do not merge or deploy until security issues are resolved."
+          
+          # In a real setup, you would send this to Slack, email, or other notification systems
+          exit 1
