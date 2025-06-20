@@ -36,10 +36,10 @@ android {
         // Google Sign-In configuration
         manifestPlaceholders["com.google.android.gms.client_id"] = "@string/web_client_id"
 
-        // Google Maps API Key configuration - Secure environment injection
+        // Google Maps API Key configuration - Secure environment injection with CI fallback
         val googleMapsKey = project.findProperty("GOOGLE_MAPS_API_KEY") as String?
             ?: System.getenv("GOOGLE_MAPS_API_KEY")
-            ?: throw GradleException("GOOGLE_MAPS_API_KEY not found in gradle.properties or environment variables")
+            ?: "PLACEHOLDER_API_KEY_FOR_CI_BUILD" // Fallback for CI environments
 
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsKey
     }
