@@ -8,6 +8,11 @@ on:
     branches: [ main, production-readiness ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 jobs:
   # 🔍 Comprehensive Security Scanning
   security-audit:
