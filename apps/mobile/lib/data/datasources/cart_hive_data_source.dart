@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 
 import '../../core/storage/hive_config.dart';
-import '../../domain/entities/product.dart';
+import '../models/product_model.dart';
 import '../models/cart_item_model.dart';
 import '../../core/error/exceptions.dart';
 
@@ -65,7 +65,7 @@ class CartHiveDataSource {
 
   /// Add item to cart with optimized performance
   Future<CartItemModel> addToCart({
-    required Product product,
+    required ProductModel product,
     required int quantity,
   }) async {
     try {
@@ -82,10 +82,10 @@ class CartHiveDataSource {
       if (existingItemIndex != -1) {
         // Update existing item
         final existingItem = currentItems[existingItemIndex];
-        final updatedItem = existingItem.copyWith(
+        final updatedItem = existingItem.copyWithModel(
           quantity: existingItem.quantity + quantity,
         );
-        
+
         updatedItems = currentItems.replace(existingItemIndex, updatedItem);
         resultItem = updatedItem;
       } else {
@@ -148,7 +148,7 @@ class CartHiveDataSource {
       }
 
       final existingItem = currentItems[itemIndex];
-      final updatedItem = existingItem.copyWith(quantity: newQuantity);
+      final updatedItem = existingItem.copyWithModel(quantity: newQuantity);
       
       final updatedItems = currentItems.replace(itemIndex, updatedItem);
       await cacheCartItems(updatedItems);
