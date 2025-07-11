@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/order_service.dart';
+import '../../../core/services/network_service.dart';
 import '../order/order_summary_screen.dart';
 
 /// Order processing screen with beautiful animations
@@ -141,20 +142,33 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
         return;
       }
 
-      // Find delivery address ID (for now, we'll use the first address or create one)
+      // Get delivery address ID from the selected address in orderData
       String? deliveryAddressId;
-      try {
-        final addressResponse = await Supabase.instance.client
-            .from('addresses')
-            .select('id')
-            .eq('user_id', user.id)
-            .limit(1);
 
-        if (addressResponse.isNotEmpty) {
-          deliveryAddressId = addressResponse.first['id'];
+      // Extract address from orderData (passed from checkout screen)
+      final shippingAddress = orderData['shippingAddress'] as Map<String, dynamic>?;
+
+      if (shippingAddress != null && shippingAddress['id'] != null) {
+        // Use the selected address ID from checkout
+        deliveryAddressId = shippingAddress['id'] as String;
+        debugPrint('OrderProcessingScreen: Using selected address ID: $deliveryAddressId');
+      } else {
+        // Fallback: find any address for the user (this should rarely happen)
+        debugPrint('OrderProcessingScreen: No address ID in orderData, falling back to first address');
+        try {
+          final addressResponse = await Supabase.instance.client
+              .from('addresses')
+              .select('id')
+              .eq('user_id', user.id)
+              .limit(1);
+
+          if (addressResponse.isNotEmpty) {
+            deliveryAddressId = addressResponse.first['id'];
+            debugPrint('OrderProcessingScreen: Using fallback address ID: $deliveryAddressId');
+          }
+        } catch (e) {
+          debugPrint('OrderProcessingScreen: Error getting fallback address: $e');
         }
-      } catch (e) {
-        debugPrint('OrderProcessingScreen: Error getting address: $e');
       }
 
       if (deliveryAddressId == null) {
@@ -169,6 +183,8 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
         'quantity': item['quantity'],
         'price': (item['price'] as num).toDouble(),
         'total': (item['total'] as num).toDouble(),
+        'image_url': item['imageUrl'] ?? '', // Include product image
+        'weight': item['weight'] ?? '', // Include product weight
       }).toList();
 
       debugPrint('OrderProcessingScreen: Creating order with ${orderItems.length} items');
@@ -194,24 +210,71 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
       // Clear cart after successful order
       widget.onSuccess?.call();
 
-      // Show success and navigate to order summary
-      _showSuccess(order.id);
-
-    } catch (e) {
-      debugPrint('OrderProcessingScreen: Error processing order: $e');
-      String errorMessage = 'Something went wrong. Please try again.';
-
-      if (e.toString().contains('Product not found')) {
-        errorMessage = 'Some products in your cart are no longer available.';
-      } else if (e.toString().contains('out of stock')) {
-        errorMessage = 'Some products in your cart are out of stock.';
-      } else if (e.toString().contains('Insufficient stock')) {
-        errorMessage = 'Insufficient stock for some products in your cart.';
-      } else if (e.toString().contains('User not authenticated')) {
-        errorMessage = 'Please login again to place your order.';
+      // Check if this is an offline order
+      if (order.status == 'queued') {
+        // Handle offline order
+        _showOfflineSuccess(order.orderNumber ?? 'OFFLINE-ORDER');
+      } else {
+        // Show normal success and navigate to order summary
+        _showSuccess(order.id);
       }
 
-      _showError(errorMessage);
+    } catch (e) {
+      debugPrint('OrderProcessingScreen: Order failed - ${e.toString()}');
+
+      // Classify error type for appropriate handling
+      final errorType = NetworkService.classifyError(e);
+      String? errorMessage;
+
+      switch (errorType) {
+        case NetworkErrorType.connectivity:
+          errorMessage = 'Poor network connection. Please check your internet and try again.';
+          break;
+
+        case NetworkErrorType.server:
+          errorMessage = 'Our servers are temporarily busy. Please try again in a moment.';
+          break;
+
+        case NetworkErrorType.authentication:
+          errorMessage = 'Please login again to place your order.';
+          break;
+
+        case NetworkErrorType.business:
+          // Handle specific business logic errors
+          if (e.toString().contains('Product not found')) {
+            errorMessage = 'Some products in your cart are no longer available.';
+          } else if (e.toString().contains('out of stock') || e.toString().contains('Insufficient stock')) {
+            final errorString = e.toString();
+            if (errorString.contains('Insufficient stock for some items:')) {
+              errorMessage = errorString.replaceFirst('ServerException: ', '');
+            } else {
+              errorMessage = 'Some products in your cart are out of stock. Please update quantities and try again.';
+            }
+          } else if (e.toString().contains('delivery_address_id')) {
+            errorMessage = 'Please add a delivery address before placing your order.';
+          } else if (e.toString().contains('Invalid payment method')) {
+            errorMessage = 'Please select a valid payment method.';
+          } else if (e.toString().contains('Minimum order amount')) {
+            errorMessage = 'Minimum order amount is ₹99. Please add more items to your cart.';
+          } else if (e.toString().contains('Maximum order amount')) {
+            errorMessage = 'Order amount exceeds maximum limit. Please contact support.';
+          } else if (e.toString().contains('COD order') && e.toString().contains('limit')) {
+            final errorString = e.toString();
+            if (errorString.contains('ServerException: ')) {
+              errorMessage = errorString.replaceFirst('ServerException: ', '');
+            } else {
+              errorMessage = 'COD order limit exceeded. Please use online payment.';
+            }
+          } else {
+            errorMessage = 'Please check your order details and try again.';
+          }
+          break;
+      }
+
+      // Use fallback message if none set
+      final finalErrorMessage = errorMessage ?? 'Something went wrong. Please try again.';
+
+      _showError(finalErrorMessage);
     }
   }
 
@@ -484,5 +547,22 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
         ),
       ],
     );
+  }
+
+  void _showOfflineSuccess(String orderNumber) {
+    setState(() {
+      _isProcessing = false;
+      _isSuccess = true;
+      _isError = false;
+      _currentMessage = 'Order queued successfully!';
+      _errorMessage = 'Your order will be processed when connection is restored.\nOrder Number: $orderNumber';
+    });
+
+    // Auto-navigate after delay
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        context.go('/home');
+      }
+    });
   }
 }

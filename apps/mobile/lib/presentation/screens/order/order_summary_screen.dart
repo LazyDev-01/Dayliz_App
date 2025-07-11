@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/order_service.dart';
+import '../../../core/utils/address_formatter.dart';
+import '../../../domain/entities/address.dart';
 import '../../../domain/entities/order.dart' as domain;
 import '../../widgets/common/unified_app_bar.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/services/delivery_calculation_service.dart';
 
 /// Order Summary Screen - Shows detailed order information
 /// Displays order items, billing details, delivery info, and tracking
@@ -67,13 +71,16 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
   Map<String, dynamic> _convertOrderToMap(domain.Order order) {
     return {
       'orderId': order.id,
+      'orderNumber': order.orderNumber, // Add order number for display
       'status': order.status,
       'items': order.items.map((item) => {
         'productName': item.productName,
         'quantity': item.quantity,
-        'price': item.unitPrice,
-        'total': item.totalPrice,
+        'unitPrice': item.unitPrice, // Original price (MRP)
+        'totalPrice': item.totalPrice, // Total for this item
         'image': item.imageUrl ?? 'https://via.placeholder.com/50',
+        'weight': item.options?['weight'] ?? '', // Get weight from options
+        'productId': item.productId, // Include product ID for potential lookups
       }).toList(),
       'subtotal': order.subtotal,
       'tax': order.tax,
@@ -141,9 +148,6 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
           : errorMessage != null
               ? _buildErrorState(theme)
               : _buildBody(context, theme),
-      bottomNavigationBar: isLoading || errorMessage != null
-          ? null
-          : _buildBottomButton(context, theme),
     );
   }
 
@@ -242,7 +246,145 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
     );
   }
 
-  
+  /// Builds quantity with weight display
+  String _buildQuantityWithWeight(int quantity, String weight) {
+    if (weight.isNotEmpty) {
+      return 'Qty: $quantity x $weight';
+    } else {
+      return 'Qty: $quantity';
+    }
+  }
+
+  /// Builds a price row to match cart screen format
+  Widget _buildPriceRow(String label, String amount, {bool isTotal = false, Color? textColor}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isTotal ? 16 : 14,
+            fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400,
+            color: textColor ?? AppColors.textPrimary,
+          ),
+        ),
+        Text(
+          amount,
+          style: TextStyle(
+            fontSize: isTotal ? 16 : 14,
+            fontWeight: isTotal ? FontWeight.w600 : FontWeight.w500,
+            color: textColor ?? AppColors.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Builds delivery fee row with weather impact message and discount display
+  Widget _buildDeliveryFeeRow(DeliveryFeeResult deliveryFeeResult) {
+    // Show crossed-out ₹25 when delivery fee is lower (₹20, ₹15, or FREE)
+    final bool showDeliveryDiscount = !deliveryFeeResult.weatherImpact &&
+                                     (deliveryFeeResult.fee < 25.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Delivery Fee',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            // Show delivery fee with discount styling
+            if (showDeliveryDiscount)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Crossed-out original price (₹25)
+                  const Text(
+                    '₹25',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textSecondary,
+                      decoration: TextDecoration.lineThrough,
+                      decorationColor: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Discounted price
+                  Text(
+                    deliveryFeeResult.displayText,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: deliveryFeeResult.isFree ? Colors.green[600] : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              )
+            else
+              // Normal delivery fee display (for ₹25 or weather surcharge)
+              Text(
+                deliveryFeeResult.displayText,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: deliveryFeeResult.weatherImpact ? Colors.orange[700] : AppColors.textPrimary,
+                ),
+              ),
+          ],
+        ),
+        // Show weather impact message only for bad weather
+        if (deliveryFeeResult.weatherImpact && deliveryFeeResult.weatherMessage != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            deliveryFeeResult.weatherMessage!,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.orange[700],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+        // Show delivery discount message for lower fees
+        if (showDeliveryDiscount && !deliveryFeeResult.isFree) ...[
+          const SizedBox(height: 4),
+          Text(
+            'You saved ₹${(25.0 - deliveryFeeResult.fee).toStringAsFixed(0)} on delivery!',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.green[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Builds a dotted divider to match cart screen format
+  Widget _buildDottedDivider() {
+    return Row(
+      children: List.generate(
+        50, // Number of dashes
+        (index) => Expanded(
+          child: Container(
+            height: 1,
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            color: Colors.grey[400],
+          ),
+        ),
+      ),
+    );
+  }
+
+
   /// Builds the main body content
   Widget _buildBody(BuildContext context, ThemeData theme) {
     return SingleChildScrollView(
@@ -257,7 +399,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
           _buildBillDetailsSection(theme),
           const SizedBox(height: 16),
           _buildOrderInvoiceSection(theme), // Moved to last as requested
-          const SizedBox(height: 100), // Space for bottom button
+          const SizedBox(height: 24), // Bottom spacing
         ],
       ),
     );
@@ -266,11 +408,6 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
   /// Builds the order status section
   Widget _buildOrderStatusSection(ThemeData theme) {
     final status = orderData['status'] ?? 'pending';
-    final orderId = orderData['orderId'] ?? 'N/A';
-
-    // Note: estimatedDelivery parsing removed as we no longer display the date/time
-
-    final items = orderData['items'] as List? ?? [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -353,27 +490,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Order ID: #$orderId',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                '${items.length} ${items.length == 1 ? 'item' : 'items'}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
+
         ],
       ),
     );
@@ -399,9 +516,10 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
   /// Builds the order invoice section
   Widget _buildOrderInvoiceSection(ThemeData theme) {
     final orderId = orderData['orderId'] ?? 'N/A';
+    final orderNumber = orderData['orderNumber'] ?? orderId; // Use order number if available, fallback to ID
     final paymentMethod = orderData['paymentMethod'] ?? 'cod';
     final shippingAddress = orderData['shippingAddress'] as Map<String, dynamic>? ?? {};
-    final createdAt = orderData['createdAt'] as DateTime? ?? DateTime.now();
+    final createdAt = realOrder?.createdAt ?? DateTime.now(); // Use realOrder createdAt for proper timezone
 
     // Format payment method
     String getPaymentMethodText(String method) {
@@ -419,16 +537,24 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
       }
     }
 
-    // Format delivery address
+    // Format delivery address using standardized formatter
     String getDeliveryAddress() {
       if (shippingAddress.isEmpty) return 'Address not available';
-      
-      final addressLine1 = shippingAddress['addressLine1'] ?? '';
-      final city = shippingAddress['city'] ?? '';
-      final state = shippingAddress['state'] ?? '';
-      final postalCode = shippingAddress['postalCode'] ?? '';
-      
-      return '$addressLine1, $city, $state $postalCode'.trim();
+
+      // Create a temporary Address object for formatting
+      final tempAddress = Address(
+        id: '',
+        userId: '',
+        addressLine1: shippingAddress['addressLine1'] ?? '',
+        addressLine2: shippingAddress['addressLine2'] ?? '',
+        city: shippingAddress['city'] ?? '',
+        state: shippingAddress['state'] ?? '',
+        postalCode: shippingAddress['postalCode'] ?? '',
+        country: shippingAddress['country'] ?? 'India',
+      );
+
+      // Use full address format instead of compact format
+      return AddressFormatter.formatAddress(tempAddress, includeCountry: true);
     }
 
     return Container(
@@ -463,7 +589,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildInvoiceRow('Order ID', '#$orderId'),
+          _buildInvoiceRow('Order ID', orderNumber.startsWith('DLZ-') ? orderNumber : '#$orderNumber'),
           const SizedBox(height: 12),
           _buildInvoiceRow('Mode of Payment', getPaymentMethodText(paymentMethod)),
           const SizedBox(height: 12),
@@ -497,8 +623,8 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
             color: Colors.black87,
             height: isAddress ? 1.4 : 1.0,
           ),
-          maxLines: isAddress ? 3 : 1,
-          overflow: TextOverflow.ellipsis,
+          maxLines: isAddress ? null : 1, // Allow unlimited lines for address
+          overflow: isAddress ? TextOverflow.visible : TextOverflow.ellipsis,
         ),
       ],
     );
@@ -548,9 +674,9 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
                 _buildOrderItem(
                   imageUrl: item['image'] ?? 'https://via.placeholder.com/50',
                   title: item['productName'] ?? 'Product',
-                  weight: 'Qty: ${item['quantity'] ?? 1}',
-                  originalPrice: '₹${(item['price'] ?? 0.0).toStringAsFixed(2)}',
-                  discountedPrice: '₹${(item['total'] ?? 0.0).toStringAsFixed(2)}',
+                  weight: _buildQuantityWithWeight(item['quantity'] ?? 1, item['weight'] ?? ''),
+                  originalPrice: '₹${(item['unitPrice'] ?? 0.0).toStringAsFixed(0)}', // Price per unit (discounted)
+                  discountedPrice: '₹${(item['totalPrice'] ?? 0.0).toStringAsFixed(0)}', // Total for this item
                 ),
                 if (index < items.length - 1) const SizedBox(height: 16),
               ],
@@ -627,19 +753,18 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            if (originalPrice != discountedPrice) ...[
-              Text(
-                originalPrice,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[500],
-                  decoration: TextDecoration.lineThrough,
-                ),
-              ),
-              const SizedBox(height: 2),
-            ],
+            // Show unit price
             Text(
-              discountedPrice,
+              originalPrice, // This is the unit price
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 2),
+            // Show total price for this item
+            Text(
+              discountedPrice, // This is the total price
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -652,143 +777,74 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
     );
   }
 
-  /// Builds the bill details section
+  /// Builds the bill details section to match cart screen format with weather-adaptive delivery fees
   Widget _buildBillDetailsSection(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Bill Details',
-                style: TextStyle(
-                  fontSize: 16, // 16px as requested
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700], // Dark grey as requested
-                ),
+    // Calculate values to match cart screen format
+    final subtotal = orderData['subtotal'] ?? 0.0;
+    final tax = orderData['tax'] ?? 0.0;
+
+    return FutureBuilder<bool>(
+      future: DeliveryCalculationService.getCurrentWeatherStatus(),
+      builder: (context, weatherSnapshot) {
+        final isBadWeather = weatherSnapshot.data ?? false;
+
+        // Calculate delivery fee using the same logic as cart screen
+        final deliveryFeeResult = DeliveryCalculationService.calculateDeliveryFee(
+          cartTotal: subtotal, // Use subtotal for delivery fee calculation
+          isBadWeather: isBadWeather,
+        );
+
+        // Use calculated delivery fee or original if it was stored differently
+        final deliveryFee = deliveryFeeResult.fee;
+
+        // Recalculate total with proper delivery fee
+        final recalculatedTotal = subtotal + tax + deliveryFee;
+        final roundedTotal = recalculatedTotal.round().toDouble();
+
+        return Container(
+          padding: const EdgeInsets.all(16), // Match cart screen padding
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
-              const SizedBox(height: 8),
-              _buildDottedLine(), // Added dotted line
             ],
           ),
-          const SizedBox(height: 16),
-          _buildBillRow('Subtotal', '₹${(orderData['subtotal'] ?? 0.0).toStringAsFixed(2)}'),
-          const SizedBox(height: 8),
-          _buildBillRow('Tax', '₹${(orderData['tax'] ?? 0.0).toStringAsFixed(2)}'),
-          const SizedBox(height: 8),
-          _buildBillRow('Delivery Fee', orderData['shipping'] == 0.0 ? 'FREE' : '₹${(orderData['shipping'] ?? 0.0).toStringAsFixed(2)}'),
-          const SizedBox(height: 16),
-          const Divider(),
-          const SizedBox(height: 16),
-          _buildBillRow(
-            'Total',
-            '₹${(orderData['total'] ?? 0.0).toStringAsFixed(2)}',
-            isTotal: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Bill Details Title
+              const Text(
+                'Bill Details',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary, // Match cart screen color
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildPriceRow('Sub total', '₹${subtotal.toStringAsFixed(0)}'), // Match cart format
+              const SizedBox(height: 8),
+              _buildPriceRow('Taxes and Charges', '₹${tax.toStringAsFixed(1)}'), // Match cart format
+              const SizedBox(height: 8),
+              _buildDeliveryFeeRow(deliveryFeeResult), // Use weather-adaptive delivery fee
+              const SizedBox(height: 16),
+              _buildDottedDivider(), // Match cart screen divider
+              const SizedBox(height: 16),
+              _buildPriceRow(
+                'Grand Total', // Changed from 'Total' to 'Grand Total'
+                '₹${roundedTotal.toStringAsFixed(0)}', // Round to whole number
+                isTotal: true,
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  /// Builds individual bill row
-  Widget _buildBillRow(String label, String amount, {bool isTotal = false, bool isPositive = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: isTotal ? 16 : 14,
-            fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400,
-            color: Colors.black,
-          ),
-        ),
-        Text(
-          amount,
-          style: TextStyle(
-            fontSize: isTotal ? 16 : 14,
-            fontWeight: isTotal ? FontWeight.w600 : FontWeight.w500,
-            color: isPositive ? Colors.green : Colors.black,
-          ),
-        ),
-      ],
-    );
-  }
-
-  
-  /// Builds the bottom track order button
-  Widget _buildBottomButton(BuildContext context, ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        height: 50,
-        child: ElevatedButton(
-          onPressed: () {
-            // TODO: Implement track order functionality
-            _showTrackOrderDialog(context);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Text(
-            'Track your order',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Shows track order dialog (placeholder)
-  void _showTrackOrderDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Track Order'),
-          content: const Text('This is a UI-only implementation. Order tracking functionality will be added later.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
         );
       },
     );
   }
+
 }

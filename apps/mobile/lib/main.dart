@@ -6,9 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get_it/get_it.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:dayliz_app/core/network/network_info.dart';
 import 'package:dayliz_app/core/config/app_config.dart';
 import 'package:dayliz_app/core/services/supabase_service.dart';
 import 'package:dayliz_app/core/services/firebase_notification_service.dart';
+import 'package:dayliz_app/core/services/conditional_firebase_service.dart';
 import 'package:dayliz_app/core/utils/image_preloader.dart';
 import 'package:dayliz_app/core/storage/hive_config.dart';
 // Clean architecture imports
@@ -18,12 +24,18 @@ import 'package:dayliz_app/presentation/screens/dev/clean_settings_screen.dart';
 import 'package:dayliz_app/presentation/screens/debug/supabase_connection_test_screen.dart';
 import 'package:dayliz_app/presentation/screens/debug/debug_menu_screen.dart';
 import 'package:dayliz_app/presentation/screens/debug/clean_google_sign_in_debug_screen.dart';
-
+// Location gating imports
+import 'package:dayliz_app/presentation/screens/location/location_access_screen.dart';
+import 'package:dayliz_app/presentation/screens/location/location_selection_screen.dart';
+import 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart';
+import 'package:dayliz_app/presentation/providers/location_gating_provider.dart';
+// Connectivity imports
+import 'core/services/connectivity_checker.dart';
+import 'network_error_app.dart';
 
 import 'package:dayliz_app/presentation/screens/debug/cart_dependency_test_screen.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 // Clean architecture imports
-import 'package:flutter/foundation.dart';
 // Clean architecture imports for database operations
 import 'package:dayliz_app/data/datasources/clean_database_seeder.dart';
 import 'package:dayliz_app/data/datasources/clean_database_migrations.dart';
@@ -34,7 +46,6 @@ import 'package:dayliz_app/domain/usecases/remove_from_cart_usecase.dart';
 import 'package:dayliz_app/domain/usecases/get_wishlist_products_usecase.dart';
 
 import 'package:dayliz_app/presentation/screens/dev/clean_database_seeder_screen.dart';
-import 'package:get_it/get_it.dart';
 import 'di/dependency_injection.dart' show sl;
 // Clean architecture screens
 import 'package:dayliz_app/presentation/screens/product/clean_product_listing_screen.dart';
@@ -53,7 +64,8 @@ import 'presentation/screens/auth/clean_login_screen.dart';
 import 'presentation/screens/auth/premium_auth_landing_screen.dart';
 import 'presentation/screens/auth/phone_auth_screen.dart';
 import 'presentation/screens/auth/otp_verification_screen.dart';
-import 'presentation/screens/splash/splash_screen.dart';
+import 'presentation/screens/splash/splash_screen.dart'; // Original (temporarily disabled)
+import 'presentation/screens/splash/loading_animation_splash_screen.dart'; // New loading animation splash
 import 'presentation/screens/debug/direct_auth_test_screen.dart';
 import 'presentation/screens/auth/clean_register_screen.dart';
 import 'presentation/screens/auth/clean_forgot_password_screen.dart';
@@ -71,12 +83,6 @@ import 'presentation/screens/profile/clean_address_form_screen.dart';
 import 'presentation/screens/profile/clean_user_profile_screen.dart';
 import 'presentation/screens/profile/clean_preferences_screen.dart';
 import 'presentation/screens/search/enhanced_search_screen.dart';
-import 'presentation/screens/location/location_setup_screen.dart';
-import 'presentation/screens/location/location_search_screen.dart';
-import 'presentation/screens/location/optimal_location_setup_screen.dart';
-import 'presentation/screens/debug/location_setup_test_screen.dart';
-import 'presentation/screens/debug/test_gps_integration_screen.dart';
-import 'presentation/screens/debug/test_google_maps_integration_screen.dart';
 
 import 'presentation/screens/notifications/notifications_screen.dart';
 import 'presentation/screens/notifications/notification_settings_screen.dart';
@@ -85,28 +91,62 @@ import 'presentation/screens/coupons/coupons_screen.dart';
 // Splash screen temporarily disabled
 // import 'presentation/screens/splash/clean_splash_screen.dart';
 import 'presentation/screens/auth/clean_verify_token_handler.dart';
+import 'presentation/screens/legal/privacy_policy_screen.dart';
+import 'presentation/screens/legal/terms_of_service_screen.dart';
+import 'presentation/screens/legal/consent_preferences_screen.dart';
+import 'presentation/screens/legal/data_rights_screen.dart';
+
+// Monitoring services
+import 'core/services/app_monitoring_integration.dart';
 
 // Define auth states for router redirection
 enum AppAuthState { authenticated, unauthenticated, emailVerificationRequired }
 
 Future<void> main() async {
+  final appStartTime = DateTime.now();
+  debugPrint('🚀 App startup initiated at: ${appStartTime.toIso8601String()}');
+
   WidgetsFlutterBinding.ensureInitialized();
 
+  // STEP 1: IMMEDIATE CONNECTIVITY CHECK (HIGHEST PRIORITY)
+  debugPrint('🌐 Checking internet connectivity...');
+  final connectivityStartTime = DateTime.now();
+
+  final connectivityResult = await ConnectivityChecker.checkConnectivityDetailed();
+  final connectivityDuration = DateTime.now().difference(connectivityStartTime);
+
+  debugPrint('🌐 Connectivity check completed in: ${connectivityDuration.inMilliseconds}ms');
+  debugPrint('🌐 Connection status: ${connectivityResult.hasConnection ? "✅ CONNECTED" : "❌ NO INTERNET"}');
+
+  // If no internet, show network error app immediately
+  if (!connectivityResult.hasConnection) {
+    debugPrint('❌ No internet detected - launching NetworkErrorApp');
+    runApp(const NetworkErrorApp());
+    return; // Exit early, don't load main app
+  }
+
+  debugPrint('✅ Internet available - proceeding with main app initialization');
+
   // Load environment variables
+  final envStartTime = DateTime.now();
   await dotenv.load(fileName: '.env');
+  debugPrint('✅ Environment loaded in: ${DateTime.now().difference(envStartTime).inMilliseconds}ms');
 
   // Initialize app configuration
+  final configStartTime = DateTime.now();
   await AppConfig.init();
+  debugPrint('✅ App config loaded in: ${DateTime.now().difference(configStartTime).inMilliseconds}ms');
 
   // Initialize high-performance local storage
+  final hiveStartTime = DateTime.now();
   await HiveConfig.initialize();
+  debugPrint('✅ Hive storage initialized in: ${DateTime.now().difference(hiveStartTime).inMilliseconds}ms');
 
-  // Initialize Firebase for notifications
+  // Initialize Firebase with conditional modules (saves ~3-5MB)
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    debugPrint('Firebase initialized successfully');
+    final firebaseService = ConditionalFirebaseService();
+    await firebaseService.initializeFirebase();
+    debugPrint('✅ Conditional Firebase initialized successfully');
 
     // Initialize Firebase notification service
     final notificationService = FirebaseNotificationService.instance;
@@ -116,85 +156,11 @@ Future<void> main() async {
     debugPrint('Error initializing Firebase: $e');
   }
 
-  // Initialize Supabase service first
-  try {
-    final supabaseService = SupabaseService.instance;
-    await supabaseService.initialize();
-    debugPrint('SupabaseService initialized successfully');
-  } catch (e) {
-    debugPrint('Error initializing SupabaseService: $e');
-  }
+  // Initialize only essential services synchronously
+  await _initializeEssentialServices();
 
-  // Initialize authentication components (also initializes cart components)
-  try {
-    await di.initAuthentication();
-    debugPrint('Authentication and cart components initialized successfully');
-  } catch (e) {
-    debugPrint('Error initializing authentication and cart components: $e');
-  }
-
-  // Gracefully initialize clean architecture components
-  try {
-    await di.initCleanArchitecture();
-    debugPrint('Clean architecture initialization successful');
-
-    // Initialize product dependencies with Supabase implementation
-    try {
-      await product_di.initProductDependencies();
-      debugPrint('Product dependencies initialization successful');
-    } catch (e) {
-      debugPrint('Product dependencies initialization failed: $e');
-      // Continue with the app even if product dependencies initialization fails
-    }
-
-    // Repository implementations have been updated to use clean architecture
-    // The updated dependencies can be enabled when all features are migrated
-    // await di_updated.updateDependencies();
-    debugPrint('Clean architecture initialization completed');
-  } catch (e) {
-    debugPrint('Clean architecture initialization failed: $e');
-    // Continue with the app even if clean architecture init fails
-  }
-
-  // Test database connections
-  await _testDatabaseConnections();
-
-  // Verify cart dependencies are registered
-  _verifyCartDependencies();
-
-  // Verify wishlist dependencies are registered
-  _verifyWishlistDependencies();
-
-  // Run database migrations
-  try {
-    final isAuthenticatedUseCase = sl<IsAuthenticatedUseCase>();
-    final isAuthenticated = await isAuthenticatedUseCase.call();
-
-    if (isAuthenticated) {
-      await CleanDatabaseMigrations.instance.runMigrations();
-    } else {
-      debugPrint('Skipping database migrations: Not authenticated');
-    }
-  } catch (e) {
-    debugPrint('Error running database migrations: $e');
-  }
-
-  // Seed database with test data
-  if (kDebugMode) {
-    try {
-      final isAuthenticatedUseCase = sl<IsAuthenticatedUseCase>();
-      final isAuthenticated = await isAuthenticatedUseCase.call();
-
-      if (isAuthenticated) {
-        await CleanDatabaseSeeder.instance.seedDatabase();
-      } else {
-        debugPrint('Skipping database seeding: Not authenticated');
-      }
-    } catch (e) {
-      debugPrint('Error seeding database: $e');
-      // Continue with app startup even if seeding fails
-    }
-  }
+  // Move heavy operations to background after app starts
+  _initializeBackgroundOperations();
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -210,6 +176,10 @@ Future<void> main() async {
       statusBarBrightness: Brightness.light,
     ),
   );
+
+  final totalStartupTime = DateTime.now().difference(appStartTime);
+  debugPrint('🎉 App startup completed in: ${totalStartupTime.inMilliseconds}ms');
+  debugPrint('📊 Target: <2000ms | Actual: ${totalStartupTime.inMilliseconds}ms | Status: ${totalStartupTime.inMilliseconds < 2000 ? "✅ FAST" : "⚠️ SLOW"}');
 
   runApp(
     const ProviderScope(
@@ -240,8 +210,8 @@ class _MyAppState extends ConsumerState<MyApp> {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
 
-    // Force clean auth notifier to initialize
-    ref.watch(clean_auth.authNotifierProvider);
+    // Initialize auth notifier after essential services are ready
+    // This is moved to after dependency injection is complete
 
     return ScreenUtilInit(
       designSize: const Size(375, 812), // iPhone 11 Pro design size
@@ -259,6 +229,129 @@ class _MyAppState extends ConsumerState<MyApp> {
       },
     );
   }
+}
+
+/// Initialize only essential services that are needed for app startup
+/// This keeps the main thread responsive and fast
+Future<void> _initializeEssentialServices() async {
+  try {
+    debugPrint('🚀 Initializing essential services...');
+
+    // Register SharedPreferences first (required by auth)
+    if (!sl.isRegistered<SharedPreferences>()) {
+      final sharedPreferences = await SharedPreferences.getInstance();
+      sl.registerLazySingleton(() => sharedPreferences);
+      debugPrint('✅ SharedPreferences registered');
+    }
+
+    // Register NetworkInfo (required by auth)
+    if (!sl.isRegistered<NetworkInfo>()) {
+      if (kIsWeb) {
+        sl.registerLazySingleton<NetworkInfo>(() => WebNetworkInfoImpl());
+      } else {
+        // Register InternetConnectionChecker first for non-web platforms
+        if (!sl.isRegistered<InternetConnectionChecker>()) {
+          sl.registerLazySingleton(() => InternetConnectionChecker());
+        }
+        sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
+      }
+      debugPrint('✅ NetworkInfo registered');
+    }
+
+    // Initialize Supabase service (essential for auth)
+    final supabaseService = SupabaseService.instance;
+    await supabaseService.initialize();
+    debugPrint('✅ SupabaseService initialized');
+
+    // Initialize basic authentication components
+    await di.initAuthentication();
+    debugPrint('✅ Authentication components initialized');
+
+    debugPrint('✅ Essential services initialization completed');
+  } catch (e) {
+    debugPrint('❌ Error initializing essential services: $e');
+    // Continue with app startup even if some services fail
+  }
+}
+
+/// Initialize heavy operations in background after app starts
+/// This prevents blocking the main thread during startup
+void _initializeBackgroundOperations() {
+  // Run in background without blocking app startup
+  Future.microtask(() async {
+    try {
+      debugPrint('🔄 Starting background initialization...');
+
+      // Initialize monitoring system (non-essential)
+      try {
+        await AppMonitoringIntegration().initialize();
+        debugPrint('✅ Monitoring system initialized');
+      } catch (e) {
+        debugPrint('❌ Monitoring system failed: $e');
+      }
+
+      // Initialize clean architecture components
+      try {
+        await di.initCleanArchitecture();
+        debugPrint('✅ Clean architecture initialized');
+
+        // Initialize product dependencies
+        try {
+          await product_di.initProductDependencies();
+          debugPrint('✅ Product dependencies initialized');
+        } catch (e) {
+          debugPrint('❌ Product dependencies failed: $e');
+        }
+      } catch (e) {
+        debugPrint('❌ Clean architecture failed: $e');
+      }
+
+      // Test database connections
+      await _testDatabaseConnections();
+
+      // Verify dependencies are registered
+      _verifyCartDependencies();
+      _verifyWishlistDependencies();
+
+      // Run database migrations (only if authenticated)
+      try {
+        final isAuthenticatedUseCase = sl<IsAuthenticatedUseCase>();
+        final isAuthenticated = await isAuthenticatedUseCase.call();
+
+        if (isAuthenticated) {
+          debugPrint('🔄 Running database migrations...');
+          await CleanDatabaseMigrations.instance.runMigrations();
+          debugPrint('✅ Database migrations completed');
+        } else {
+          debugPrint('⏭️ Skipping database migrations: Not authenticated');
+        }
+      } catch (e) {
+        debugPrint('❌ Error running database migrations: $e');
+      }
+
+      // Seed database with test data (debug mode only)
+      if (kDebugMode) {
+        try {
+          final isAuthenticatedUseCase = sl<IsAuthenticatedUseCase>();
+          final isAuthenticated = await isAuthenticatedUseCase.call();
+
+          if (isAuthenticated) {
+            debugPrint('🔄 Seeding database with test data...');
+            await CleanDatabaseSeeder.instance.seedDatabase();
+            debugPrint('✅ Database seeding completed');
+          } else {
+            debugPrint('⏭️ Skipping database seeding: Not authenticated');
+          }
+        } catch (e) {
+          debugPrint('❌ Error seeding database: $e');
+        }
+      }
+
+      debugPrint('✅ Background initialization completed');
+    } catch (e) {
+      debugPrint('❌ Background initialization error: $e');
+    }
+  });
 }
 
 Future<void> _testDatabaseConnections() async {
@@ -369,22 +462,23 @@ final routerProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: true, // Enable debug logging to track deep link issues
 
     // CRITICAL FIX: Simplified redirect logic that reads auth state when needed
-    redirect: (context, state) {
-      // Read auth state only when redirect is called, not on every auth change
-      final authState = ref.read(clean_auth.authNotifierProvider);
-      final isAuthenticated = authState.isAuthenticated && authState.user != null;
-      final isLoading = authState.isLoading;
+    redirect: (context, state) async {
+      // Only try to read auth state if dependencies are initialized
+      try {
+        final authState = ref.read(clean_auth.authNotifierProvider);
+        final isAuthenticated = authState.isAuthenticated && authState.user != null;
+        final isLoading = authState.isLoading;
 
-      debugPrint('🔄 ROUTER: Redirect called for ${state.uri.path}');
-      debugPrint('🔄 ROUTER: Full URI: ${state.uri}');
-      debugPrint('🔄 ROUTER: Query params: ${state.uri.queryParameters}');
-      debugPrint('🔄 ROUTER: Auth: $isAuthenticated, Loading: $isLoading');
+        debugPrint('🔄 ROUTER: Redirect called for ${state.uri.path}');
+        debugPrint('🔄 ROUTER: Full URI: ${state.uri}');
+        debugPrint('🔄 ROUTER: Query params: ${state.uri.queryParameters}');
+        debugPrint('🔄 ROUTER: Auth: $isAuthenticated, Loading: $isLoading');
 
-      // Don't redirect during loading states
-      if (isLoading) {
-        debugPrint('ROUTER: Skipping redirect during loading state');
-        return null;
-      }
+        // Don't redirect during loading states
+        if (isLoading) {
+          debugPrint('ROUTER: Skipping redirect during loading state');
+          return null;
+        }
 
       // Handle root path
       if (state.uri.path == '/') {
@@ -398,7 +492,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
         // NEW: Simplified routing for authenticated users
         if (isAuthenticated) {
-          debugPrint('ROUTER: User authenticated, redirecting to home (location setup will be handled by bottom sheet)');
+          debugPrint('ROUTER: User authenticated, redirecting to home');
           return '/home';
         }
 
@@ -417,11 +511,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      // NEW: Allow location setup and location search screens
-      if (state.uri.path == '/location-setup' || state.uri.path == '/location-search') {
-        debugPrint('ROUTER: On location setup screen, allowing access');
-        return null;
-      }
+
 
       // GUEST MODE: Define guest-accessible routes (browsing without authentication)
       final guestAccessibleRoutes = [
@@ -431,16 +521,43 @@ final routerProvider = Provider<GoRouter>((ref) {
         '/reset-password',
         '/phone-auth',      // NEW: Phone authentication
         '/otp-verification', // NEW: OTP verification
-        '/location-setup',  // NEW: Allow location setup for guests too
-        '/location-search', // NEW: Allow location search screen
-        // NOTE: /home is now protected by location setup
+
+        '/privacy-policy',  // NEW: Privacy Policy screen
+        '/terms-of-service', // NEW: Terms of Service screen
+
+        // Location gating routes (accessible without auth)
+        '/location-access',
+        '/location-selection',
+        '/service-not-available',
       ];
 
       // Check if current path is guest-accessible
       final isGuestAccessible = guestAccessibleRoutes.any((route) =>
         state.uri.path == route || state.uri.path.startsWith(route));
 
-      // Allow authenticated users to access all routes (location setup handled by bottom sheet)
+      // LOCATION GATING: Check if location access is required for main app routes
+      final mainAppRoutes = ['/home', '/categories', '/cart', '/profile', '/orders'];
+      final isMainAppRoute = mainAppRoutes.any((route) => state.uri.path.startsWith(route));
+
+      if (isMainAppRoute) {
+        try {
+          // Location checking is now handled in splash screen
+          // Only check if location gating was completed in current session
+          final locationState = ref.read(locationGatingProvider);
+          debugPrint('🎯 ROUTER: Location gating check - ${locationState.toString()}');
+
+          // If location gating is required and not completed, redirect to location access
+          if (locationState.isLocationRequired && !locationState.hasCompletedInSession) {
+            debugPrint('🎯 ROUTER: Location gating required, redirecting to location-access');
+            return '/location-access';
+          }
+        } catch (e) {
+          debugPrint('🎯 ROUTER: Location gating provider not ready: $e');
+          // If location provider is not ready, allow navigation (fail-safe)
+        }
+      }
+
+      // Allow authenticated users to access all routes
 
       // Protect authenticated routes
       if (!isAuthenticated &&
@@ -459,6 +576,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       return null;
+      } catch (e) {
+        // If auth notifier is not ready yet, allow navigation to splash
+        debugPrint('ROUTER: Auth notifier not ready yet, allowing navigation: $e');
+        if (state.uri.path == '/splash' || state.uri.path == '/auth') {
+          return null;
+        }
+        return '/splash';
+      }
     },
 
     // Setup observers for deep linking and index tracking
@@ -470,12 +595,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     // Deep link debugging disabled to reduce noise
 
     routes: [
-      // Splash Screen Route - App Entry Point
+      // Splash Screen Route - App Entry Point (NEW LOADING ANIMATION)
       GoRoute(
         path: '/splash',
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
-          child: const SplashScreen(),
+          child: const LoadingAnimationSplashScreen(), // Using new loading animation splash
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -514,6 +639,42 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
           child: const PremiumAuthLandingScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
+      // Location Access Screen (Smart Location Gating)
+      GoRoute(
+        path: '/location-access',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const LocationAccessScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+
+      // Location Selection Screen (Manual Address Entry)
+      GoRoute(
+        path: '/location-selection',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const LocationSelectionScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return child; // No transition animation
+          },
+        ),
+      ),
+
+      // Service Not Available Screen
+      GoRoute(
+        path: '/service-not-available',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const ServiceNotAvailableScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -717,77 +878,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // Location Setup route
-      GoRoute(
-        path: '/location-setup',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const LocationSetupScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.3),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOutCubic,
-                )),
-                child: child,
-              ),
-            );
-          },
-        ),
-      ),
 
-      // Location Search route
-      GoRoute(
-        path: '/location-search',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const LocationSearchScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1.0, 0),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOutCubic,
-                )),
-                child: child,
-              ),
-            );
-          },
-        ),
-      ),
 
-      // Optimal Location Setup route (NEW IMPLEMENTATION)
-      GoRoute(
-        path: '/location-setup',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const OptimalLocationSetupScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
-      ),
 
-      // Debug Location Setup Test route
-      GoRoute(
-        path: '/debug/location-test',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const LocationSetupTestScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
-      ),
+
+
+
+
 
       // Profile route
       GoRoute(
@@ -1401,32 +1498,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      // GPS Test Screen
-      GoRoute(
-        path: '/test-gps',
-        pageBuilder: (context, state) {
-          return CustomTransitionPage<void>(
-            key: state.pageKey,
-            child: const TestGPSIntegrationScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          );
-        },
-      ),
-      // Mapbox Test Screen
-      GoRoute(
-        path: '/test-google-maps',
-        pageBuilder: (context, state) {
-          return CustomTransitionPage<void>(
-            key: state.pageKey,
-            child: const TestGoogleMapsIntegrationScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          );
-        },
-      ),
+
 
       // Notifications routes
       GoRoute(
@@ -1454,6 +1526,75 @@ final routerProvider = Provider<GoRouter>((ref) {
             return SlideTransition(
               position: Tween<Offset>(
                 begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
+
+      // Legal screens routes
+      GoRoute(
+        path: '/privacy-policy',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const PrivacyPolicyScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1.0, 0.0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
+
+      GoRoute(
+        path: '/terms-of-service',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const TermsOfServiceScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1.0, 0.0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
+
+      GoRoute(
+        path: '/consent-preferences',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const ConsentPreferencesScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1.0, 0.0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
+
+      GoRoute(
+        path: '/data-rights',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const DataRightsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1.0, 0.0),
                 end: Offset.zero,
               ).animate(animation),
               child: child,
@@ -1525,4 +1666,12 @@ class IndexObserver extends NavigatorObserver {
       }
     }
   }
+}
+
+/// Global function to restart the app when connectivity is restored
+void restartApp() {
+  debugPrint('🔄 Restarting app due to connectivity restoration...');
+
+  // Re-run main function to restart the app
+  main();
 }

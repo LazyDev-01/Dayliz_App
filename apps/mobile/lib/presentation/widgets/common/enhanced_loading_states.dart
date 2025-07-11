@@ -119,7 +119,7 @@ class EnhancedLoadingStates {
       baseColor: Colors.grey[300]!,
       highlightColor: Colors.grey[100]!,
       child: Column(
-        children: List.generate(5, (index) => 
+        children: List.generate(5, (index) =>
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -293,6 +293,67 @@ class EnhancedLoadingStates {
         strokeWidth: 2,
         valueColor: AlwaysStoppedAnimation<Color>(
           color ?? Colors.white,
+        ),
+      ),
+    );
+  }
+
+  /// Map skeleton loader for deferred maps loading
+  static Widget mapSkeleton({double height = 300}) {
+    return SizedBox(
+      height: height,
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey[300]!,
+        highlightColor: Colors.grey[100]!,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Stack(
+            children: [
+              // Map background
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              // Fake map elements
+              Positioned(
+                top: 20,
+                left: 20,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 20,
+                right: 20,
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              // Center marker placeholder
+              const Center(
+                child: Icon(
+                  Icons.location_on,
+                  color: Colors.grey,
+                  size: 40,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

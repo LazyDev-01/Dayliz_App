@@ -70,50 +70,59 @@ class ProductCard extends ConsumerWidget {
   }
 
   Widget _buildImageSection(double size) {
-    return Stack(
-      children: [
-        // Product image with rounded corners
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: CachedNetworkImage(
-              imageUrl: product.mainImageUrl,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              errorWidget: (context, url, error) => Container(
-                color: Colors.grey[200],
-                child: const Icon(Icons.image_not_supported, size: 40),
-              ),
-            ),
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Colors.grey[300]!,
+          width: 1.0,
         ),
-
-        // Discount tag if applicable
-        if (product.discountPercentage != null && product.discountPercentage! > 0)
-          Positioned(
-            top: 8,
-            left: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                '${product.discountPercentage!.round()}% OFF',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Stack(
+        children: [
+          // Product image with rounded corners
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: size,
+              height: size,
+              child: CachedNetworkImage(
+                imageUrl: product.mainImageUrl,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.image_not_supported, size: 40),
                 ),
               ),
             ),
           ),
-      ],
+
+          // Discount tag if applicable
+          if (product.discountPercentage != null && product.discountPercentage! > 0)
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${product.discountPercentage!.round()}% OFF',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -155,7 +164,7 @@ class ProductCard extends ConsumerWidget {
                 // Original price if discounted
                 if (product.discountPercentage != null && product.discountPercentage! > 0)
                   Text(
-                    '₹${product.price.toStringAsFixed(2)}',
+                    '₹${product.originalPrice.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 12,
                       decoration: TextDecoration.lineThrough,
@@ -163,7 +172,7 @@ class ProductCard extends ConsumerWidget {
                     ),
                   ),
 
-                // Current price (discounted if applicable)
+                // Current price (retail sale price)
                 Text(
                   '₹${product.discountedPrice.toStringAsFixed(2)}',
                   style: const TextStyle(

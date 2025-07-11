@@ -105,11 +105,11 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   // Get status icon
   const getStatusIcon = (status: Order["status"]) => {
     switch (status) {
-      case "pending":
+      case "processing":
         return <AlertCircle className="h-5 w-5 text-yellow-500" />
       case "packed":
         return <Package className="h-5 w-5 text-blue-500" />
-      case "shipped":
+      case "out_for_delivery":
         return <Truck className="h-5 w-5 text-purple-500" />
       case "delivered":
         return <CheckCircle className="h-5 w-5 text-green-500" />
@@ -123,11 +123,11 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   // Get badge variant based on order status
   const getStatusBadgeVariant = (status: Order["status"]) => {
     switch (status) {
-      case "pending":
+      case "processing":
         return { variant: "outline" as const, className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" }
       case "packed":
         return { variant: "outline" as const, className: "bg-blue-100 text-blue-800 hover:bg-blue-100" }
-      case "shipped":
+      case "out_for_delivery":
         return { variant: "outline" as const, className: "bg-purple-100 text-purple-800 hover:bg-purple-100" }
       case "delivered":
         return { variant: "outline" as const, className: "bg-green-100 text-green-800 hover:bg-green-100" }
@@ -222,11 +222,11 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleStatusUpdate("pending")}
-                    disabled={order.status === "pending"}
-                    className={order.status === "pending" ? "bg-yellow-100" : ""}
+                    onClick={() => handleStatusUpdate("processing")}
+                    disabled={order.status === "processing"}
+                    className={order.status === "processing" ? "bg-yellow-100" : ""}
                   >
-                    Pending
+                    Processing
                   </Button>
                   <Button
                     variant="outline"
@@ -240,11 +240,11 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleStatusUpdate("shipped")}
-                    disabled={order.status === "shipped" || order.status === "cancelled"}
-                    className={order.status === "shipped" ? "bg-purple-100" : ""}
+                    onClick={() => handleStatusUpdate("out_for_delivery")}
+                    disabled={order.status === "out_for_delivery" || order.status === "cancelled"}
+                    className={order.status === "out_for_delivery" ? "bg-purple-100" : ""}
                   >
-                    Shipped
+                    Out for Delivery
                   </Button>
                   <Button
                     variant="outline"

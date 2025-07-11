@@ -36,6 +36,8 @@ class CleanProductListingScreen extends ConsumerStatefulWidget {
 }
 
 class _CleanProductListingScreenState extends ConsumerState<CleanProductListingScreen> {
+  bool _isRefreshing = false;
+
   @override
   void initState() {
     super.initState();
@@ -127,14 +129,26 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
 
   /// Refresh products with pull-to-refresh
   Future<void> _refreshProducts() async {
-    if (widget.subcategoryId != null) {
-      await ref.read(paginatedProductsBySubcategoryProvider(widget.subcategoryId!).notifier).refreshProducts();
-    } else if (widget.categoryId != null) {
-      await ref.read(paginatedProductsByCategoryProvider(widget.categoryId!).notifier).refreshProducts();
-    } else if (widget.searchQuery != null) {
-      await ref.read(paginatedSearchProductsProvider(widget.searchQuery!).notifier).refreshProducts();
-    } else {
-      await ref.read(paginatedAllProductsProvider.notifier).refreshProducts();
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      if (widget.subcategoryId != null) {
+        await ref.read(paginatedProductsBySubcategoryProvider(widget.subcategoryId!).notifier).refreshProducts();
+      } else if (widget.categoryId != null) {
+        await ref.read(paginatedProductsByCategoryProvider(widget.categoryId!).notifier).refreshProducts();
+      } else if (widget.searchQuery != null) {
+        await ref.read(paginatedSearchProductsProvider(widget.searchQuery!).notifier).refreshProducts();
+      } else {
+        await ref.read(paginatedAllProductsProvider.notifier).refreshProducts();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
     }
   }
 
@@ -176,6 +190,20 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
 
     if (state.isEmpty) {
       return _buildEmptyState();
+    }
+
+    // Show skeleton loading during refresh
+    if (_isRefreshing) {
+      return RefreshIndicator(
+        onRefresh: _refreshProducts,
+        child: const SingleChildScrollView(
+          physics: AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: ProductGridSkeleton(itemCount: 6),
+          ),
+        ),
+      );
     }
 
     return RefreshIndicator(

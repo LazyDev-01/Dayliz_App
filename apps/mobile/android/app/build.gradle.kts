@@ -5,6 +5,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
     // Google Services plugin for Firebase/Google Sign-In
     id("com.google.gms.google-services")
+    // Firebase Crashlytics plugin for crash reporting
+    id("com.google.firebase.crashlytics")
+    // Firebase Performance plugin for performance monitoring
+    id("com.google.firebase.firebase-perf")
 }
 
 android {

@@ -21,6 +21,7 @@ class AddressModel extends Address {
     String? landmark,
     String? zoneId,
     String? recipientName,
+    String? floor,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : super(
@@ -42,6 +43,7 @@ class AddressModel extends Address {
           landmark: landmark,
           zoneId: zoneId,
           recipientName: recipientName,
+          floor: floor,
           createdAt: createdAt,
           updatedAt: updatedAt,
         );
@@ -61,7 +63,7 @@ class AddressModel extends Address {
       isDefault: map['is_default'] ?? false,
       // Label field removed
       addressType: map['address_type'],
-      additionalInfo: map['additional_info'],
+      additionalInfo: null, // Field removed from database
       latitude: map['latitude'] != null ?
           double.tryParse(map['latitude'].toString()) : null,
       longitude: map['longitude'] != null ?
@@ -69,6 +71,7 @@ class AddressModel extends Address {
       landmark: map['landmark'],
       zoneId: map['zone_id'],
       recipientName: map['recipient_name'],
+      floor: map['floor'],
       createdAt: map['created_at'] != null ? DateTime.parse(map['created_at'].toString()) : null,
       updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at'].toString()) : null,
     );
@@ -89,12 +92,13 @@ class AddressModel extends Address {
       'is_default': isDefault,
       // Label field removed
       'address_type': addressType,
-      'additional_info': additionalInfo,
+      // 'additional_info' field removed from database
       'latitude': latitude,
       'longitude': longitude,
       'landmark': landmark,
       'zone_id': zoneId,
       'recipient_name': recipientName,
+      'floor': floor,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

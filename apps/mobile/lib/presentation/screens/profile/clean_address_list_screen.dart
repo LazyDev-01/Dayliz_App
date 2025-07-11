@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/haptic_service.dart';
+import '../../../core/utils/address_formatter.dart';
 import '../../../domain/entities/address.dart';
 import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
@@ -9,6 +11,7 @@ import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/skeleton_loaders.dart';
+import '../../widgets/common/haptic_widgets.dart';
 import '../../widgets/address/address_form_bottom_sheet.dart';
 import 'location_picker_screen_v2.dart';
 
@@ -197,23 +200,34 @@ class _CleanAddressListScreenState extends ConsumerState<CleanAddressListScreen>
           Container(
             width: double.infinity,
             margin: const EdgeInsets.all(16),
-            child: ElevatedButton.icon(
-              onPressed: _navigateToAddAddress,
-              icon: const Icon(Icons.add, color: Colors.green, size: 20),
-              label: const Text(
-                'Add New Address',
-                style: TextStyle(
-                  color: Colors.green,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.green,
-                elevation: 0, // Remove shadow
+            child: HapticInkWell(
+              onTap: _navigateToAddAddress,
+              hapticType: HapticType.light,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(
+                    color: Colors.green,
+                    width: 2,
+                  ),
                   borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.add, color: Colors.green, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Add New Address',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -337,59 +351,45 @@ class AddressCard extends StatelessWidget {
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  address.addressType?.toUpperCase() ?? 'ADDRESS',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                Expanded(
+                  child: Text(
+                    address.addressType?.toUpperCase() ?? 'ADDRESS',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+                // Edit/Delete icons moved to top right
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    HapticIconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: onEdit,
+                      tooltip: 'Edit Address',
+                      hapticType: HapticType.light,
+                    ),
+                    HapticIconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: onDelete,
+                      tooltip: 'Delete Address',
+                      color: Theme.of(context).colorScheme.error,
+                      hapticType: HapticType.medium,
+                    ),
+                  ],
                 ),
               ],
             ),
             const SizedBox(height: 8),
+            // Use standardized address format
             Text(
-              address.country.toLowerCase(),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            Text(
-              '${address.addressLine1}, ${address.city}',
+              AddressFormatter.formatAddress(address),
               style: Theme.of(context).textTheme.bodyMedium,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            if (address.phoneNumber != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                'mobile : ${address.phoneNumber!}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
-            ] else ...[
-              const SizedBox(height: 4),
-              Text(
-                'mobile : NA',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: onEdit,
-                  tooltip: 'Edit Address',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: onDelete,
-                  tooltip: 'Delete Address',
-                  color: Theme.of(context).colorScheme.error,
-                ),
-              ],
-            ),
+            // Mobile number display removed as requested
+            const SizedBox(height: 8),
           ],
         ),
       ),

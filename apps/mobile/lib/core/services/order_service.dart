@@ -6,13 +6,166 @@ import '../../domain/entities/address.dart';
 import '../../domain/entities/payment_method.dart';
 import '../../data/models/order_model.dart';
 import '../errors/exceptions.dart';
+import 'network_service.dart';
+import 'offline_order_service.dart';
 
 /// Service for handling order operations with Supabase
 class OrderService {
   final SupabaseClient _supabase;
+  late final OfflineOrderService _offlineOrderService;
 
-  OrderService({required SupabaseClient supabaseClient}) 
-      : _supabase = supabaseClient;
+  OrderService({required SupabaseClient supabaseClient})
+      : _supabase = supabaseClient {
+    _offlineOrderService = OfflineOrderService();
+  }
+
+  /// Create order with smart retry mechanism and offline support
+  Future<Map<String, dynamic>?> _createOrderWithRetry(
+    Map<String, dynamic> orderData,
+    List<Map<String, dynamic>> items,
+  ) async {
+    // Check network connectivity first
+    final hasInternet = await NetworkService.hasInternetConnection();
+
+    if (!hasInternet) {
+      // Queue order for offline processing
+      debugPrint('OrderService: No internet, queuing order offline');
+      final tempOrderId = await _offlineOrderService.queueOrder(
+        userId: orderData['user_id'],
+        items: items,
+        total: orderData['total_amount'],
+        subtotal: orderData['subtotal'] ?? 0,
+        tax: orderData['tax'] ?? 0,
+        shipping: orderData['shipping'] ?? 0,
+        deliveryAddressId: orderData['delivery_address_id'],
+        paymentMethod: orderData['payment_method'],
+        notes: orderData['notes'],
+        couponCode: orderData['coupon_code'],
+      );
+
+      // Return offline order response
+      return {
+        'success': true,
+        'id': tempOrderId,
+        'order_number': 'OFFLINE-$tempOrderId',
+        'status': 'queued',
+        'message': 'Order queued for processing when connection is restored',
+        'offline': true,
+      };
+    }
+
+    Exception? lastException;
+
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        debugPrint('OrderService: Order creation attempt $attempt/3');
+
+        // Create order using original function
+        final response = await _supabase.rpc('create_order_with_items_hierarchical', params: {
+          'order_data': orderData,
+          'order_items': items,
+          'user_lat': null, // Remove GPS request
+          'user_lng': null, // Remove GPS request
+        });
+
+        // If order creation successful, deduct stock immediately
+        if (response != null && response['success'] == true) {
+          try {
+            debugPrint('OrderService: Attempting stock deduction for order ${response['order_number']}');
+            debugPrint('OrderService: Deducting stock for ${items.length} items');
+
+            int successCount = 0;
+            int failCount = 0;
+
+            // Deduct stock for each item individually (more reliable)
+            for (final item in items) {
+              try {
+                final stockResult = await _supabase.rpc('deduct_single_product_stock', params: {
+                  'product_id_param': item['product_id'],
+                  'quantity_param': item['quantity'],
+                  'product_name_param': item['product_name'],
+                });
+
+                if (stockResult != null && stockResult['success'] == true) {
+                  successCount++;
+                  debugPrint('OrderService: ✅ ${stockResult['message']}');
+                } else {
+                  failCount++;
+                  debugPrint('OrderService: ❌ ${stockResult?['error'] ?? 'Unknown error'}');
+                }
+              } catch (itemError) {
+                failCount++;
+                debugPrint('OrderService: ❌ Stock deduction failed for ${item['product_name']}: $itemError');
+              }
+            }
+
+            debugPrint('OrderService: Stock deduction complete - Success: $successCount, Failed: $failCount');
+
+          } catch (stockError) {
+            debugPrint('OrderService: ❌ Stock deduction exception: $stockError');
+            // Continue - order is created, stock deduction can be handled manually
+          }
+        }
+
+        // If successful, return immediately
+        if (response != null) {
+          debugPrint('OrderService: Order creation successful on attempt $attempt');
+          return response;
+        }
+
+      } catch (e) {
+        lastException = e is Exception ? e : Exception(e.toString());
+        final errorType = NetworkService.classifyError(e);
+
+        debugPrint('OrderService: Attempt $attempt failed: $e (Type: $errorType)');
+
+        // Get retry strategy based on error type
+        final retryStrategy = NetworkService.getRetryStrategy(errorType);
+
+        if (!retryStrategy.shouldRetry || attempt >= retryStrategy.maxAttempts) {
+          break;
+        }
+
+        // Wait before retry
+        if (attempt < 3) {
+          await Future.delayed(retryStrategy.delayBetweenAttempts);
+        }
+      }
+    }
+
+    // All attempts failed - check if we should queue offline
+    if (lastException != null && NetworkService.shouldUseOfflineMode(lastException)) {
+      debugPrint('OrderService: Network error detected, queuing order offline');
+      final tempOrderId = await _offlineOrderService.queueOrder(
+        userId: orderData['user_id'],
+        items: items,
+        total: orderData['total_amount'],
+        subtotal: orderData['subtotal'] ?? 0,
+        tax: orderData['tax'] ?? 0,
+        shipping: orderData['shipping'] ?? 0,
+        deliveryAddressId: orderData['delivery_address_id'],
+        paymentMethod: orderData['payment_method'],
+        notes: orderData['notes'],
+        couponCode: orderData['coupon_code'],
+      );
+
+      return {
+        'success': true,
+        'id': tempOrderId,
+        'order_number': 'OFFLINE-$tempOrderId',
+        'status': 'queued',
+        'message': 'Order queued due to network issues. Will be processed when connection is restored.',
+        'offline': true,
+      };
+    }
+
+    // Throw the last exception
+    if (lastException != null) {
+      throw lastException;
+    }
+
+    return null;
+  }
 
   /// Create a new order with items
   Future<domain.Order> createOrder({
@@ -55,7 +208,7 @@ class OrderService {
         'shipping': shipping,
         'discount': discount ?? 0.0,
         'final_amount': total,
-        'status': 'pending',
+        'status': 'processing',
         'payment_method': paymentMethod,
         'payment_status': 'pending',
         'delivery_address_id': deliveryAddressId,
@@ -64,22 +217,90 @@ class OrderService {
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      debugPrint('OrderService: Order data prepared: $orderData');
+      debugPrint('OrderService: Creating order for ${items.length} items, total: ₹$total');
 
-      // Create order using database function for transaction safety
-      final response = await _supabase.rpc('create_order_with_items', params: {
-        'order_data': orderData,
-        'order_items': items,
-      });
+      // Use delivery address for zone detection instead of GPS
+      // TODO: Extract coordinates from selected delivery address when address geocoding is implemented
+      debugPrint('OrderService: Using delivery address for zone detection');
+
+      // Create order using hierarchical database function with retry mechanism
+      final response = await _createOrderWithRetry(orderData, items);
 
       if (response == null) {
         throw ServerException(message: 'Failed to create order - no response from database');
       }
 
-      debugPrint('OrderService: Order created successfully: $response');
+      debugPrint('OrderService: Order creation ${response['success'] == true ? 'successful' : 'failed'}');
+
+      // Check if order creation was successful
+      final isSuccess = response['success'] as bool? ?? false;
+
+      if (!isSuccess) {
+        // Handle different types of validation errors
+        final error = response['error'] as String?;
+        final message = response['message'] as String?;
+        final stockIssues = response['stock_issues'] as List<dynamic>?;
+
+        if (error == 'INSUFFICIENT_STOCK' && stockIssues != null) {
+          // Create detailed error message for stock issues
+          final issueMessages = stockIssues.map((issue) {
+            final productName = issue['product_name'] ?? 'Unknown Product';
+            final requested = issue['requested_quantity'] ?? 0;
+            final available = issue['available_stock'] ?? 0;
+            return '$productName: Requested $requested, Available $available';
+          }).join('\n');
+
+          throw ServerException(
+            message: 'Insufficient stock for some items:\n$issueMessages'
+          );
+        } else if (error?.startsWith('INVALID_PAYMENT') == true) {
+          throw ServerException(
+            message: message ?? 'Invalid payment method selected'
+          );
+        } else if (error?.contains('ORDER_AMOUNT') == true) {
+          throw ServerException(
+            message: message ?? 'Invalid order amount'
+          );
+        } else if (error?.startsWith('COD_LIMIT') == true) {
+          throw ServerException(
+            message: message ?? 'COD order limit exceeded'
+          );
+        } else if (error == 'TRANSACTION_FAILED') {
+          throw ServerException(
+            message: 'Order processing failed. Please try again.'
+          );
+        } else if (error == 'ORDER_NUMBER_CONFLICT') {
+          throw ServerException(
+            message: 'Order processing conflict. Please try again.'
+          );
+        } else if (error == 'ORDER_CREATION_TIMEOUT') {
+          throw ServerException(
+            message: 'Order processing timed out. Please try again.'
+          );
+        } else {
+          throw ServerException(message: message ?? 'Failed to create order');
+        }
+      }
+
+      // Extract order ID from successful response
+      final orderId = response['id'] as String;
+
+      // Fetch the complete order data with items and address
+      final completeOrderResponse = await _supabase
+          .from('orders')
+          .select('''
+            *,
+            order_items(*),
+            addresses!delivery_address_id(*),
+            payment_methods!payment_method_id(*)
+          ''')
+          .eq('id', orderId)
+          .single();
+
+      debugPrint('OrderService: Order ${completeOrderResponse['order_number']} retrieved successfully');
 
       // Convert response to Order entity
-      return _mapDatabaseOrderToEntity(response);
+      return _mapDatabaseOrderToEntity(completeOrderResponse);
 
     } catch (e) {
       debugPrint('OrderService: Error creating order: $e');
@@ -196,6 +417,48 @@ class OrderService {
     try {
       debugPrint('OrderService: Cancelling order $orderId');
 
+      // First restore stock for the cancelled order
+      try {
+        // Get order items to restore stock
+        final orderItemsResponse = await _supabase
+            .from('order_items')
+            .select('product_id, quantity, product_name')
+            .eq('order_id', orderId);
+
+        if (orderItemsResponse.isNotEmpty) {
+          debugPrint('OrderService: Restoring stock for ${orderItemsResponse.length} items');
+
+          int successCount = 0;
+          int failCount = 0;
+
+          for (final item in orderItemsResponse) {
+            try {
+              final stockResult = await _supabase.rpc('restore_single_product_stock', params: {
+                'product_id_param': item['product_id'],
+                'quantity_param': item['quantity'],
+                'product_name_param': item['product_name'],
+              });
+
+              if (stockResult != null && stockResult['success'] == true) {
+                successCount++;
+                debugPrint('OrderService: ✅ ${stockResult['message']}');
+              } else {
+                failCount++;
+                debugPrint('OrderService: ❌ ${stockResult?['error'] ?? 'Unknown error'}');
+              }
+            } catch (itemError) {
+              failCount++;
+              debugPrint('OrderService: ❌ Stock restoration failed for ${item['product_name']}: $itemError');
+            }
+          }
+
+          debugPrint('OrderService: Stock restoration complete - Success: $successCount, Failed: $failCount');
+        }
+      } catch (stockError) {
+        debugPrint('OrderService: ❌ Stock restoration exception: $stockError');
+        // Continue with cancellation even if stock restoration fails
+      }
+
       final response = await _supabase
           .from('orders')
           .update({
@@ -265,7 +528,7 @@ class OrderService {
         id: addressData['id'] ?? '',
         userId: addressData['user_id'] ?? '',
         addressLine1: addressData['address_line1'] ?? '',
-        addressLine2: addressData['address_line2'],
+        addressLine2: addressData['address_line2'] ?? '', // Provide default empty string
         city: addressData['city'] ?? '',
         state: addressData['state'] ?? '',
         postalCode: addressData['postal_code'] ?? '',
@@ -291,14 +554,15 @@ class OrderService {
       return domain.Order(
         id: data['id'] ?? '',
         userId: data['user_id'] ?? '',
+        orderNumber: data['order_number'], // Can be null, handled by domain entity
         items: orderItems,
         subtotal: (data['subtotal'] ?? 0.0).toDouble(),
         tax: (data['tax'] ?? 0.0).toDouble(),
         shipping: (data['shipping'] ?? 0.0).toDouble(),
         total: (data['final_amount'] ?? data['total_amount'] ?? 0.0).toDouble(),
-        status: data['status'] ?? 'pending',
-        createdAt: DateTime.parse(data['created_at'] ?? DateTime.now().toIso8601String()),
-        updatedAt: data['updated_at'] != null ? DateTime.parse(data['updated_at']) : null,
+        status: data['status'] ?? 'processing',
+        createdAt: DateTime.parse(data['created_at'] ?? DateTime.now().toIso8601String()).toLocal(), // Convert to local time
+        updatedAt: data['updated_at'] != null ? DateTime.parse(data['updated_at']).toLocal() : null, // Convert to local time
         shippingAddress: shippingAddress,
         paymentMethod: paymentMethod,
         trackingNumber: data['tracking_number'],

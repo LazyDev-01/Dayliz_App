@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Firebase Crashlytics Configuration -->
+	<key>firebase_crashlytics_collection_enabled</key>
+	<true/>
+	
+	<!-- Firebase Performance Configuration -->
+	<key>firebase_performance_collection_enabled</key>
+	<true/>
+	
+	<!-- Firebase Analytics Configuration -->
+	<key>firebase_analytics_collection_enabled</key>
+	<true/>
+	
+	<!-- Monitoring Configuration -->
+	<key>monitoring_enabled</key>
+	<true/>
+	
+	<!-- Development vs Production Configuration -->
+	<key>monitoring_debug_mode</key>
+	<true/>
+</dict>
+</plist>

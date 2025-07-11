@@ -306,7 +306,7 @@ class _CleanOrderDetailScreenState extends ConsumerState<CleanOrderDetailScreen>
       case domain.Order.statusDelivered:
         color = Colors.green;
         break;
-      case domain.Order.statusShipped:
+      case domain.Order.statusOutForDelivery:
         color = Colors.blue;
         break;
       case domain.Order.statusProcessing:
@@ -440,6 +440,12 @@ class _CleanOrderDetailScreenState extends ConsumerState<CleanOrderDetailScreen>
 
   String _formatStatus(String status) {
     if (status.isEmpty) return '';
+
+    // Handle special case for out_for_delivery
+    if (status == 'out_for_delivery') {
+      return 'Out for Delivery';
+    }
+
     return status[0].toUpperCase() + status.substring(1);
   }
 }
@@ -539,7 +545,7 @@ class _OrderDetailView extends StatelessWidget {
       case domain.Order.statusDelivered:
         color = Colors.green;
         break;
-      case domain.Order.statusShipped:
+      case domain.Order.statusOutForDelivery:
         color = Colors.blue;
         break;
       case domain.Order.statusProcessing:
@@ -571,9 +577,8 @@ class _OrderDetailView extends StatelessWidget {
 
   Widget _buildStatusTimeline(BuildContext context) {
     final statuses = [
-      domain.Order.statusPending,
       domain.Order.statusProcessing,
-      domain.Order.statusShipped,
+      domain.Order.statusOutForDelivery,
       domain.Order.statusDelivered,
     ];
 
@@ -995,6 +1000,12 @@ class _OrderDetailView extends StatelessWidget {
 
   String _formatStatus(String status) {
     if (status.isEmpty) return '';
+
+    // Handle special case for out_for_delivery
+    if (status == 'out_for_delivery') {
+      return 'Out for Delivery';
+    }
+
     return status[0].toUpperCase() + status.substring(1);
   }
 }

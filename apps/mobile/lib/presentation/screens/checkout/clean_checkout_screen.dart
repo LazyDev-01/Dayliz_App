@@ -550,8 +550,10 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
         'productId': item.product.id,
         'productName': item.product.name,
         'quantity': item.quantity,
-        'price': item.product.price,
-        'total': item.product.price * item.quantity,
+        'price': item.product.discountedPrice, // Use discounted price
+        'total': item.product.discountedPrice * item.quantity,
+        'imageUrl': item.product.mainImageUrl, // Include product image
+        'weight': item.product.attributes?['weight'] ?? '', // Include weight from attributes
       }).toList(),
       'subtotal': cartState.totalPrice,
       'tax': cartState.totalPrice * 0.18, // 18% tax
@@ -559,6 +561,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
       'total': cartState.totalPrice + (cartState.totalPrice * 0.18),
       'paymentMethod': _selectedPaymentMethod,
       'shippingAddress': {
+        'id': selectedAddress.id, // Include address ID for proper order creation
         'addressLine1': selectedAddress.addressLine1,
         'addressLine2': selectedAddress.addressLine2,
         'city': selectedAddress.city,

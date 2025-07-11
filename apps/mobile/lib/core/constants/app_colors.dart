@@ -45,6 +45,7 @@ class AppColors {
   static const success = Color(0xFF4CAF50);        // Green for success (matches primary)
   static const info = Color(0xFF4CAF50);           // Standard green for information (matches primary)
   static const warning = Color(0xFFFF8F00);        // Orange for warnings
+  static const locationBlue = Color(0xFF2196F3);   // Blue for location services
   
   // Grocery-specific semantic colors
   static const fresh = Color(0xFF4CAF50);          // Fresh produce (matches primary)

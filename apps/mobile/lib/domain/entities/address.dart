@@ -55,6 +55,9 @@ class Address extends Equatable {
   /// Name of the recipient at this address
   final String? recipientName;
 
+  /// Floor number or description (optional)
+  final String? floor;
+
   /// When this address was created
   final DateTime? createdAt;
 
@@ -80,6 +83,7 @@ class Address extends Equatable {
     this.landmark,
     this.zoneId,
     this.recipientName,
+    this.floor,
     this.createdAt,
     this.updatedAt,
   });
@@ -103,6 +107,7 @@ class Address extends Equatable {
     String? landmark,
     String? zoneId,
     String? recipientName,
+    String? floor,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -124,6 +129,7 @@ class Address extends Equatable {
       landmark: landmark ?? this.landmark,
       zoneId: zoneId ?? this.zoneId,
       recipientName: recipientName ?? this.recipientName,
+      floor: floor ?? this.floor,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -141,7 +147,6 @@ class Address extends Equatable {
         country,
         phoneNumber,
         isDefault,
-
         addressType,
         additionalInfo,
         latitude,
@@ -149,6 +154,7 @@ class Address extends Equatable {
         landmark,
         zoneId,
         recipientName,
+        floor,
         createdAt,
         updatedAt,
       ];

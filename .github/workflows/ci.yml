@@ -284,6 +284,169 @@ jobs:
             apps/mobile/coverage/lcov.info
           retention-days: 30
 
+  # 📊 Bundle Size Analysis & Performance Monitoring
+  bundle-analysis:
+    name: 📦 Bundle Size Analysis
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/production-readiness'
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Install Dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: 📊 Build APK with Size Analysis
+        working-directory: apps/mobile
+        run: |
+          echo "📊 Building APK with detailed size analysis..."
+
+          # Build APK with size analysis
+          flutter build apk --analyze-size --target-platform android-arm64 --verbose > build_output.txt 2>&1
+
+          # Extract size information
+          echo "📦 APK Size Analysis Results:"
+          echo "================================"
+
+          # Get APK file size
+          if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+            APK_SIZE=$(stat -c%s "build/app/outputs/flutter-apk/app-release.apk")
+            APK_SIZE_MB=$(echo "scale=2; $APK_SIZE / 1024 / 1024" | bc)
+            echo "📱 Total APK Size: ${APK_SIZE_MB} MB (${APK_SIZE} bytes)"
+
+            # Check against target (25MB)
+            if (( $(echo "$APK_SIZE_MB > 25" | bc -l) )); then
+              echo "⚠️ WARNING: APK size (${APK_SIZE_MB} MB) exceeds target of 25 MB"
+              echo "🎯 Target: <25 MB for optimal performance"
+            else
+              echo "✅ APK size within target (<25 MB)"
+            fi
+          else
+            echo "❌ APK file not found"
+          fi
+
+          # Extract Flutter size analysis if available
+          if grep -q "app-release.apk" build_output.txt; then
+            echo ""
+            echo "🔍 Detailed Size Breakdown:"
+            grep -A 20 "app-release.apk" build_output.txt || echo "No detailed breakdown available"
+          fi
+
+      - name: 📊 Build APK Bundle Split Analysis
+        working-directory: apps/mobile
+        run: |
+          echo "📊 Building split APKs for size optimization analysis..."
+
+          # Build split APKs to analyze potential savings
+          flutter build apk --split-per-abi --verbose > split_build_output.txt 2>&1
+
+          echo "📦 Split APK Analysis Results:"
+          echo "================================"
+
+          total_size=0
+          for apk in build/app/outputs/flutter-apk/*.apk; do
+            if [ -f "$apk" ]; then
+              size=$(stat -c%s "$apk")
+              size_mb=$(echo "scale=2; $size / 1024 / 1024" | bc)
+              filename=$(basename "$apk")
+              echo "📱 $filename: ${size_mb} MB"
+              total_size=$((total_size + size))
+            fi
+          done
+
+          if [ $total_size -gt 0 ]; then
+            total_mb=$(echo "scale=2; $total_size / 1024 / 1024" | bc)
+            echo "📊 Total Split APKs Size: ${total_mb} MB"
+            echo "💡 Split APKs can reduce download size by ~30-40%"
+          fi
+
+      - name: 📈 Performance Metrics Collection
+        working-directory: apps/mobile
+        run: |
+          echo "📈 Collecting performance metrics..."
+
+          # Create performance report
+          cat > performance_report.md << EOF
+          # 📊 Performance Analysis Report
+
+          ## Bundle Size Analysis
+          - **Build Date**: $(date)
+          - **Commit**: ${{ github.sha }}
+          - **Branch**: ${{ github.ref_name }}
+
+          ## APK Size Metrics
+          EOF
+
+          # Add APK size to report
+          if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+            APK_SIZE=$(stat -c%s "build/app/outputs/flutter-apk/app-release.apk")
+            APK_SIZE_MB=$(echo "scale=2; $APK_SIZE / 1024 / 1024" | bc)
+            echo "- **Total APK Size**: ${APK_SIZE_MB} MB" >> performance_report.md
+
+            # Performance status
+            if (( $(echo "$APK_SIZE_MB > 25" | bc -l) )); then
+              echo "- **Status**: ⚠️ Exceeds target (25 MB)" >> performance_report.md
+              echo "- **Recommendation**: Implement code splitting and asset optimization" >> performance_report.md
+            else
+              echo "- **Status**: ✅ Within target (<25 MB)" >> performance_report.md
+            fi
+          fi
+
+          echo "" >> performance_report.md
+          echo "## Optimization Recommendations" >> performance_report.md
+          echo "- Implement deferred Google Maps loading (-12MB)" >> performance_report.md
+          echo "- Optimize Firebase imports (-3-5MB)" >> performance_report.md
+          echo "- Enable APK splitting (-30-40% download size)" >> performance_report.md
+          echo "- Compress Lottie animations (-1-2MB)" >> performance_report.md
+
+          echo "📋 Performance report generated"
+          cat performance_report.md
+
+      - name: 📊 Upload Performance Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-report-${{ github.sha }}
+          path: |
+            apps/mobile/performance_report.md
+            apps/mobile/build_output.txt
+            apps/mobile/split_build_output.txt
+          retention-days: 30
+
+      - name: 💬 Comment Performance Report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = './apps/mobile/performance_report.md';
+
+            if (fs.existsSync(path)) {
+              const report = fs.readFileSync(path, 'utf8');
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 📊 Performance Analysis Report\n\n${report}\n\n---\n*Generated by Bundle Analysis CI*`
+              });
+            }
+
   # 🔒 Enhanced Security Testing
   security-testing:
     name: 🛡️ Enhanced Security Testing
@@ -394,7 +557,7 @@ jobs:
   notify:
     name: 📢 Enhanced Build Notification
     runs-on: ubuntu-latest
-    needs: [security-scan, build-and-test, security-testing, deploy-staging]
+    needs: [security-scan, build-and-test, bundle-analysis, security-testing, deploy-staging]
     if: always()
 
     steps:
@@ -404,6 +567,7 @@ jobs:
           echo "===================================="
           echo "🔍 Security Scan: ${{ needs.security-scan.result }}"
           echo "🏗️ Build & Test: ${{ needs.build-and-test.result }}"
+          echo "📦 Bundle Analysis: ${{ needs.bundle-analysis.result }}"
           echo "🛡️ Security Testing: ${{ needs.security-testing.result }}"
           echo "🚀 Deployment: ${{ needs.deploy-staging.result }}"
           echo ""
@@ -415,6 +579,9 @@ jobs:
           fi
           if [[ "${{ needs.build-and-test.result }}" == "failure" ]]; then
             failed_jobs="$failed_jobs Build-Test"
+          fi
+          if [[ "${{ needs.bundle-analysis.result }}" == "failure" ]]; then
+            failed_jobs="$failed_jobs Bundle-Analysis"
           fi
           if [[ "${{ needs.security-testing.result }}" == "failure" ]]; then
             failed_jobs="$failed_jobs Security-Testing"

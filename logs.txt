@@ -1,0 +1,38 @@
+I/flutter (23604): GoRouter: INFO: pushing /clean/product/599be5aa-738b-467d-a765-5a56cd2e8a36
+I/flutter (23604): 🔄 ROUTER: Redirect called for /clean/product/599be5aa-738b-467d-a765-5a56cd2e8a36
+I/flutter (23604): 🔄 ROUTER: Full URI: /clean/product/599be5aa-738b-467d-a765-5a56cd2e8a36
+I/flutter (23604): 🔄 ROUTER: Query params: {}
+I/flutter (23604): 🔄 ROUTER: Auth: true, Loading: false
+I/flutter (23604): 📱 PRODUCT_LISTING: ========== PROVIDER SELECTION DEBUG ==========
+I/flutter (23604): 📱 PRODUCT_LISTING: isVirtual: false
+I/flutter (23604): 📱 PRODUCT_LISTING: subcategoryIds: null
+I/flutter (23604): 📱 PRODUCT_LISTING: subcategoryId: 1b614fbd-5a8a-4d91-a22a-29b9441f8d8e
+I/flutter (23604): 📱 PRODUCT_LISTING: categoryId: null
+I/flutter (23604): 📱 PRODUCT_LISTING: title: null
+I/flutter (23604): 📱 PRODUCT_LISTING: Using single subcategory provider
+I/flutter (23604): 📱 PRODUCT_LISTING: Subcategory ID: 1b614fbd-5a8a-4d91-a22a-29b9441f8d8e
+I/flutter (23604): isProductInCartProvider: Repository check for 599be5aa-738b-467d-a765-5a56cd2e8a36 returned false
+
+══╡ EXCEPTION CAUGHT BY IMAGE RESOURCE SERVICE ╞════════════════════════════════════════════════════
+The following _ClientSocketException was thrown resolving an image codec:
+ClientException with SocketException: Failed host lookup: 'via.placeholder.com' (OS Error: No
+address associated with hostname, errno = 7), uri=https://via.placeholder.com/150
+
+When the exception was thrown, this was the stack
+
+Image provider: CachedNetworkImageProvider("https://via.placeholder.com/150", scale: 1.0)
+ Image key: CachedNetworkImageProvider("https://via.placeholder.com/150", scale: 1.0):
+  CachedNetworkImageProvider("https://via.placeholder.com/150", scale: 1.0)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+
+W/System  (23604): A resource failed to call close.
+I/flutter (23604): ProductSupabaseDataSource: Fetching product with ID: 599be5aa-738b-467d-a765-5a56cd2e8a36 from Supabase
+I/flutter (23604): ProductSupabaseDataSource: Retrieved product with ID: 599be5aa-738b-467d-a765-5a56cd2e8a36
+Another exception was thrown: 'package:flutter/src/widgets/basic.dart': Failed assertion: line 3482 pos 14: 'aspectRatio > 0.0': is not true.
+Another exception was thrown: HttpException: Invalid statusCode: 400, uri =
+https://zdezerezpbeuebnompyj.supabase.co/storage/v1/object/public/categories/Grocery%20and%20Kitchen/Atta%20Rice%20and%20Daal/aata_multigrain.webp
+I/flutter (23604): ProductSupabaseDataSource: Fetching related products for product ID: 599be5aa-738b-467d-a765-5a56cd2e8a36
+I/flutter (23604): ProductSupabaseDataSource: Fetching product with ID: 599be5aa-738b-467d-a765-5a56cd2e8a36 from Supabase
+I/flutter (23604): ProductSupabaseDataSource: Retrieved product with ID: 599be5aa-738b-467d-a765-5a56cd2e8a36
+I/flutter (23604): ProductSupabaseDataSource: Retrieved 5 related products
+Another exception was thrown: 'package:flutter/src/widgets/basic.dart': Failed assertion: line 3482 pos 14: 'aspectRatio > 0.0': is not true.

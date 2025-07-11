@@ -46,9 +46,8 @@ class Order extends Equatable {
   });
 
   /// Order statuses
-  static const String statusPending = 'pending';
   static const String statusProcessing = 'processing';
-  static const String statusShipped = 'shipped';
+  static const String statusOutForDelivery = 'out_for_delivery';
   static const String statusDelivered = 'delivered';
   static const String statusCancelled = 'cancelled';
   static const String statusRefunded = 'refunded';
@@ -57,10 +56,10 @@ class Order extends Equatable {
   bool get isActive => status != statusCancelled && status != statusRefunded;
 
   /// Returns true if the order can be cancelled
-  bool get canBeCancelled => status == statusPending || status == statusProcessing;
+  bool get canBeCancelled => status == statusProcessing;
 
   /// Returns true if the order has been shipped
-  bool get isShipped => status == statusShipped || status == statusDelivered;
+  bool get isShipped => status == statusOutForDelivery || status == statusDelivered;
 
   /// Returns the total number of items in the order
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);

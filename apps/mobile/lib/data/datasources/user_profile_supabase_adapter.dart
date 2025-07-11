@@ -98,7 +98,7 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
         isDefault: item['is_default'] ?? false,
         // Label field removed
         addressType: item['address_type'],
-        additionalInfo: item['additional_info'],
+        additionalInfo: null, // Field removed from database
         landmark: item['landmark'],
         latitude: item['latitude'] != null ?
             double.tryParse(item['latitude'].toString()) : null,
@@ -106,6 +106,7 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
             double.tryParse(item['longitude'].toString()) : null,
         zoneId: item['zone_id'],
         recipientName: item['recipient_name'],
+        floor: item['floor'],
         createdAt: item['created_at'] != null ? DateTime.parse(item['created_at'].toString()) : null,
         updatedAt: item['updated_at'] != null ? DateTime.parse(item['updated_at'].toString()) : null,
       )).toList();
@@ -171,12 +172,13 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
         'is_default': shouldBeDefault,
         // Label field removed
         'address_type': address.addressType,
-        'additional_info': address.additionalInfo,
+        // 'additional_info' field removed from database
         'landmark': address.landmark,
         'latitude': address.latitude,
         'longitude': address.longitude,
         'zone_id': address.zoneId,
         'recipient_name': address.recipientName,
+        'floor': address.floor,
         // Let the database handle created_at and updated_at
       };
 
@@ -206,7 +208,7 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
         isDefault: response['is_default'] ?? false,
         // Label field removed
         addressType: response['address_type'],
-        additionalInfo: response['additional_info'],
+        additionalInfo: null, // Field removed from database
         landmark: response['landmark'],
         latitude: response['latitude'] != null ?
             double.tryParse(response['latitude'].toString()) : null,
@@ -214,6 +216,7 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
             double.tryParse(response['longitude'].toString()) : null,
         zoneId: response['zone_id'],
         recipientName: response['recipient_name'],
+        floor: response['floor'],
         createdAt: response['created_at'] != null ? DateTime.parse(response['created_at'].toString()) : null,
         updatedAt: response['updated_at'] != null ? DateTime.parse(response['updated_at'].toString()) : null,
       );
@@ -293,7 +296,7 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
         isDefault: response['is_default'] ?? false,
         // Label field removed
         addressType: response['address_type'],
-        additionalInfo: response['additional_info'],
+        additionalInfo: null, // Field removed from database
         landmark: response['landmark'],
         latitude: response['latitude'] != null ?
             double.tryParse(response['latitude'].toString()) : null,
@@ -301,6 +304,7 @@ class UserProfileSupabaseAdapter implements UserProfileDataSource {
             double.tryParse(response['longitude'].toString()) : null,
         zoneId: response['zone_id'],
         recipientName: response['recipient_name'],
+        floor: response['floor'],
         createdAt: response['created_at'] != null ? DateTime.parse(response['created_at'].toString()) : null,
         updatedAt: response['updated_at'] != null ? DateTime.parse(response['updated_at'].toString()) : null,
       );

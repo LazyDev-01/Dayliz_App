@@ -6,7 +6,7 @@ import '../../../domain/entities/category.dart';
 
 import '../../providers/category_providers.dart';
 import '../../widgets/common/navigation_handler.dart';
-import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/error_state.dart';
 import '../product/clean_product_listing_screen.dart';
 
@@ -31,7 +31,7 @@ class OptimizedCategoriesScreen extends ConsumerWidget {
       ),
       body: categoriesAsync.when(
         data: (categories) => _buildOptimizedCategoriesList(context, categories),
-        loading: () => const LoadingIndicator(message: 'Loading categories...'),
+        loading: () => const CategoriesScreenSkeleton(),
         error: (error, stackTrace) => ErrorState(
           message: error.toString(),
           onRetry: () => ref.refresh(categoriesProvider),
@@ -139,7 +139,17 @@ class OptimizedCategoriesScreen extends ConsumerWidget {
             child: Container(
               width: double.infinity,
               margin: const EdgeInsets.fromLTRB(4, 8, 4, 4),
-              child: _buildOptimizedImage(subcategory, themeColor),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.grey.shade300,
+                  width: 1.0,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0), // Add breathing space
+                child: _buildOptimizedImage(subcategory, themeColor),
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -174,7 +184,7 @@ class OptimizedCategoriesScreen extends ConsumerWidget {
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(8), // Reduced to match padding
       child: CachedNetworkImage(
         imageUrl: subcategory.imageUrl!,
         fit: BoxFit.cover,
@@ -191,7 +201,7 @@ class OptimizedCategoriesScreen extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: themeColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8), // Reduced to match padding
       ),
       child: Icon(
         Icons.category,

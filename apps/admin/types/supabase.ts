@@ -111,7 +111,7 @@ export type Database = {
           id: string
           user_id: string
           total_amount: number
-          status: 'pending' | 'packed' | 'shipped' | 'delivered' | 'cancelled'
+          status: 'processing' | 'packed' | 'out_for_delivery' | 'delivered' | 'cancelled'
           created_at: string
           updated_at: string
           address_id: string
@@ -122,7 +122,7 @@ export type Database = {
           id?: string
           user_id: string
           total_amount: number
-          status?: 'pending' | 'packed' | 'shipped' | 'delivered' | 'cancelled'
+          status?: 'processing' | 'packed' | 'out_for_delivery' | 'delivered' | 'cancelled'
           created_at?: string
           updated_at?: string
           address_id: string
@@ -130,7 +130,7 @@ export type Database = {
           payment_status?: 'pending' | 'completed' | 'failed'
         }
         Update: {
-          status?: 'pending' | 'packed' | 'shipped' | 'delivered' | 'cancelled'
+          status?: 'processing' | 'packed' | 'out_for_delivery' | 'delivered' | 'cancelled'
           updated_at?: string
           payment_status?: 'pending' | 'completed' | 'failed'
         }

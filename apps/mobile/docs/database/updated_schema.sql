@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Create custom types
-CREATE TYPE order_status AS ENUM ('pending', 'processing', 'shipped', 'delivered', 'cancelled');
+CREATE TYPE order_status AS ENUM ('processing', 'out_for_delivery', 'delivered', 'cancelled');
 CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
 CREATE TYPE payment_method AS ENUM ('creditCard', 'wallet', 'cashOnDelivery', 'upi');
 
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id),
     total_amount DECIMAL(10, 2) NOT NULL,
-    status order_status DEFAULT 'pending',
+    status order_status DEFAULT 'processing',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     shipping_address JSONB,

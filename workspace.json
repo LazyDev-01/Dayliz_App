@@ -5,9 +5,9 @@
   "workspaces": {
     "apps": [
       "apps/mobile",
-      "apps/web-dashboard",
-      "apps/vendor-portal",
-      "apps/delivery-app"
+      "apps/admin",
+      "apps/agent",
+      "apps/vendor"
     ],
     "services": [
       "services/api"
@@ -32,9 +32,14 @@
     "mobile:test:coverage": "cd apps/mobile && flutter test --coverage",
     "api:dev": "cd services/api && uvicorn app.main:app --reload",
     "api:test": "cd services/api && pytest",
+    "vendor:dev": "cd apps/vendor && npm run dev",
+    "vendor:build": "cd apps/vendor && npm run build",
+    "vendor:test": "cd apps/vendor && npm run test",
+    "vendor:lint": "cd apps/vendor && npm run lint",
     "docs:serve": "cd docs && python -m http.server 8080",
     "setup:mobile": "cd apps/mobile && flutter pub get",
     "setup:api": "cd services/api && pip install -r requirements.txt",
+    "setup:vendor": "cd apps/vendor && npm install",
     "lint:mobile": "cd apps/mobile && flutter analyze",
     "format:mobile": "cd apps/mobile && dart format .",
     "clean:mobile": "cd apps/mobile && flutter clean && flutter pub get",

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../widgets/common/google_map_widget.dart';
+import '../../widgets/common/deferred_google_map_widget.dart';
 import '../../../core/services/location_service.dart';
 
 /// Test screen to verify Google Maps integration functionality
@@ -95,7 +95,7 @@ class _TestGoogleMapsIntegrationScreenState extends State<TestGoogleMapsIntegrat
 
                   // Google Maps Widget
                   Expanded(
-                    child: GoogleMapWidget(
+                    child: LazyGoogleMapWidget(
                       height: double.infinity,
                       onLocationChanged: _onLocationChanged,
                       onLocationSelected: _onLocationSelected,

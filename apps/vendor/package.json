@@ -1,0 +1,70 @@
+{
+  "name": "dayliz-vendor-panel",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Dayliz Vendor Panel - React + Vite + TypeScript + Ant Design",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.2.6",
+    "@hookform/resolvers": "^3.3.2",
+    "@supabase/supabase-js": "^2.49.10",
+    "@tanstack/react-query": "^5.81.5",
+    "@tanstack/react-query-devtools": "^5.81.5",
+    "antd": "^5.12.8",
+    "axios": "^1.6.2",
+    "classnames": "^2.3.2",
+    "dayjs": "^1.11.10",
+    "lodash": "^4.17.21",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.48.2",
+    "react-router-dom": "^6.20.1",
+    "react-use": "^17.4.0",
+    "recharts": "^2.8.0",
+    "zod": "^3.22.4",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
+    "@types/lodash": "^4.14.202",
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "@vitejs/plugin-react": "^4.1.1",
+    "@vitest/ui": "^1.0.0",
+    "eslint": "^8.53.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.4",
+    "jsdom": "^23.0.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "vite-plugin-pwa": "^0.17.4",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "vendor-panel",
+    "react",
+    "vite",
+    "typescript",
+    "antd",
+    "supabase",
+    "dayliz"
+  ]
+}

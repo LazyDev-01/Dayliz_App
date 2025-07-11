@@ -9,12 +9,20 @@ abstract class Failure extends Equatable {
   const Failure(this.message);
 
   @override
-  List<Object> get props => [message];
+  List<Object?> get props => [message];
 }
 
 /// Server failure when API requests fail
 class ServerFailure extends Failure {
-  const ServerFailure({String message = 'Server error occurred'}) : super(message);
+  final String? statusCode;
+
+  const ServerFailure({
+    String message = 'Server error occurred',
+    this.statusCode,
+  }) : super(message);
+
+  @override
+  List<Object?> get props => [message, statusCode];
 }
 
 /// Network failure when device is offline

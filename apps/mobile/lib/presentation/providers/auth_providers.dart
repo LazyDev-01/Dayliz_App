@@ -27,12 +27,14 @@ class AuthState {
   final domain.User? user;
   final String? errorMessage;
   final bool isLoading;
+  final bool isLoggingOut;
 
   const AuthState({
     this.isAuthenticated = false,
     this.user,
     this.errorMessage,
     this.isLoading = false,
+    this.isLoggingOut = false,
   });
 
   AuthState copyWith({
@@ -40,13 +42,16 @@ class AuthState {
     domain.User? user,
     String? errorMessage,
     bool? isLoading,
+    bool? isLoggingOut,
     bool clearError = false,
+    bool clearUser = false,
   }) {
     return AuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
-      user: user ?? this.user,
+      user: clearUser ? null : (user ?? this.user),
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       isLoading: isLoading ?? this.isLoading,
+      isLoggingOut: isLoggingOut ?? this.isLoggingOut,
     );
   }
 }
@@ -75,7 +80,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required this.resetPasswordUseCase,
     required this.changePasswordUseCase,
     required this.checkEmailExistsUseCase,
-  }) : super(const AuthState());
+  }) : super(const AuthState()) {
+    // CRITICAL FIX: Initialize authentication state on startup
+    _initializeAuth();
+  }
 
   // Constructor that uses service locator
   factory AuthNotifier.fromServiceLocator() {
@@ -91,6 +99,61 @@ class AuthNotifier extends StateNotifier<AuthState> {
       changePasswordUseCase: sl<ChangePasswordUseCase>(),
       checkEmailExistsUseCase: sl<CheckEmailExistsUseCase>(),
     );
+  }
+
+  /// Initialize authentication state on app startup
+  /// This restores existing sessions so users don't have to login every time
+  Future<void> _initializeAuth() async {
+    debugPrint('🔄 [AuthNotifier] Initializing authentication state...');
+    state = state.copyWith(isLoading: true);
+
+    try {
+      // Check if user is already authenticated (has valid session)
+      final isAuthenticated = await isAuthenticatedUseCase();
+
+      if (isAuthenticated) {
+        debugPrint('✅ [AuthNotifier] User has valid session, restoring user data...');
+
+        // Get current user data from the session
+        final userResult = await getCurrentUserUseCase();
+        await userResult.fold(
+          (failure) async {
+            debugPrint('❌ [AuthNotifier] Failed to get user data: ${failure.message}');
+            // Session exists but user data fetch failed - clear session
+            await logoutUseCase();
+            state = state.copyWith(
+              isAuthenticated: false,
+              clearUser: true,
+              isLoading: false,
+            );
+          },
+          (user) async {
+            debugPrint('✅ [AuthNotifier] Session restored successfully for user: ${user.id}');
+            state = state.copyWith(
+              isAuthenticated: true,
+              user: user,
+              isLoading: false,
+              clearError: true,
+            );
+          },
+        );
+      } else {
+        debugPrint('ℹ️ [AuthNotifier] No existing session found');
+        state = state.copyWith(
+          isAuthenticated: false,
+          user: null,
+          isLoading: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ [AuthNotifier] Error during auth initialization: $e');
+      state = state.copyWith(
+        isAuthenticated: false,
+        user: null,
+        isLoading: false,
+        errorMessage: 'Failed to initialize authentication',
+      );
+    }
   }
 
   Future<void> login(String email, String password, {bool rememberMe = true}) async {
@@ -188,24 +251,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<Either<Failure, bool>> logout() async {
     try {
-      state = state.copyWith(isLoading: true, clearError: true);
+      // Set logging out flag to prevent profile loading during logout
+      state = state.copyWith(isLoading: true, isLoggingOut: true, clearError: true);
       final result = await logoutUseCase();
-      state = state.copyWith(isLoading: false);
 
       return result.fold(
         (failure) {
           state = state.copyWith(
             errorMessage: _mapFailureToMessage(failure),
             isAuthenticated: true,
+            isLoading: false,
+            isLoggingOut: false,
           );
           return Left(failure);
         },
         (success) {
           if (success) {
+            debugPrint('🔄 [AuthNotifier] Logout successful, updating state...');
+            debugPrint('🔄 [AuthNotifier] Before state update - Auth: ${state.isAuthenticated}, User: ${state.user != null}');
+
             state = state.copyWith(
               isAuthenticated: false,
-              user: null,
+              clearUser: true,
+              isLoading: false,
+              isLoggingOut: false,
             );
+
+            debugPrint('🔄 [AuthNotifier] After state update - Auth: ${state.isAuthenticated}, User: ${state.user != null}');
+            debugPrint('🔄 [AuthNotifier] Logout completed successfully');
           }
           return Right(success);
         },
@@ -214,6 +287,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(
         errorMessage: e.toString(),
         isLoading: false,
+        isLoggingOut: false,
       );
       return Left(ServerFailure(message: e.toString()));
     }

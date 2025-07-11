@@ -4,10 +4,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/models/coupon.dart';
+import '../../../core/services/delivery_calculation_service.dart';
+import '../../../core/utils/address_formatter.dart';
 import '../../../theme/app_theme.dart';
 import '../../providers/cart_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/user_profile_providers.dart';
+import '../../providers/coupon_providers.dart';
+import '../../widgets/animations/animated_empty_state.dart';
 
 import '../../widgets/common/common_bottom_nav_bar.dart';
 import '../../widgets/common/navigation_handler.dart';
@@ -37,6 +42,13 @@ class ModernCartScreen extends ConsumerStatefulWidget {
 }
 
 class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
+  final TextEditingController _couponController = TextEditingController();
+
+  @override
+  void dispose() {
+    _couponController.dispose();
+    super.dispose();
+  }
   bool _addressesLoadInitiated = false;
   bool _cartLoadInitiated = false;
 
@@ -129,34 +141,15 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
       );
     }
 
-    // Show empty cart state
+    // Show empty cart state with Lottie animation
     if (cartState.items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.shopping_cart_outlined, size: 64, color: AppColors.textSecondary),
-            const SizedBox(height: 16),
-            const Text(
-              'Your cart is empty',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Add some products to get started',
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                // Navigate to main home screen when cart is empty
-                context.goToMainHomeWithProvider(ref);
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-              child: const Text('Continue Shopping'),
-            ),
-          ],
-        ),
+      return DaylizEmptyStates.emptyCart(
+        onStartShopping: () {
+          // Navigate to main home screen when cart is empty
+          context.goToMainHomeWithProvider(ref);
+        },
+        customTitle: 'Your cart is empty',
+        customSubtitle: 'Add some delicious products to get started',
       );
     }
 
@@ -180,58 +173,77 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     );
   }
 
-  /// Builds the delivery time section
+  /// Builds the delivery time section with weather adaptation
   Widget _buildDeliveryTimeSection(ThemeData theme, DaylizThemeExtension? daylizTheme, CartState cartState) {
     final itemCount = cartState.totalQuantity;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-          bottomLeft: Radius.circular(0),
-          bottomRight: Radius.circular(0),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.success.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+    return FutureBuilder<bool>(
+      future: DeliveryCalculationService.getCurrentWeatherStatus(),
+      builder: (context, weatherSnapshot) {
+        final isBadWeather = weatherSnapshot.data ?? false;
+        final deliveryTime = DeliveryCalculationService.calculateDeliveryTime(
+          isBadWeather: isBadWeather,
+        );
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              topRight: Radius.circular(12),
+              bottomLeft: Radius.circular(0),
+              bottomRight: Radius.circular(0),
             ),
-            child: const Icon(
-              Icons.access_time,
-              color: AppColors.success,
-              size: 20,
-            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              const Text(
-                'Delivery in 30 minutes',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.access_time,
+                  color: AppColors.success,
+                  size: 20,
                 ),
               ),
-              Text(
-                'Shipment of $itemCount item${itemCount != 1 ? 's' : ''}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      deliveryTime.estimateText,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Shipment of $itemCount item${itemCount != 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -276,10 +288,10 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
   }) {
     final product = cartItem.product;
 
-    // Calculate prices - use discountPercentage to determine original price
-    final currentPrice = product.price;
+    // Get prices - retail price and original price
+    final currentPrice = product.discountedPrice; // This is the retail sale price
     final hasDiscount = product.discountPercentage != null && product.discountPercentage! > 0;
-    final originalPrice = hasDiscount ? currentPrice / (1 - (product.discountPercentage! / 100)) : currentPrice;
+    final originalPrice = product.originalPrice; // Calculated original price before discount
 
     // Get product image URL
     final imageUrl = product.mainImageUrl;
@@ -458,144 +470,96 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     return Semantics(
       label: isAdd ? 'Increase quantity' : 'Decrease quantity',
       button: true,
-      child: InkWell(
-        onTap: isDisabled ? null : onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          width: 26, // Fixed width for consistency
-          height: 26, // Fixed height for consistency
-          alignment: Alignment.center,
-          child: isLoading
-              ? const SizedBox(
-                  width: 10,
-                  height: 10,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isDisabled ? null : onTap,
+          borderRadius: BorderRadius.circular(4),
+          splashColor: AppColors.success.withValues(alpha: 0.2),
+          highlightColor: AppColors.success.withValues(alpha: 0.1),
+          child: Container(
+            width: 26, // Fixed width for consistency
+            height: 26, // Fixed height for consistency
+            alignment: Alignment.center,
+            child: isLoading
+                ? const SizedBox(
+                    width: 10,
+                    height: 10,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
+                    ),
+                  )
+                : Icon(
+                    icon,
+                    size: 13,
+                    color: isDisabled
+                        ? AppColors.success.withValues(alpha: 0.5)
+                        : AppColors.success,
                   ),
-                )
-              : Icon(
-                  icon,
-                  size: 13,
-                  color: isDisabled
-                      ? AppColors.success.withValues(alpha: 0.5)
-                      : AppColors.success,
-                ),
+          ),
         ),
       ),
     );
   }
 
-  /// Builds the coupon section
+  /// Builds the modern coupon section
   Widget _buildCouponSection(ThemeData theme, DaylizThemeExtension? daylizTheme) {
     return Container(
-      padding: const EdgeInsets.all(8), // Reduced from EdgeInsets.fromLTRB(4, 4, 4, 2)
+      padding: const EdgeInsets.all(12), // Reduced from 16
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Free Delivery Section with light blue background
-          Container(
-            padding: const EdgeInsets.all(10), // Reduced from 12
-            decoration: BoxDecoration(
-              color: AppColors.info.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6), // Reduced from 8
-                  decoration: BoxDecoration(
-                    color: AppColors.info.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6), // Reduced from 8
-                  ),
-                  child: const Icon(
-                    Icons.two_wheeler,
-                    color: AppColors.info,
-                    size: 18, // Reduced from 20
-                  ),
-                ),
-                const SizedBox(width: 10), // Reduced from 12
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Get FREE delivery',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.info,
-                        ),
-                      ),
-                      const SizedBox(height: 3), // Reduced from 4
-                      const Row(
-                        children: [
-                          Text(
-                            'Add products worth ₹53 more',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward,
-                            size: 14,
-                            color: AppColors.textSecondary,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6), // Reduced from 8
-                      // Progress Bar
-                      Container(
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        child: FractionallySizedBox(
-                          alignment: Alignment.centerLeft,
-                          widthFactor: 0.7, // 70% progress (adjust as needed)
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.info,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6), // Reduced from 8
+          // Coupon Input Section
+          _buildModernCouponInputSection(),
 
-          // See All Coupons Button
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 2, 4, 0), // Reduced padding
-            child: Center(
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(0, 28), // Reduced button height from 32
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), // Reduced padding
-                ),
-                onPressed: () {
-                  // Navigate to coupons/gifts screen
-                  context.push('/coupons');
-                },
-                child: const Text(
-                  'See all coupons ▶',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.bold,
+          const SizedBox(height: 10), // Further reduced
+
+          // See All Coupons Button - Smaller
+          Center(
+            child: TextButton(
+              onPressed: () => context.push('/coupons'),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), // Reduced padding
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'See all coupons',
+                    style: TextStyle(
+                      fontSize: 12, // Reduced from 14
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 3), // Reduced spacing
+                  Container(
+                    padding: const EdgeInsets.all(1.5), // Smaller padding
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white,
+                      size: 8, // Smaller icon
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -604,56 +568,199 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     );
   }
 
-  /// Builds the price breakdown section
-  Widget _buildPriceBreakdown(ThemeData theme, DaylizThemeExtension? daylizTheme, CartState cartState) {
-    // Calculate totals from cart data
-    final itemTotal = cartState.items.fold<double>(0, (sum, item) => sum + (item.quantity * item.product.price));
-    final deliveryFee = itemTotal >= 300 ? 0.0 : 29.0; // Free delivery above ₹300
-    final taxesAndCharges = itemTotal * 0.02; // 2% taxes
-    final grandTotal = itemTotal + deliveryFee + taxesAndCharges;
+  /// Builds modern coupon input section matching the screenshot design
+  Widget _buildModernCouponInputSection() {
+    final cartState = ref.watch(cartNotifierProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Bill Details Title
-          const Text(
-            'Bill Details',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Apply Coupon',
+          style: TextStyle(
+            fontSize: 16, // Reduced from 18 to match other section titles
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
           ),
-          const SizedBox(height: 16),
-          _buildPriceRow('Item total', '₹${itemTotal.toStringAsFixed(0)}'),
-          const SizedBox(height: 8),
-          _buildPriceRow('Taxes and Charges', '₹${taxesAndCharges.toStringAsFixed(1)}'),
-          const SizedBox(height: 8),
-          _buildPriceRow(
-            'Delivery Fee',
-            deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toStringAsFixed(1)}',
-          ),
-          const SizedBox(height: 16),
-          const Divider(),
-          const SizedBox(height: 16),
-          _buildPriceRow(
-            'Grand Total',
-            '₹${grandTotal.toStringAsFixed(1)}',
-            isTotal: true,
+        ),
+        const SizedBox(height: 10), // Reduced from 12
+
+        // Show applied coupon or input field
+        if (cartState.appliedCoupon != null) ...[
+          _buildAppliedCouponDisplay(cartState.appliedCoupon!),
+        ] else ...[
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 44, // Fixed height to reduce size
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100], // Light grey background
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: TextField(
+                    controller: _couponController,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter Coupon Code',
+                      hintStyle: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 13, // Smaller text to fit without ellipsis
+                        fontWeight: FontWeight.w400,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 13, // Smaller text size
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                    textCapitalization: TextCapitalization.characters,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10), // Reduced from 12
+              SizedBox(
+                height: 44, // Match input field height
+                child: ElevatedButton(
+                  onPressed: () => _applyCoupon(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[600],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0), // Reduced horizontal padding
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Apply',
+                    style: TextStyle(
+                      fontSize: 14, // Reduced from 16
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
-      ),
+
+        // Show error message if any
+        if (cartState.couponErrorMessage != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            cartState.couponErrorMessage!,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.red,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Builds the price breakdown section with weather-adaptive delivery fees
+  Widget _buildPriceBreakdown(ThemeData theme, DaylizThemeExtension? daylizTheme, CartState cartState) {
+    // Calculate totals from cart data
+    final itemTotal = cartState.items.fold<double>(0, (sum, item) => sum + (item.quantity * item.product.discountedPrice));
+    final taxesAndCharges = itemTotal * 0.02; // 2% taxes
+
+    return FutureBuilder<bool>(
+      future: DeliveryCalculationService.getCurrentWeatherStatus(),
+      builder: (context, weatherSnapshot) {
+        final isBadWeather = weatherSnapshot.data ?? false;
+        final deliveryFeeResult = DeliveryCalculationService.calculateDeliveryFee(
+          cartTotal: itemTotal,
+          isBadWeather: isBadWeather,
+        );
+
+        // Calculate coupon discount
+        final appliedCoupon = cartState.appliedCoupon;
+        double couponDiscount = 0.0;
+        double finalDeliveryFee = deliveryFeeResult.fee;
+
+        if (appliedCoupon != null) {
+          couponDiscount = appliedCoupon.discountAmount;
+          // Apply free delivery if coupon provides it
+          if (appliedCoupon.givesFreeDelivery) {
+            finalDeliveryFee = 0.0;
+          }
+        }
+
+        final grandTotal = itemTotal + finalDeliveryFee + taxesAndCharges - couponDiscount;
+        final roundedGrandTotal = grandTotal.round().toDouble(); // Round to whole number
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Bill Details Title
+              const Text(
+                'Bill Details',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildPriceRow('Sub total', '₹${itemTotal.toStringAsFixed(0)}'),
+              const SizedBox(height: 8),
+              _buildPriceRow('Taxes and Charges', '₹${taxesAndCharges.toStringAsFixed(1)}'),
+              const SizedBox(height: 8),
+              _buildDeliveryFeeRow(deliveryFeeResult),
+
+              // Show coupon discount if applied
+              if (appliedCoupon != null) ...[
+                const SizedBox(height: 8),
+                _buildPriceRow(
+                  'Coupon Discount (${appliedCoupon.coupon.code})',
+                  '-₹${couponDiscount.toStringAsFixed(1)}',
+                  textColor: Colors.green[600],
+                ),
+              ],
+
+              const SizedBox(height: 16),
+              _buildDottedDivider(),
+              const SizedBox(height: 16),
+              _buildPriceRow(
+                'Grand Total',
+                '₹${roundedGrandTotal.toStringAsFixed(0)}',
+                isTotal: true,
+              ),
+
+              // Show weather surcharge message if bad weather fee is applied
+              if (deliveryFeeResult.weatherImpact) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '* Weather surcharge of ₹${deliveryFeeResult.fee.toStringAsFixed(0)} applied due to adverse weather conditions',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.orange[700],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
   /// Builds individual price row
-  Widget _buildPriceRow(String label, String amount, {bool isTotal = false}) {
+  Widget _buildPriceRow(String label, String amount, {bool isTotal = false, Color? textColor}) {
+    final color = textColor ?? AppColors.textPrimary;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -662,7 +769,7 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
           style: TextStyle(
             fontSize: isTotal ? 16 : 14,
             fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400,
-            color: AppColors.textPrimary,
+            color: color,
           ),
         ),
         Text(
@@ -670,12 +777,195 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
           style: TextStyle(
             fontSize: isTotal ? 16 : 14,
             fontWeight: isTotal ? FontWeight.w600 : FontWeight.w500,
-            color: AppColors.textPrimary,
+            color: color,
           ),
         ),
       ],
     );
   }
+
+  /// Builds delivery fee row with weather impact message and discount display
+  Widget _buildDeliveryFeeRow(DeliveryFeeResult deliveryFeeResult) {
+    // Show crossed-out ₹25 when delivery fee is lower (₹20, ₹15, or FREE)
+    final bool showDeliveryDiscount = !deliveryFeeResult.weatherImpact &&
+                                     (deliveryFeeResult.fee < 25.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Delivery Fee',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            // Show delivery fee with discount styling
+            if (showDeliveryDiscount)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Crossed-out original price (₹25)
+                  const Text(
+                    '₹25',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textSecondary,
+                      decoration: TextDecoration.lineThrough,
+                      decorationColor: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Discounted price
+                  Text(
+                    deliveryFeeResult.displayText,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: deliveryFeeResult.isFree ? Colors.green[600] : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              )
+            else
+              // Normal delivery fee display (for ₹25 or weather surcharge)
+              Text(
+                deliveryFeeResult.displayText,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: deliveryFeeResult.weatherImpact ? Colors.orange[700] : AppColors.textPrimary,
+                ),
+              ),
+          ],
+        ),
+        // Show weather impact message only for bad weather
+        if (deliveryFeeResult.weatherImpact && deliveryFeeResult.weatherMessage != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            deliveryFeeResult.weatherMessage!,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.orange[700],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+        // Show delivery discount message for lower fees
+        if (showDeliveryDiscount && !deliveryFeeResult.isFree) ...[
+          const SizedBox(height: 4),
+          Text(
+            'You saved ₹${(25.0 - deliveryFeeResult.fee).toStringAsFixed(0)} on delivery!',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.green[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Builds dotted divider for invoice feel
+  Widget _buildDottedDivider() {
+    return CustomPaint(
+      size: const Size(double.infinity, 1),
+      painter: DottedLinePainter(),
+    );
+  }
+
+  /// Apply coupon logic
+  Future<void> _applyCoupon() async {
+    final couponCode = _couponController.text.trim();
+    if (couponCode.isEmpty) {
+      return;
+    }
+
+    final success = await ref.read(cartNotifierProvider.notifier).applyCoupon(couponCode);
+    if (success) {
+      _couponController.clear();
+      // Show success feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Coupon "$couponCode" applied successfully!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Build applied coupon display
+  Widget _buildAppliedCouponDisplay(AppliedCoupon appliedCoupon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green[200]!),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.check_circle,
+            color: Colors.green[600],
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  appliedCoupon.coupon.code,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green[700],
+                  ),
+                ),
+                Text(
+                  appliedCoupon.coupon.getDiscountDescription(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.green[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              ref.read(cartNotifierProvider.notifier).removeCoupon();
+            },
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'Remove',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.red[600],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
 
   /// Builds the cancellation policy section
   Widget _buildCancellationPolicy(ThemeData theme, DaylizThemeExtension? daylizTheme) {
@@ -684,6 +974,13 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -698,7 +995,7 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
           ),
           SizedBox(height: 8),
           Text(
-            'Orders cannot be cancelled once packed for delivery. In case of unexpected delays, a refund will be provided, if applicable.',
+            'Orders cannot be cancelled once packed for delivery.',
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,
@@ -712,11 +1009,9 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
 
   /// Builds the bottom section with address and place order button
   Widget _buildBottomSection(BuildContext context, ThemeData theme, DaylizThemeExtension? daylizTheme, CartState cartState) {
-    // Calculate grand total from cart data
-    final itemTotal = cartState.items.fold<double>(0, (sum, item) => sum + (item.quantity * item.product.price));
-    final deliveryFee = itemTotal >= 300 ? 0.0 : 29.0;
+    // Calculate totals from cart data
+    final itemTotal = cartState.items.fold<double>(0, (sum, item) => sum + (item.quantity * item.product.discountedPrice));
     final taxesAndCharges = itemTotal * 0.02;
-    final grandTotal = itemTotal + deliveryFee + taxesAndCharges;
 
     // Get default address from user profile
     final userProfileState = ref.watch(userProfileNotifierProvider);
@@ -728,7 +1023,33 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
             orElse: () => addresses.first,
           )
         : null;
-    return Container(
+
+    return FutureBuilder<bool>(
+      future: DeliveryCalculationService.getCurrentWeatherStatus(),
+      builder: (context, weatherSnapshot) {
+        final isBadWeather = weatherSnapshot.data ?? false;
+        final deliveryFeeResult = DeliveryCalculationService.calculateDeliveryFee(
+          cartTotal: itemTotal,
+          isBadWeather: isBadWeather,
+        );
+
+        // Calculate coupon discount for bottom section
+        final appliedCoupon = cartState.appliedCoupon;
+        double couponDiscount = 0.0;
+        double finalDeliveryFee = deliveryFeeResult.fee;
+
+        if (appliedCoupon != null) {
+          couponDiscount = appliedCoupon.discountAmount;
+          // Apply free delivery if coupon provides it
+          if (appliedCoupon.givesFreeDelivery) {
+            finalDeliveryFee = 0.0;
+          }
+        }
+
+        final grandTotal = itemTotal + finalDeliveryFee + taxesAndCharges - couponDiscount;
+        final roundedGrandTotal = grandTotal.round().toDouble(); // Round to whole number
+
+        return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -774,12 +1095,12 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
                         ),
                       ),
                       Text(
-                        '${defaultAddress.addressLine1}, ${defaultAddress.city}',
+                        AddressFormatter.formatAddress(defaultAddress, includeCountry: false),
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary,
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -868,17 +1189,17 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
           ),
           const SizedBox(height: 8), // Reduced from 16 to 8
 
-          // Total Amount and Proceed Button Section
+          // To Pay and Proceed Button Section
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Total Amount Section (Left Side)
+              // To Pay Section (Left Side)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Total Amount',
+                      'To Pay',
                       style: TextStyle(
                         fontSize: 14,
                         color: AppColors.textSecondary,
@@ -887,7 +1208,7 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '₹${grandTotal.toStringAsFixed(1)}',
+                      '₹${roundedGrandTotal.toStringAsFixed(0)}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -933,6 +1254,8 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 
@@ -1050,11 +1373,11 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     if (addresses.isEmpty) {
       // Navigate to add new address
       _navigateToAddAddress(context);
-    } else if (addresses.length <= 5) {
-      // Show inline bottom sheet for few addresses (increased threshold for testing)
+    } else if (addresses.length <= 10) {
+      // Show scrollable bottom sheet for addresses (increased threshold since it's now scrollable)
       _showInlineAddressSelection(context, addresses);
     } else {
-      // Navigate to full address selection page for many addresses
+      // Navigate to full address selection page for many addresses (10+ addresses)
       _navigateToAddressSelection(context);
     }
   }
@@ -1073,60 +1396,79 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (context, setState) => Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Handle bar
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.textSecondary.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
+          builder: (context, setState) => DraggableScrollableSheet(
+            initialChildSize: 0.6,
+            minChildSize: 0.3,
+            maxChildSize: 0.9,
+            expand: false,
+            builder: (context, scrollController) => Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // Title
-                const Text(
-                  'Select Delivery Address',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                  // Title
+                  const Text(
+                    'Select Delivery Address',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // Address list with improved selection feedback
-                ...addresses.map((address) => _buildAddressOptionWithFeedback(
-                  context,
-                  address,
-                  selectedAddressId,
-                  (String addressId) {
-                    setState(() {
-                      selectedAddressId = addressId;
-                    });
-                  },
-                )),
-
-                const SizedBox(height: 8),
-
-                // Add new address button
-                _buildAddNewAddressButton(context),
-
-                const SizedBox(height: 16),
-              ],
+                  // Scrollable address list
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      itemCount: addresses.length + 1, // +1 for add button
+                      itemBuilder: (context, index) {
+                        if (index < addresses.length) {
+                          // Address item
+                          return _buildAddressOptionWithFeedback(
+                            context,
+                            addresses[index],
+                            selectedAddressId,
+                            (String addressId) {
+                              setState(() {
+                                selectedAddressId = addressId;
+                              });
+                            },
+                          );
+                        } else {
+                          // Add new address button at the end
+                          return Column(
+                            children: [
+                              const SizedBox(height: 8),
+                              _buildAddNewAddressButton(context),
+                              const SizedBox(height: 16),
+                            ],
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -1269,7 +1611,7 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${address.addressLine1}, ${address.city}, ${address.state}',
+                      AddressFormatter.formatAddress(address, includeCountry: false),
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
@@ -1407,15 +1749,7 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     }
   }
 
-  /// Navigate to home screen with clean navigation
-  void _navigateToHome() {
-    debugPrint('🏠 Navigating to home from cart');
 
-    // Use the clean navigation method that updates provider and navigates
-    context.goToMainHomeWithProvider(ref);
-
-    debugPrint('🏠 Navigation to home completed');
-  }
 
   /// Get weight/unit display text from product attributes
   String _getWeightDisplay(Product product) {
@@ -1490,4 +1824,31 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
       ),
     );
   }
+}
+
+/// Custom painter for dotted line divider
+class DottedLinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.grey[400]!
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    const dashWidth = 4.0;
+    const dashSpace = 3.0;
+    double startX = 0;
+
+    while (startX < size.width) {
+      canvas.drawLine(
+        Offset(startX, 0),
+        Offset(startX + dashWidth, 0),
+        paint,
+      );
+      startX += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

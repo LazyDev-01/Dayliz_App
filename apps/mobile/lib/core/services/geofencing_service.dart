@@ -9,14 +9,14 @@ class GeofencingService {
 
     switch (zone.zoneType) {
       case ZoneType.polygon:
-        return _isPointInPolygon(userLocation, zone.boundaryCoordinates!);
+        return isPointInPolygon(userLocation, zone.boundaryCoordinates!);
       case ZoneType.circle:
         return _isPointInCircle(userLocation, zone.center!, zone.radiusKm!);
     }
   }
 
   /// Check if a point is inside a polygon using ray casting algorithm
-  static bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
+  static bool isPointInPolygon(LatLng point, List<LatLng> polygon) {
     if (polygon.length < 3) return false;
 
     int intersections = 0;

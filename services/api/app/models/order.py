@@ -11,7 +11,7 @@ class Order(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
-    status = Column(String, default="pending")  # pending, processing, shipped, delivered, cancelled
+    status = Column(String, default="processing")  # processing, out_for_delivery, delivered, cancelled
     total_amount = Column(Numeric(10, 2))  # Using Numeric for money values
     payment_method = Column(String)  # creditCard, wallet, cashOnDelivery, upi
     payment_status = Column(String, default="pending")  # pending, completed, failed, refunded

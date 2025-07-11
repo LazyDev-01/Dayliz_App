@@ -591,4 +591,16 @@ class UserProfileLocalDataSource implements UserProfileDataSource {
       throw ServerException(message: 'Failed to update preferences: ${e.toString()}');
     }
   }
+
+  /// Clear all cached user profile data (called during logout)
+  Future<bool> clearAllProfiles() async {
+    try {
+      await sharedPreferences.remove(USER_PROFILE_KEY);
+      await sharedPreferences.remove(USER_ADDRESSES_KEY);
+      await sharedPreferences.remove(USER_PREFERENCES_KEY);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 }

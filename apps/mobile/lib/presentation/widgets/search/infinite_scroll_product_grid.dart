@@ -112,7 +112,7 @@ class _InfiniteScrollProductGridState extends ConsumerState<InfiniteScrollProduc
           sliver: SliverGrid(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 0.65,
+              childAspectRatio: 0.55, // Fixed to match CleanProductCard's 1:1.8 aspect ratio
               crossAxisSpacing: 12,
               mainAxisSpacing: 16,
             ),

@@ -8,61 +8,27 @@ import '../../domain/entities/category.dart';
 /// This is the consolidated provider for all category operations
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   try {
+    debugPrint('🏷️ PROVIDER: Fetching categories with display_order...');
     // Fetch categories with subcategories from Supabase
-    // Don't rely on database display_order, we'll sort manually
+    // Use database display_order for proper sorting (explicitly ascending)
     final response = await Supabase.instance.client
         .from('categories')
         .select('*, subcategories(*)')
-        .order('name'); // Order by name first, then we'll custom sort
+        .order('display_order', ascending: true); // Explicitly order ascending by display_order
 
-    // Convert to Category entities
+    debugPrint('🏷️ PROVIDER: Raw response: $response');
+    // Convert to Category entities (already sorted by display_order from database)
     final categories = response.map((data) => _mapToCategory(data)).toList();
 
-    // Custom sort to ensure correct order:
-    // 1. Grocery & Kitchen
-    // 2. Snacks & Drinks
-    // 3. Beauty & Hygiene
-    // 4. Household & Essentials
-    final sortedCategories = _sortCategoriesInCorrectOrder(categories);
+    debugPrint('🏷️ PROVIDER: Final categories order: ${categories.map((c) => '${c.name}(${c.displayOrder})').toList()}');
 
-    return sortedCategories;
+    return categories;
   } catch (e) {
     throw Exception('Failed to load categories: ${e.toString()}');
   }
 });
 
-/// Sort categories in the correct order regardless of database display_order
-List<Category> _sortCategoriesInCorrectOrder(List<Category> categories) {
-  // Define the desired order
-  final desiredOrder = [
-    'Grocery & Kitchen',
-    'Snacks & Drinks',
-    'Beauty & Hygiene',
-    'Household & Essentials'
-  ];
 
-  // Create a map for quick lookup
-  final categoryMap = <String, Category>{};
-  for (final category in categories) {
-    categoryMap[category.name] = category;
-  }
-
-  // Build the sorted list
-  final sortedCategories = <Category>[];
-
-  // Add categories in the desired order
-  for (final categoryName in desiredOrder) {
-    if (categoryMap.containsKey(categoryName)) {
-      sortedCategories.add(categoryMap[categoryName]!);
-      categoryMap.remove(categoryName); // Remove to avoid duplicates
-    }
-  }
-
-  // Add any remaining categories that weren't in our desired order
-  sortedCategories.addAll(categoryMap.values);
-
-  return sortedCategories;
-}
 
 /// Map Supabase data to Category entity
 Category _mapToCategory(Map<String, dynamic> data) {

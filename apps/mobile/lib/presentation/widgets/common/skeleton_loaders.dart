@@ -511,6 +511,103 @@ class CouponSkeleton extends StatelessWidget {
   }
 }
 
+/// Skeleton loader for subcategory cards in categories screen
+class SubcategorySkeleton extends StatelessWidget {
+  const SubcategorySkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SkeletonLoading(
+      isLoading: true,
+      child: Column(
+        children: [
+          // Subcategory Image (circular)
+          SkeletonContainer(
+            height: 60,
+            width: 60,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          const SizedBox(height: 8),
+          // Subcategory Name
+          SkeletonContainer(
+            height: 12,
+            width: 50,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Skeleton loader for categories screen with sections
+class CategoriesScreenSkeleton extends StatelessWidget {
+  final int categoryCount;
+
+  const CategoriesScreenSkeleton({
+    super.key,
+    this.categoryCount = 4,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      itemCount: categoryCount,
+      itemBuilder: (context, index) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Category Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SkeletonLoading(
+                isLoading: true,
+                child: Row(
+                  children: [
+                    // Category Icon
+                    SkeletonContainer(
+                      height: 24,
+                      width: 24,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    const SizedBox(width: 12),
+                    // Category Name
+                    SkeletonContainer(
+                      height: 18,
+                      width: 150,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Subcategories Grid
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                childAspectRatio: 0.65,
+                crossAxisSpacing: 4,
+                mainAxisSpacing: 3,
+              ),
+              itemCount: 8, // Show 8 skeleton subcategories per category
+              itemBuilder: (context, subIndex) {
+                return const SubcategorySkeleton();
+              },
+            ),
+
+            const SizedBox(height: 24),
+          ],
+        );
+      },
+    );
+  }
+}
+
 /// Generic list skeleton loader
 class ListSkeleton extends StatelessWidget {
   final Widget itemSkeleton;

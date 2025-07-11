@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+// Import our new reusable haptic system
+import '../../../core/services/haptic_service.dart';
+import '../../widgets/common/haptic_widgets.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -165,7 +169,24 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
   Widget _buildCombinedProfileSection(UserProfileState state, domain.User? currentUser) {
     final primaryColor = Theme.of(context).primaryColor;
     final displayName = currentUser?.name ?? state.profile?.fullName ?? 'User';
-    final email = currentUser?.email ?? 'No email';
+
+    // Priority logic: phone > email
+    String contactInfo;
+    if (currentUser?.phone != null && currentUser!.phone!.isNotEmpty) {
+      // Format phone number as +91-xxxxxxxxxx
+      final phone = currentUser.phone!;
+      if (phone.length == 10 && phone.startsWith(RegExp(r'[6-9]'))) {
+        contactInfo = '+91-$phone';
+      } else if (phone.startsWith('+91')) {
+        contactInfo = phone;
+      } else {
+        contactInfo = phone; // Use as-is if format is unclear
+      }
+    } else if (currentUser?.email != null && currentUser!.email.isNotEmpty) {
+      contactInfo = currentUser.email;
+    } else {
+      contactInfo = 'No contact info';
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
@@ -183,69 +204,107 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
       ),
       child: Column(
         children: [
-          // Profile section
+          // Profile section with enhanced design
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(20.0),
             child: Row(
               children: [
-                // Profile avatar section (reduced size)
+                // Enhanced profile avatar
                 Container(
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF4CAF50), // AppColors.success - theme green
+                        Color(0xFF388E3C), // AppColors.primaryDark - darker green
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        primaryColor.withOpacity(0.7),
-                        primaryColor.withOpacity(0.9),
-                      ],
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: primaryColor.withOpacity(0.2),
-                        spreadRadius: 1,
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
+                        color: const Color(0xFF4CAF50).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
                       ),
                     ],
                   ),
-                  child: Center(
-                    child: Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 24,
-                    ),
+                  child: ClipOval(
+                    child: state.profile?.profileImageUrl != null
+                        ? Image.network(
+                            state.profile!.profileImageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                decoration: const BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Color(0xFF4CAF50), // AppColors.success - theme green
+                                      Color(0xFF388E3C), // AppColors.primaryDark - darker green
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.person_rounded,
+                                  size: 24, // Reduced icon size to match smaller container
+                                  color: Colors.white,
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Color(0xFF4CAF50), // AppColors.success - theme green
+                                  Color(0xFF388E3C), // AppColors.primaryDark - darker green
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.person_rounded,
+                              size: 24, // Reduced icon size to match smaller container
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
 
-                const SizedBox(width: 16),
+                const SizedBox(width: 20),
 
-                // User info
+                // User info with enhanced styling
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Name only (verified tag removed)
                       Text(
                         displayName,
                         style: TextStyle(
-                          fontSize: 16, // Reduced from 18 to 16 to match section titles
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.grey[800],
+                          letterSpacing: 0.5,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
 
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
 
                       Text(
-                        email,
+                        contactInfo,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 15,
                           color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -257,57 +316,9 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
             ),
           ),
 
-          // Divider between profile and action buttons
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Divider(
-              color: Colors.grey[300],
-              thickness: 1,
-              height: 24,
-            ),
-          ),
-
-          // Quick action buttons
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Wallet Button
-                _buildQuickActionButton(
-                  icon: Icons.account_balance_wallet_outlined,
-                  label: 'Wallet',
-                  onTap: () {
-                    _showFeatureComingSoonDialog('Wallet');
-                  },
-                ),
-
-                // Support Button
-                _buildQuickActionButton(
-                  icon: Icons.chat_outlined,
-                  label: 'Support',
-                  onTap: () {
-                    _showFeatureComingSoonDialog('Support');
-                  },
-                ),
-
-                // Gift Button
-                _buildQuickActionButton(
-                  icon: Icons.card_giftcard_outlined,
-                  label: 'Gifts',
-                  onTap: () {
-                    // Navigate to gifts screen
-                    final authState = ref.read(authNotifierProvider);
-                    if (authState.isAuthenticated && authState.user != null) {
-                      context.push('/coupons');
-                    } else {
-                      _showAuthRequiredDialog('Gifts & Offers');
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
+          // Quick action buttons section removed - wallet, support, and gifts moved/removed
+          // Gifts functionality is now accessible from cart screen
+          const SizedBox(height: 16), // Maintain spacing
         ],
       ),
     );
@@ -635,12 +646,9 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
     final primaryColor = Theme.of(context).primaryColor;
 
     return Expanded(
-      child: InkWell(
-        onTap: () {
-          // Add haptic feedback
-          HapticFeedback.lightImpact();
-          onTap();
-        },
+      child: HapticInkWell(
+        onTap: onTap,
+        hapticType: HapticType.light,
         borderRadius: BorderRadius.circular(16), // Increased for square rounded design
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -693,15 +701,13 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
   }
 
   Widget _buildActionButtons() {
-    final primaryColor = Theme.of(context).primaryColor;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
 
         // Your Account Section
         Padding(
-          padding: const EdgeInsets.only(bottom: 16.0, left: 24.0, top: 8.0),
+          padding: const EdgeInsets.only(bottom: 16.0, left: 16.0, top: 8.0),
           child: Text(
             'Account',
             style: TextStyle(
@@ -730,38 +736,41 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
           child: Column(
             children: [
               // Your Orders (renamed from My Orders)
-              ListTile(
-                leading: Icon(Icons.shopping_bag_outlined, color: primaryColor),
+              HapticListTile(
+                leading: Icon(Icons.shopping_bag_outlined, color: Colors.grey[600]),
                 title: const Text('Your Orders'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/orders'),
+                hapticType: HapticType.light,
               ),
 
               Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
 
               // Address Book (renamed from My Addresses)
-              ListTile(
-                leading: Icon(Icons.location_on_outlined, color: primaryColor),
+              HapticListTile(
+                leading: Icon(Icons.location_on_outlined, color: Colors.grey[600]),
                 title: const Text('Address Book'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/addresses'),
+                hapticType: HapticType.light,
               ),
 
               Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
 
               // Your Wishlist
-              ListTile(
-                leading: Icon(Icons.favorite_border_outlined, color: primaryColor),
+              HapticListTile(
+                leading: Icon(Icons.favorite_border_outlined, color: Colors.grey[600]),
                 title: const Text('Your Wishlist'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/wishlist'),
+                hapticType: HapticType.light,
               ),
 
               Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
 
               // Payment Methods
-              ListTile(
-                leading: Icon(Icons.payment_outlined, color: primaryColor),
+              HapticListTile(
+                leading: Icon(Icons.payment_outlined, color: Colors.grey[600]),
                 title: const Text('Payment Methods'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
@@ -772,6 +781,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                     _showAuthRequiredDialog('Payment Methods');
                   }
                 },
+                hapticType: HapticType.light,
               ),
             ],
           ),
@@ -809,12 +819,26 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
           ),
           child: Column(
             children: [
+              // Help and Support (moved from quick actions)
+              HapticListTile(
+                leading: Icon(Icons.chat_outlined, color: Colors.grey[600]),
+                title: const Text('Help and Support'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  _showFeatureComingSoonDialog('Help and Support');
+                },
+                hapticType: HapticType.light,
+              ),
+
+              Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
+
               // Notifications
-              ListTile(
-                leading: Icon(Icons.notifications_outlined, color: primaryColor),
+              HapticListTile(
+                leading: Icon(Icons.notifications_outlined, color: Colors.grey[600]),
                 title: const Text('Notifications'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/preferences'),
+                hapticType: HapticType.light,
               ),
 
               Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
@@ -828,7 +852,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                     // Language
                     ListTile(
                       onTap: () => _showLanguageDialog(),
-                      leading: Icon(Icons.language_outlined, color: primaryColor),
+                      leading: Icon(Icons.language_outlined, color: Colors.grey[600]),
                       title: const Text('Language'),
                       trailing: const Icon(Icons.chevron_right),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
@@ -837,7 +861,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                     // Theme
                     ListTile(
                       onTap: () => _showThemeDialog(),
-                      leading: Icon(Icons.palette_outlined, color: primaryColor),
+                      leading: Icon(Icons.palette_outlined, color: Colors.grey[600]),
                       title: const Text('Theme'),
                       trailing: const Icon(Icons.chevron_right),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
@@ -846,40 +870,53 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                 ),
               ),
 
+              // Privacy Preferences
+              ListTile(
+                leading: Icon(Icons.privacy_tip_outlined, color: Colors.grey[600]),
+                title: const Text('Privacy Preferences'),
+                subtitle: const Text('Manage your data processing consents'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  context.push('/consent-preferences');
+                },
+              ),
+
               // Privacy Policy
               ListTile(
-                leading: Icon(Icons.privacy_tip_outlined, color: primaryColor),
+                leading: Icon(Icons.description_outlined, color: Colors.grey[600]),
                 title: const Text('Privacy Policy'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  _showFeatureComingSoonDialog('Privacy Policy');
+                  context.push('/privacy-policy');
                 },
               ),
 
               Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
 
               // About
-              ListTile(
-                leading: Icon(Icons.info_outline, color: primaryColor),
+              HapticListTile(
+                leading: Icon(Icons.info_outline, color: Colors.grey[600]),
                 title: const Text('About'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _showAboutDialog(),
+                hapticType: HapticType.light,
               ),
 
               Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
 
               // Debug Menu (for development)
-              ListTile(
-                leading: Icon(Icons.bug_report_outlined, color: primaryColor),
+              HapticListTile(
+                leading: Icon(Icons.bug_report_outlined, color: Colors.grey[600]),
                 title: const Text('Debug Menu'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/clean/debug'),
+                hapticType: HapticType.light,
               ),
 
               Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
 
               // Delete Account - special styling for warning action
-              ListTile(
+              HapticListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
                 title: const Text(
                   'Delete Account',
@@ -889,6 +926,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
                 ),
                 trailing: const Icon(Icons.chevron_right, color: Colors.red),
                 onTap: () => _showDeleteAccountDialog(),
+                hapticType: HapticType.medium, // Stronger feedback for destructive action
               ),
             ],
           ),
@@ -942,6 +980,9 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
 
 
   void _signOut() {
+    // Add haptic feedback for sign out action using our reusable system
+    HapticService.medium();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -965,15 +1006,19 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
   }
 
   Future<void> _handleSignOut() async {
-    await ref.read(authNotifierProvider.notifier).logout();
-    if (mounted) {
-      // Use a separate method to navigate after async operation
-      _navigateToLogin();
+    try {
+      await ref.read(authNotifierProvider.notifier).logout();
+      if (mounted) {
+        _navigateToLogin();
+      }
+    } catch (e) {
+      debugPrint('Logout error: $e');
+      // Handle logout error appropriately
     }
   }
 
   void _navigateToLogin() {
-    context.go('/login');
+    context.go('/auth');
   }
 
   /// Builds skeleton loading for profile screen

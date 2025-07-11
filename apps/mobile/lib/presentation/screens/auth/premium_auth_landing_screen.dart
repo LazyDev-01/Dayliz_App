@@ -449,7 +449,11 @@ class _PremiumAuthLandingScreenState extends ConsumerState<PremiumAuthLandingScr
 
   void _showTermsAndPrivacy(String type) {
     debugPrint('🔄 Showing $type');
-    // TODO: Implement terms and privacy screens
+    if (type == 'privacy') {
+      context.push('/privacy-policy');
+    } else if (type == 'terms') {
+      context.push('/terms-of-service');
+    }
   }
 }
 

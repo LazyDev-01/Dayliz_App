@@ -14,17 +14,19 @@ class CategorySupabaseDataSource implements CategoryRemoteDataSource {
   @override
   Future<List<CategoryModel>> getCategories() async {
     try {
+      debugPrint('🏷️ CATEGORIES: Fetching categories with display_order...');
       final response = await supabaseClient
           .from('categories')
           .select('*')
-          .order('name'); // Order by name first, then we'll custom sort
+          .order('display_order', ascending: true); // Explicitly order ascending by display_order
 
+      debugPrint('🏷️ CATEGORIES: Raw response: $response');
       final categories = response.map((data) => _mapToCategory(data)).toList();
 
-      // Custom sort to ensure correct order
-      final sortedCategories = _sortCategoriesInCorrectOrder(categories);
+      debugPrint('🏷️ CATEGORIES: Mapped categories order: ${categories.map((c) => '${c.name}(${c.displayOrder})').toList()}');
 
-      return sortedCategories;
+      // Return categories already sorted by database display_order
+      return categories;
     } catch (e) {
       throw ServerException(
         message: 'Failed to fetch categories from Supabase: ${e.toString()}',
@@ -57,18 +59,12 @@ class CategorySupabaseDataSource implements CategoryRemoteDataSource {
       final response = await supabaseClient
           .from('categories')
           .select('*, subcategories(*)')
-          .order('name'); // Order by name first, then we'll custom sort
+          .order('display_order', ascending: true); // Explicitly order ascending by display_order
 
       final categories = response.map((data) => _mapToCategoryWithSubcategories(data)).toList();
 
-      // Custom sort to ensure correct order:
-      // 1. Grocery & Kitchen
-      // 2. Snacks & Drinks
-      // 3. Beauty & Hygiene
-      // 4. Household & Essentials
-      final sortedCategories = _sortCategoriesInCorrectOrder(categories);
-
-      return sortedCategories;
+      // Return categories already sorted by database display_order
+      return categories;
     } catch (e) {
       throw ServerException(
         message: 'Failed to fetch categories with subcategories from Supabase: ${e.toString()}',
@@ -156,36 +152,5 @@ class CategorySupabaseDataSource implements CategoryRemoteDataSource {
     }
   }
 
-  /// Sort categories in the correct order regardless of database display_order
-  List<CategoryModel> _sortCategoriesInCorrectOrder(List<CategoryModel> categories) {
-    // Define the desired order
-    final desiredOrder = [
-      'Grocery & Kitchen',
-      'Snacks & Drinks',
-      'Beauty & Hygiene',
-      'Household & Essentials'
-    ];
 
-    // Create a map for quick lookup
-    final categoryMap = <String, CategoryModel>{};
-    for (final category in categories) {
-      categoryMap[category.name] = category;
-    }
-
-    // Build the sorted list
-    final sortedCategories = <CategoryModel>[];
-
-    // Add categories in the desired order
-    for (final categoryName in desiredOrder) {
-      if (categoryMap.containsKey(categoryName)) {
-        sortedCategories.add(categoryMap[categoryName]!);
-        categoryMap.remove(categoryName); // Remove to avoid duplicates
-      }
-    }
-
-    // Add any remaining categories that weren't in our desired order
-    sortedCategories.addAll(categoryMap.values);
-
-    return sortedCategories;
-  }
 }

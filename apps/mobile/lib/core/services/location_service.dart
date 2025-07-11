@@ -53,6 +53,11 @@ class LocationService {
     return await _realService.requestLocationPermission();
   }
 
+  /// Request GPS service to be enabled via Android system dialog
+  Future<bool> requestLocationService() async {
+    return await _realService.requestLocationService();
+  }
+
   /// Get current position with error handling
   Future<Position?> getCurrentPosition() async {
     return await _realService.getCurrentPosition();
@@ -76,7 +81,12 @@ class LocationService {
     return await _realService.getAddressFromCoordinates(latitude, longitude);
   }
 
-  /// Get current location with full address details
+  /// Get current location with coordinates only (no internet required)
+  Future<LocationData?> getCurrentLocationCoordinatesOnly() async {
+    return await _realService.getCurrentLocationCoordinatesOnly();
+  }
+
+  /// Get current location with full address details (requires internet)
   Future<LocationData?> getCurrentLocationWithAddress() async {
     return await _realService.getCurrentLocationWithAddress();
   }

@@ -138,7 +138,7 @@ export type Tables = {
   orders: {
     id: string
     user_id: string
-    status: 'pending' | 'processing' | 'packed' | 'shipped' | 'delivered' | 'cancelled' | 'refunded'
+    status: 'processing' | 'packed' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'refunded'
     total: number
     subtotal: number
     tax: number

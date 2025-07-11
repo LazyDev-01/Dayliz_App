@@ -285,25 +285,25 @@ void main() {
 
     test('should filter orders by status locally', () async {
       // arrange
-      final tPendingOrder = tOrder.copyWith(status: 'pending');
-      final tProcessingOrder = tOrder.copyWith(status: 'processing', id: 'order-2');
+      final tProcessingOrder = tOrder.copyWith(status: 'processing');
+      final tOutForDeliveryOrder = tOrder.copyWith(status: 'out_for_delivery', id: 'order-2');
       final tDeliveredOrder = tOrder.copyWith(status: 'delivered', id: 'order-3');
-      final tAllOrders = [tPendingOrder, tProcessingOrder, tDeliveredOrder];
+      final tAllOrders = [tProcessingOrder, tOutForDeliveryOrder, tDeliveredOrder];
 
       when(mockGetOrdersUseCase.call(any))
           .thenAnswer((_) async => Right(tAllOrders));
       await notifier.getOrders();
 
       // act
-      final pendingOrders = notifier.getOrdersByStatusLocal('pending');
       final processingOrders = notifier.getOrdersByStatusLocal('processing');
+      final outForDeliveryOrders = notifier.getOrdersByStatusLocal('out_for_delivery');
       final deliveredOrders = notifier.getOrdersByStatusLocal('delivered');
 
       // assert
-      expect(pendingOrders.length, 1);
-      expect(pendingOrders[0].status, 'pending');
       expect(processingOrders.length, 1);
       expect(processingOrders[0].status, 'processing');
+      expect(outForDeliveryOrders.length, 1);
+      expect(outForDeliveryOrders[0].status, 'out_for_delivery');
       expect(deliveredOrders.length, 1);
       expect(deliveredOrders[0].status, 'delivered');
     });

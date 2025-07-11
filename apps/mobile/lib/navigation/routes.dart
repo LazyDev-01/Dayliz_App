@@ -23,6 +23,9 @@ import '../presentation/screens/search/enhanced_search_screen.dart';
 import '../presentation/screens/wishlist/clean_wishlist_screen.dart';
 import '../presentation/screens/debug/supabase_connection_test_screen.dart';
 import '../presentation/screens/debug/supabase_auth_test_screen.dart';
+import '../presentation/screens/legal/privacy_policy_screen.dart';
+import '../presentation/screens/legal/terms_of_service_screen.dart';
+import '../presentation/screens/legal/consent_preferences_screen.dart';
 import '../presentation/screens/debug/search_demo_screen.dart';
 import 'package:go_router/go_router.dart';
 
@@ -206,6 +209,20 @@ class CleanRoutes {
         // Debug menu screen
         return MaterialPageRoute(
           builder: (_) => const DebugMenuScreen(),
+          settings: settings,
+        );
+
+      case 'privacy-policy':
+        // Privacy Policy screen
+        return MaterialPageRoute(
+          builder: (_) => const PrivacyPolicyScreen(),
+          settings: settings,
+        );
+
+      case 'terms-of-service':
+        // Terms of Service screen
+        return MaterialPageRoute(
+          builder: (_) => const TermsOfServiceScreen(),
           settings: settings,
         );
 

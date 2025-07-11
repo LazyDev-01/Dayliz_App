@@ -6,6 +6,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../theme/app_theme.dart';
 import '../../providers/cart_providers.dart';
+import '../../providers/user_profile_providers.dart';
+import '../../providers/auth_providers.dart';
 import '../checkout/order_processing_screen.dart';
 
 /// Payment Selection Screen for Cart Checkout Flow
@@ -337,16 +339,37 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
     // Get cart data from provider
     final cartState = ref.read(cartNotifierProvider);
 
-    // Prepare order data
+    // Get current user
+    final authState = ref.read(authNotifierProvider);
+    final user = authState.user;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to place an order')),
+      );
+      return;
+    }
+
+    // Get selected address
+    final selectedAddress = ref.read(defaultAddressProvider);
+
+    if (selectedAddress == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a delivery address')),
+      );
+      return;
+    }
+
+    // Prepare order data with actual user and address data
     final orderData = {
-      'userId': 'current_user_id', // TODO: Get from auth provider
+      'userId': user.id,
       'items': cartState.items.map((item) => {
         'productId': item.product.id,
         'productName': item.product.name,
         'quantity': item.quantity,
         'price': item.product.price,
         'total': item.product.price * item.quantity,
-        'image': 'assets/images/placeholder.png', // TODO: Use actual product image
+        'image': item.product.mainImageUrl,
       }).toList(),
       'subtotal': cartState.totalPrice,
       'tax': cartState.totalPrice * 0.18, // 18% tax
@@ -354,11 +377,16 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
       'total': cartState.totalPrice + (cartState.totalPrice * 0.18),
       'paymentMethod': _selectedPaymentMethod,
       'shippingAddress': {
-        'addressLine1': '123 Main Street', // TODO: Get from address provider
-        'city': 'New York',
-        'state': 'NY',
-        'postalCode': '10001',
-        'country': 'USA',
+        'id': selectedAddress.id, // Include address ID for proper order creation
+        'addressLine1': selectedAddress.addressLine1,
+        'addressLine2': selectedAddress.addressLine2,
+        'city': selectedAddress.city,
+        'state': selectedAddress.state,
+        'postalCode': selectedAddress.postalCode,
+        'country': selectedAddress.country,
+        'latitude': selectedAddress.latitude,
+        'longitude': selectedAddress.longitude,
+        'landmark': selectedAddress.landmark,
       },
       'status': 'pending',
       'createdAt': DateTime.now(),

@@ -131,3 +131,12 @@ class CategoryException extends AppException {
   @override
   String toString() => 'CategoryException: $message${code != null ? ' (Code: $code)' : ''}';
 }
+
+/// Exception for not found operations
+class NotFoundException extends AppException {
+  const NotFoundException({required String message, String? code, dynamic originalError})
+      : super(message, code: code, originalError: originalError);
+
+  @override
+  String toString() => 'NotFoundException: $message${code != null ? ' (Code: $code)' : ''}';
+}

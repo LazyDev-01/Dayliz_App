@@ -1,107 +1,43 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
-
 import '../../widgets/common/unified_app_bar.dart';
-import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/skeleton_loading.dart';
 import '../../providers/home_providers.dart';
-import '../../providers/category_providers.dart';
 import '../../providers/paginated_product_providers.dart';
+import '../../providers/banner_providers.dart';
 import '../../widgets/product/clean_product_card.dart';
 import '../../widgets/home/home_categories_section.dart';
+import '../../widgets/home/enhanced_banner_carousel.dart';
 import '../../../domain/entities/product.dart';
-import '../../../domain/entities/category.dart';
+import '../../providers/user_profile_providers.dart';
 
 /// A clean architecture implementation of the home screen
 /// Updated with compact product cards and improved category alignment
-class CleanHomeScreen extends ConsumerStatefulWidget {
+/// Converted to ConsumerWidget for better performance and caching
+class CleanHomeScreen extends ConsumerWidget {
   const CleanHomeScreen({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<CleanHomeScreen> createState() => _CleanHomeScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Initialize auto-load provider to ensure addresses are loaded
+    ref.read(autoLoadUserProfileProvider);
 
-class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
-  final RefreshController _refreshController = RefreshController();
-  bool _isLoading = false;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    // Schedule the data loading for after the build is complete
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadInitialData();
-    });
-  }
-
-  @override
-  void dispose() {
-    _refreshController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadInitialData() async {
-    if (!mounted) return;
-    
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      debugPrint('🏠 HOME: Starting to load initial data...');
-      
-      // Load featured products
-      debugPrint('🏠 HOME: Loading featured products...');
-      await ref.read(featuredProductsNotifierProvider.notifier).loadFeaturedProducts(limit: 10);
-      
-      // Load sale products
-      debugPrint('🏠 HOME: Loading sale products...');
-      await ref.read(saleProductsNotifierProvider.notifier).loadSaleProducts(limit: 10);
-
-      debugPrint('🏠 HOME: Initial data loading completed successfully');
-      
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('🏠 HOME: Error loading initial data: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Failed to load data: ${e.toString()}';
-        });
-      }
-    }
-  }
-
-  void _onRefresh() async {
-    // Refresh all data
-    await _loadInitialData();
-    
-    // Also refresh categories
-    ref.invalidate(categoriesProvider);
-    
-    _refreshController.refreshCompleted();
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _buildAppBar(),
-      body: _buildBody(),
+      appBar: _buildAppBar(context),
+      body: _buildBody(context, ref),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+
+
+
+
+
+
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
     return UnifiedAppBars.homeScreen(
       onSearchTap: () => context.push('/search'),
       onProfileTap: () => context.push('/profile'),
@@ -113,47 +49,114 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
+  Widget _buildBody(BuildContext context, WidgetRef ref) {
+    // Watch featured products
+    final featuredProductsState = ref.watch(featuredProductsNotifierProvider);
+    final saleProductsState = ref.watch(saleProductsNotifierProvider);
+
+    // Check if we need to load data
+    final bool needsLoading = featuredProductsState.products.isEmpty &&
+                              saleProductsState.products.isEmpty &&
+                              !featuredProductsState.isLoading &&
+                              !saleProductsState.isLoading;
+
+    if (needsLoading) {
+      // Trigger loading only if data is empty and not already loading
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (featuredProductsState.products.isEmpty && !featuredProductsState.isLoading) {
+          ref.read(featuredProductsNotifierProvider.notifier).loadFeaturedProducts(limit: 10);
+        }
+        if (saleProductsState.products.isEmpty && !saleProductsState.isLoading) {
+          ref.read(saleProductsNotifierProvider.notifier).loadSaleProducts(limit: 10);
+        }
+      });
+    }
+
+    // Show loading skeleton if both are loading or empty
+    if ((featuredProductsState.isLoading && featuredProductsState.products.isEmpty) ||
+        (saleProductsState.isLoading && saleProductsState.products.isEmpty)) {
       return _buildHomeScreenSkeleton();
     }
 
-    if (_errorMessage != null) {
+    // Show error if both have errors
+    if (featuredProductsState.errorMessage != null && saleProductsState.errorMessage != null) {
       return ErrorState(
-        message: _errorMessage!,
-        onRetry: _loadInitialData,
+        message: 'Failed to load home data',
+        onRetry: () {
+          ref.read(featuredProductsNotifierProvider.notifier).loadFeaturedProducts(limit: 10);
+          ref.read(saleProductsNotifierProvider.notifier).loadSaleProducts(limit: 10);
+        },
       );
     }
 
-    return SmartRefresher(
-      controller: _refreshController,
-      onRefresh: _onRefresh,
+    return RefreshIndicator(
+      onRefresh: () => _handleRefresh(ref),
+      color: Theme.of(context).primaryColor,
+      backgroundColor: Colors.white,
       child: CustomScrollView(
         slivers: [
-          // Banner carousel placeholder
-          _buildBannerPlaceholder(),
+            // Banner carousel placeholder
+            _buildBannerPlaceholder(),
 
-          // Categories section with improved alignment
-          const SliverToBoxAdapter(
-            child: HomeCategoriesSection(),
-          ),
+            // Categories section with improved alignment
+            const SliverToBoxAdapter(
+              child: HomeCategoriesSection(),
+            ),
 
-          // Featured products section with compact cards
-          _buildFeaturedProductsSection(),
+            // Featured products section with compact cards
+            _buildFeaturedProductsSection(context, ref),
 
-          // Sale products section with compact cards
-          _buildSaleProductsSection(),
+            // Sale products section with compact cards
+            _buildSaleProductsSection(context, ref),
 
-          // All products section with pagination
-          _buildAllProductsSection(),
+            // All products section with pagination
+            _buildAllProductsSection(context, ref),
 
-          // Bottom padding
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 24),
-          ),
-        ],
+            // Bottom padding
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 24),
+            ),
+          ],
       ),
     );
+  }
+
+  /// Handle pull-to-refresh action
+  Future<void> _handleRefresh(WidgetRef ref) async {
+    try {
+      // Create a list of futures for parallel execution
+      final List<Future> refreshFutures = [];
+
+      // Refresh banners
+      refreshFutures.add(
+        ref.read(bannerNotifierProvider.notifier).refreshBanners()
+      );
+
+      // Refresh featured products
+      refreshFutures.add(
+        ref.read(featuredProductsNotifierProvider.notifier).loadFeaturedProducts(limit: 10)
+      );
+
+      // Refresh sale products
+      refreshFutures.add(
+        ref.read(saleProductsNotifierProvider.notifier).loadSaleProducts(limit: 10)
+      );
+
+      // Refresh all products (first page)
+      refreshFutures.add(
+        ref.read(paginatedAllProductsProvider.notifier).refreshProducts()
+      );
+
+      // Wait for all refresh operations to complete
+      await Future.wait(refreshFutures);
+
+      // Add a small delay for better UX (prevents too quick refresh)
+      await Future.delayed(const Duration(milliseconds: 300));
+
+    } catch (e) {
+      // Handle refresh errors gracefully
+      debugPrint('Refresh error: $e');
+    }
   }
 
   /// Build skeleton loading for home screen
@@ -258,15 +261,16 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
   Widget _buildBannerPlaceholder() {
     return SliverToBoxAdapter(
       child: Container(
-        height: 180,
         // Added top margin for proper spacing from app bar
-        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        child: _AutoScrollingBannerCarousel(),
+        margin: const EdgeInsets.fromLTRB(8, 16, 8, 0),
+        child: const EnhancedBannerCarousel(
+          height: 200,
+        ),
       ),
     );
   }
 
-  Widget _buildFeaturedProductsSection() {
+  Widget _buildFeaturedProductsSection(BuildContext context, WidgetRef ref) {
     final featuredProductsState = ref.watch(featuredProductsNotifierProvider);
 
     return SliverToBoxAdapter(
@@ -331,8 +335,8 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
   //   // Removed - using placeholder for now
   // }
 
-  Widget _buildSaleProductsSection() {
-    // final saleProductsState = ref.watch(saleProductsNotifierProvider); // Removed - using placeholder
+  Widget _buildSaleProductsSection(BuildContext context, WidgetRef ref) {
+    final saleProductsState = ref.watch(saleProductsNotifierProvider);
 
     return SliverToBoxAdapter(
       child: Column(
@@ -393,7 +397,7 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
   }
 
   /// Builds the all products section with grid layout and pagination
-  Widget _buildAllProductsSection() {
+  Widget _buildAllProductsSection(BuildContext context, WidgetRef ref) {
     final allProductsState = ref.watch(paginatedAllProductsProvider);
 
     return SliverToBoxAdapter(
@@ -456,7 +460,7 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.65,
+          childAspectRatio: 0.56, // Fixed to match card's 1:1.8 aspect ratio
           crossAxisSpacing: 12,
           mainAxisSpacing: 16,
         ),
@@ -559,192 +563,9 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
   // Widget _buildProductsLoading() { ... }
   // Widget _buildProductsError(String message) { ... }
   // Widget _buildProductsEmpty(String message) { ... }
+
+
 }
 
-/// Auto-scrolling banner carousel widget for modern commerce app experience
-class _AutoScrollingBannerCarousel extends StatefulWidget {
-  @override
-  State<_AutoScrollingBannerCarousel> createState() => _AutoScrollingBannerCarouselState();
-}
 
-class _AutoScrollingBannerCarouselState extends State<_AutoScrollingBannerCarousel> {
-  late PageController _pageController;
-  late Timer _timer;
-  int _currentPage = 0;
 
-  // Sample banner data - in real app this would come from API
-  final List<BannerData> _banners = [
-    BannerData(
-      title: 'Fresh Groceries Delivered',
-      subtitle: 'Get 20% off on your first order',
-      gradient: const LinearGradient(
-        colors: [Color(0xFF4CAF50), Color(0xFF81C784)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      icon: Icons.local_grocery_store,
-    ),
-    BannerData(
-      title: 'Daily Essentials',
-      subtitle: 'Free delivery on orders above ₹500',
-      gradient: const LinearGradient(
-        colors: [Color(0xFFFF9800), Color(0xFFFFB74D)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      icon: Icons.shopping_basket,
-    ),
-    BannerData(
-      title: 'Fresh Fruits & Vegetables',
-      subtitle: 'Farm fresh produce at your doorstep',
-      gradient: const LinearGradient(
-        colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      icon: Icons.eco,
-    ),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-    _startAutoScroll();
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _startAutoScroll() {
-    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (_pageController.hasClients) {
-        _currentPage = (_currentPage + 1) % _banners.length;
-        _pageController.animateToPage(
-          _currentPage,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Stack(
-        children: [
-          // Banner PageView
-          PageView.builder(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemCount: _banners.length,
-            itemBuilder: (context, index) {
-              return _buildBannerItem(_banners[index]);
-            },
-          ),
-
-          // Page Indicators
-          Positioned(
-            bottom: 12,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: _banners.asMap().entries.map((entry) {
-                return Container(
-                  width: 8,
-                  height: 8,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _currentPage == entry.key
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.5),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBannerItem(BannerData banner) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: banner.gradient,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            // Text Content
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    banner.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    banner.subtitle,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 14,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Icon
-            Expanded(
-              flex: 1,
-              child: Icon(
-                banner.icon,
-                size: 80,
-                color: Colors.white.withValues(alpha: 0.8),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Data class for banner information
-class BannerData {
-  final String title;
-  final String subtitle;
-  final LinearGradient gradient;
-  final IconData icon;
-
-  BannerData({
-    required this.title,
-    required this.subtitle,
-    required this.gradient,
-    required this.icon,
-  });
-}

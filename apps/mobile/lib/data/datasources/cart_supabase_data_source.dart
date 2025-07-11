@@ -785,9 +785,15 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
         subcategoryId: subcategoryId,
         brand: brand,
         attributes: attributes,
+        nutritionalInfo: data['nutritional_info'],
         tags: tags,
         createdAt: createdAt,
         updatedAt: updatedAt,
+        vendorId: data['vendor_id'],
+        vendorName: data['vendor_name'],
+        vendorFssaiLicense: data['vendor_fssai_license'],
+        vendorAddress: data['vendor_address'],
+        nutriActive: data['nutri_active'] ?? false,
       );
 
       debugPrint('🔐 CART SUPABASE: ✅ Product mapped successfully: $name (₹$price) - ${weightUnit ?? 'No weight'}');
@@ -813,9 +819,15 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
         subcategoryId: null,
         brand: null,
         attributes: const {},
+        nutritionalInfo: const {},
         tags: const [],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        vendorId: null,
+        vendorName: null,
+        vendorFssaiLicense: null,
+        vendorAddress: null,
+        nutriActive: false,
       );
     }
   }

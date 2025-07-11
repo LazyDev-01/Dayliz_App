@@ -84,8 +84,8 @@ void main() {
   );
 
   final tOrders = [tOrder];
-  const tOrderStatistics = {'pending': 2, 'processing': 1, 'delivered': 5};
-  const tTrackingInfo = {'status': 'shipped', 'location': 'Test City'};
+  const tOrderStatistics = {'processing': 2, 'out_for_delivery': 1, 'delivered': 5};
+  const tTrackingInfo = {'status': 'out_for_delivery', 'location': 'Test City'};
 
   group('getOrders', () {
     test('should check if the device is online', () async {

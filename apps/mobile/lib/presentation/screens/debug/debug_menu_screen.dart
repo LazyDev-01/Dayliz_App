@@ -10,6 +10,7 @@ import 'google_maps_api_test.dart';
 import '../profile/clean_address_form_screen.dart';
 import '../order/order_summary_screen.dart';
 import '../categories/optimized_categories_screen.dart';
+import '../categories/categories_screen_v2.dart';
 import '../auth/premium_auth_landing_screen.dart';
 import '../auth/phone_auth_screen.dart';
 import '../auth/otp_verification_screen.dart';
@@ -341,6 +342,20 @@ class DebugMenuScreen extends ConsumerWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const OptimizedCategoriesScreen(),
+                ),
+              );
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Categories Screen v2',
+            subtitle: 'New category screen with horizontal sidebar and 3-column layout',
+            icon: Icons.view_sidebar,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CategoriesScreenV2(),
                 ),
               );
             },

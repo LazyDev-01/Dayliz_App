@@ -94,7 +94,7 @@ class CartItemCard extends StatelessWidget {
                       const SizedBox(height: 4),
                     ],
 
-                    // Price display
+                    // Price display - use retail price (discountedPrice) as main price
                     if (product.discountPercentage != null && product.discountPercentage! > 0) ...[
                       Row(
                         children: [
@@ -108,7 +108,7 @@ class CartItemCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '₹${product.price.toStringAsFixed(2)}',
+                            '₹${product.originalPrice.toStringAsFixed(2)}',
                             style: TextStyle(
                               decoration: TextDecoration.lineThrough,
                               color: Colors.grey[600],
@@ -119,7 +119,7 @@ class CartItemCard extends StatelessWidget {
                       ),
                     ] else ...[
                       Text(
-                        '₹${product.price.toStringAsFixed(2)}',
+                        '₹${product.discountedPrice.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -186,17 +186,22 @@ class CartItemCard extends StatelessWidget {
     required IconData icon,
     required VoidCallback onPressed,
   }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(4),
-      child: Container(
-        width: 32,
-        height: 32,
-        alignment: Alignment.center,
-        child: Icon(
-          icon,
-          size: 18,
-          color: Colors.grey[700],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(4),
+        splashColor: Colors.grey.withValues(alpha: 0.2),
+        highlightColor: Colors.grey.withValues(alpha: 0.1),
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          child: Icon(
+            icon,
+            size: 18,
+            color: Colors.grey[700],
+          ),
         ),
       ),
     );

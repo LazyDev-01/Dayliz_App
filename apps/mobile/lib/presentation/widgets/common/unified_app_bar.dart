@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+// Import our reusable haptic system
+import '../../../core/services/haptic_service.dart';
+import '../../../core/utils/address_formatter.dart';
+import '../../providers/user_profile_providers.dart';
 import 'svg_icon_button.dart';
 import '../../../core/constants/app_colors.dart';
 import 'animated_cloud_background.dart';
@@ -125,6 +131,9 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// Handles previous page navigation with fallback
   void _handlePreviousPageNavigation(BuildContext context) {
+    // Add haptic feedback for smooth user experience using our reusable system
+    HapticService.light();
+
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     } else {
@@ -135,6 +144,8 @@ class UnifiedAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// Handles direct home navigation
   void _handleDirectHomeNavigation(BuildContext context) {
+    // Add haptic feedback for smooth user experience using our reusable system
+    HapticService.light();
     context.go('/home');
   }
 
@@ -379,7 +390,8 @@ class UnifiedAppBars {
 
 /// Unified Home App Bar that preserves all original home screen features
 /// while integrating with the unified app bar system
-class _UnifiedHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
+/// Now includes location indicator for location-first workflow
+class _UnifiedHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final VoidCallback onSearchTap;
   final VoidCallback onProfileTap;
   final String? userPhotoUrl;
@@ -388,6 +400,8 @@ class _UnifiedHomeAppBar extends StatelessWidget implements PreferredSizeWidget 
   final CloudAnimationType cloudType;
   final Color cloudColor;
   final double cloudOpacity;
+
+  // Location functionality temporarily disabled
 
   const _UnifiedHomeAppBar({
     required this.onSearchTap,
@@ -401,7 +415,7 @@ class _UnifiedHomeAppBar extends StatelessWidget implements PreferredSizeWidget 
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Enhanced profile icon with sophisticated design
     final profileIcon = _UnifiedEnhancedProfileIcon(
       userPhotoUrl: userPhotoUrl,
@@ -471,16 +485,8 @@ class _UnifiedHomeAppBar extends StatelessWidget implements PreferredSizeWidget 
 
               final appBar = AppBar(
                 title: Container(
-                  margin: EdgeInsets.only(top: topSpacing), // Add top margin for breathing room
-                  child: const Text(
-                    'Dayliz',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 24,
-                      color: Color(0xFF1F2937), // Dark gray for excellent contrast
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+                  margin: EdgeInsets.only(top: topSpacing),
+                  child: _buildLocationTitle(context, ref), // Move location to title position
                 ),
                 centerTitle: false,
                 backgroundColor: Colors.transparent, // Let gradient show through
@@ -496,9 +502,11 @@ class _UnifiedHomeAppBar extends StatelessWidget implements PreferredSizeWidget 
                 }).toList(),
                 toolbarHeight: kToolbarHeight + 16, // Adjusted to match profile icon proportions
                 bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(60), // Reduced to just accommodate search bar
+                  preferredSize: const Size.fromHeight(60), // Reduced size since location moved to title
                   child: Column(
                     children: [
+                      // Search bar section only
+
                       // Search bar section
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 12), // Reduced bottom padding
@@ -579,6 +587,160 @@ class _UnifiedHomeAppBar extends StatelessWidget implements PreferredSizeWidget 
     );
   }
 
+  /// Builds the location title widget - Modern delivery address selector
+  Widget _buildLocationTitle(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () {
+        HapticService.light();
+        _navigateToAddressScreen(context);
+      },
+      child: Consumer(
+        builder: (context, ref, child) {
+          // Watch user profile state for reactive updates
+          final userProfileState = ref.watch(userProfileNotifierProvider);
+          final addresses = userProfileState.addresses ?? [];
+
+          String address = 'Set your location';
+          bool isLocationSet = false;
+
+          if (addresses.isNotEmpty) {
+            // Find default address or use first address
+            final defaultAddress = addresses.firstWhere(
+              (address) => address.isDefault,
+              orElse: () => addresses.first,
+            );
+
+            // Format address for display (compact format)
+            address = AddressFormatter.formatAddressCompact(defaultAddress);
+            isLocationSet = true;
+          }
+
+          if (userProfileState.isAddressesLoading) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withAlpha(20),
+                  ),
+                  child: Icon(
+                    Icons.location_on,
+                    size: 18,
+                    color: Colors.white.withAlpha(220),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Deliver to',
+                          style: TextStyle(
+                            color: Colors.white.withAlpha(180),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 18,
+                          color: Colors.white.withAlpha(200),
+                        ),
+                      ],
+                    ),
+                    const Text(
+                      'Loading...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ],
+            );
+          }
+
+          // Main address display
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withAlpha(20),
+                ),
+                child: Icon(
+                  Icons.location_on,
+                  size: 18,
+                  color: Colors.white.withAlpha(220),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Deliver to',
+                          style: TextStyle(
+                            color: Colors.white.withAlpha(180),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 18,
+                          color: Colors.white.withAlpha(200),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      isLocationSet ? address : 'Select location',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+
+
+  /// Navigate to address screen for location management
+  void _navigateToAddressScreen(BuildContext context) {
+    debugPrint('🔄 [LocationIndicator] Navigating to address screen from app bar');
+    context.push('/addresses');
+  }
+
   /// Builds the cloud background based on the selected type
   Widget _buildCloudBackground() {
     switch (cloudType) {
@@ -606,7 +768,7 @@ class _UnifiedHomeAppBar extends StatelessWidget implements PreferredSizeWidget 
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 80);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 80); // Reduced since location moved to title
 }
 
 /// Enhanced profile icon widget with sophisticated design and animations
@@ -670,6 +832,7 @@ class _UnifiedEnhancedProfileIconState extends State<_UnifiedEnhancedProfileIcon
   void _handleTapUp(TapUpDetails details) {
     setState(() => _isPressed = false);
     _animationController.reverse();
+    HapticService.light();
     widget.onTap();
   }
 

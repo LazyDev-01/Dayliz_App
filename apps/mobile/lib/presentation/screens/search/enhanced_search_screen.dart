@@ -7,6 +7,7 @@ import '../../providers/paginated_search_providers.dart';
 import '../../providers/scoped_search_providers.dart';
 import '../../widgets/search/infinite_scroll_product_grid.dart';
 import '../../widgets/product/clean_product_card.dart';
+import '../../widgets/common/floating_cart_button.dart';
 
 
 /// Enhanced search screen with advanced search capabilities and context awareness
@@ -153,18 +154,25 @@ class _EnhancedSearchScreenState extends ConsumerState<EnhancedSearchScreen> {
 
     return Scaffold(
       appBar: _buildSearchAppBar(context),
-      body: Column(
+      body: Stack(
         children: [
-          if (!_hasSearched)
-            // Show word recommendations while typing (not products)
-            Expanded(
-              child: _buildSuggestionsView(currentQuery),
-            )
-          else
-            // Show context-aware search results
-            Expanded(
-              child: _buildSearchResults(),
-            ),
+          // Main content
+          Column(
+            children: [
+              if (!_hasSearched)
+                // Show word recommendations while typing (not products)
+                Expanded(
+                  child: _buildSuggestionsView(currentQuery),
+                )
+              else
+                // Show context-aware search results
+                Expanded(
+                  child: _buildSearchResults(),
+                ),
+            ],
+          ),
+          // Floating cart button - appears when cart has items
+          const FloatingCartButton(),
         ],
       ),
     );
@@ -257,7 +265,6 @@ class _EnhancedSearchScreenState extends ConsumerState<EnhancedSearchScreen> {
   }
 
   Widget _buildSuggestionsView(String query) {
-    final suggestions = ref.watch(searchSuggestionsProvider(query));
     final searchState = ref.watch(searchStateProvider);
 
     return ListView(
@@ -271,24 +278,9 @@ class _EnhancedSearchScreenState extends ConsumerState<EnhancedSearchScreen> {
             ...searchState.history.take(5).map((search) =>
               _buildSuggestionTile(search, Icons.history, () => _onSuggestionTap(search)),
             ),
-            const SizedBox(height: 24),
-          ],
-          // Show popular searches
-          if (searchState.hasPopularSearches) ...[
-            _buildSectionHeader('Popular Searches', Icons.trending_up),
-            const SizedBox(height: 8),
-            _buildPopularSearchesGrid(searchState.popularSearches),
-          ],
-        ] else ...[
-          // Show suggestions while typing
-          if (suggestions.isNotEmpty) ...[
-            _buildSectionHeader('Suggestions', Icons.auto_awesome),
-            const SizedBox(height: 8),
-            ...suggestions.map((suggestion) =>
-              _buildSuggestionTile(suggestion, Icons.search, () => _onSuggestionTap(suggestion)),
-            ),
           ],
         ],
+        // No suggestions or popular searches - only show recents
       ],
     );
   }
@@ -319,20 +311,7 @@ class _EnhancedSearchScreenState extends ConsumerState<EnhancedSearchScreen> {
     );
   }
 
-  Widget _buildPopularSearchesGrid(List<String> popularSearches) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: popularSearches.take(6).map((search) =>
-        ActionChip(
-          label: Text(search, style: const TextStyle(fontSize: 12)),
-          onPressed: () => _onSuggestionTap(search),
-          backgroundColor: Colors.grey[100],
-          side: BorderSide(color: Colors.grey[300]!),
-        ),
-      ).toList(),
-    );
-  }
+
 
   Widget _buildSearchResults() {
     if (_hasContext && !_showGlobalResults) {
@@ -485,7 +464,7 @@ class _EnhancedSearchScreenState extends ConsumerState<EnhancedSearchScreen> {
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.65,
+        childAspectRatio: 0.55, // Fixed to match CleanProductCard's 1:1.8 aspect ratio
         crossAxisSpacing: 12,
         mainAxisSpacing: 16,
       ),
@@ -520,7 +499,7 @@ class _EnhancedSearchScreenState extends ConsumerState<EnhancedSearchScreen> {
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.65,
+        childAspectRatio: 0.55, // Fixed to match CleanProductCard's 1:1.8 aspect ratio
         crossAxisSpacing: 12,
         mainAxisSpacing: 16,
       ),

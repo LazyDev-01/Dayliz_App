@@ -89,6 +89,7 @@ dependencies:
   uuid: ^4.5.1                # UUID generation (updated for geolocator compatibility)
   connectivity_plus: ^4.0.2   # Network connectivity
   package_info_plus: ^4.2.0   # Package information
+  device_info_plus: ^9.1.1    # Device information for monitoring
 
   # UI/UX Enhancement Packages
   flutter_screenutil: ^5.9.3  # Responsive design for all screen sizes
@@ -99,6 +100,8 @@ dependencies:
   # Location dependencies - Updated to stable versions compatible with Flutter 3.29.2
   geolocator: ^12.0.0           # Stable geolocation (compatible with Flutter 3.29.2)
   geocoding: ^3.0.0             # Latest geocoding (compatible with Flutter 3.29.2)
+  location: ^7.0.0              # For requestService() - GPS enable dialog
+  google_places_flutter: ^2.0.9 # Google Places API for address search
   # Enhanced mock implementation available as fallback
 
   flutter_secure_storage: ^8.0.0 # Secure storage
@@ -112,11 +115,13 @@ dependencies:
 
   permission_handler: ^11.3.0 # Permission handling (updated)
 
-  # Firebase dependencies for notifications
+  # Firebase dependencies for notifications and monitoring
   firebase_core: ^3.6.0          # Firebase core
   firebase_messaging: ^15.1.3    # Firebase Cloud Messaging
   flutter_local_notifications: ^18.0.1 # Local notifications
   firebase_analytics: ^11.3.3    # Firebase Analytics
+  firebase_crashlytics: ^4.1.3   # Firebase Crashlytics for crash reporting
+  firebase_performance: ^0.10.0+8 # Firebase Performance Monitoring
 
   # Maps and Location - Google Maps implementation
   google_maps_flutter: ^2.9.0   # Google Maps Flutter SDK

@@ -229,7 +229,7 @@ void main() {
           'id': orderId,
           'user_id': 'test-user-id',
           'total_amount': 25.0,
-          'status': 'pending',
+          'status': 'processing',
           'created_at': DateTime.now().toIso8601String(),
           'order_items': [],
           'addresses': {

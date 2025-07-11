@@ -6,12 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/product.dart';
+import '../../../domain/entities/cart_item.dart';
 import '../../providers/cart_providers.dart';
-import '../../providers/auth_providers.dart';
 import '../auth/auth_guard.dart';
 import 'enhanced_add_to_cart_button.dart';
+
+
 
 /// A clean architecture implementation of a product card for q-commerce applications
 /// following industry standards like Blinkit and Zepto.
@@ -35,69 +36,12 @@ class CleanProductCard extends ConsumerStatefulWidget {
 }
 
 class _CleanProductCardState extends ConsumerState<CleanProductCard> {
-  bool _isInCart = false;
-  int _quantity = 0;
   final _uuid = const Uuid();
 
-  @override
-  void initState() {
-    super.initState();
-    _checkIfInCart();
-  }
 
-  Future<void> _checkIfInCart() async {
-    try {
-      // First try to get from the clean architecture cart
-      final cartItems = await ref.read(cartNotifierProvider.notifier).isInCart(productId: widget.product.id);
-      if (cartItems) {
-        // Get the quantity
-        final items = ref.read(cartItemsProvider);
-        for (var item in items) {
-          if (item.product.id == widget.product.id) {
-            if (mounted) {
-              setState(() {
-                _isInCart = true;
-                _quantity = item.quantity;
-              });
-            }
-            return;
-          }
-        }
-      }
-
-      // Fallback to direct SharedPreferences check
-      final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString('CACHED_CART');
-
-      if (jsonString != null) {
-        final List<dynamic> jsonList = json.decode(jsonString);
-
-        for (final item in jsonList) {
-          try {
-            final productData = item['product'] as Map<String, dynamic>;
-
-            if (productData['id'] == widget.product.id) {
-              if (mounted) {
-                setState(() {
-                  _isInCart = true;
-                  _quantity = item['quantity'] as int;
-                });
-              }
-              break;
-            }
-          } catch (e) {
-            // Error parsing cart item
-          }
-        }
-      }
-    } catch (e) {
-      // Error checking if in cart
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    // Performance optimization: Removed debug prints for production
 
     // Calculate sizes based on screen width if not explicitly provided
     final screenWidth = MediaQuery.of(context).size.width;
@@ -169,43 +113,51 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
 
   /// Builds the image section with discount badge
   Widget _buildImageSection(double size) {
-    return Stack(
-      children: [
-        // Product image with rounded corners
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: CachedNetworkImage(
-              imageUrl: widget.product.mainImageUrl,
-              fit: BoxFit.cover,
-              fadeInDuration: const Duration(milliseconds: 300),
-              fadeOutDuration: const Duration(milliseconds: 100),
-              placeholder: (context, url) => Container(
-                color: Colors.grey[200],
-                child: const Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.grey,
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Colors.grey[300]!,
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Stack(
+        children: [
+          // Product image with rounded corners
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: size,
+              height: size,
+              child: CachedNetworkImage(
+                imageUrl: widget.product.mainImageUrl,
+                fit: BoxFit.cover,
+                fadeInDuration: const Duration(milliseconds: 300),
+                fadeOutDuration: const Duration(milliseconds: 100),
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              errorWidget: (context, url, error) => Container(
-                color: Colors.grey[200],
-                child: const Icon(
-                  Icons.image_not_supported_outlined,
-                  color: Colors.grey,
-                  semanticLabel: 'Product image not available',
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[200],
+                  child: const Icon(
+                    Icons.image_not_supported_outlined,
+                    color: Colors.grey,
+                    semanticLabel: 'Product image not available',
+                  ),
                 ),
               ),
             ),
           ),
-        ),
 
         // Discount badge
         if (widget.product.discountPercentage != null && widget.product.discountPercentage! > 0)
@@ -229,24 +181,61 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
             ),
           ),
 
-        // Out of stock overlay
-        if (!widget.product.inStock)
-          Positioned.fill(
+        // Low stock badge (only show if in stock and quantity < 5)
+        if (widget.product.inStock &&
+            widget.product.stockQuantity != null &&
+            widget.product.stockQuantity! > 0 &&
+            widget.product.stockQuantity! < 5)
+          Positioned(
+            bottom: 8,
+            left: 8,
             child: Container(
-              color: Colors.black.withAlpha(153), // 0.6 opacity (153/255)
-              child: const Center(
-                child: Text(
-                  'OUT OF STOCK',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.orange, Colors.deepOrange],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.orange.withValues(alpha: 0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
+                ],
+              ),
+              child: Text(
+                'Only ${widget.product.stockQuantity} left',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ),
-      ],
+
+          // Out of stock overlay
+          if (!widget.product.inStock)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withAlpha(153), // 0.6 opacity (153/255)
+                child: const Center(
+                  child: Text(
+                    'OUT OF STOCK',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -285,20 +274,31 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
         ),
 
         // Add button or quantity selector
-        _isInCart
-            ? _buildQuantitySelector(context)
-            : _buildAddButton(context),
+        Consumer(
+          builder: (context, ref, child) {
+            final cartItems = ref.watch(cartItemsProvider);
+            final isInCart = cartItems.any((item) => item.product.id == widget.product.id);
+            final cartItem = isInCart
+                ? cartItems.firstWhere((item) => item.product.id == widget.product.id)
+                : null;
+            final quantity = cartItem?.quantity ?? 0;
+
+            return isInCart
+                ? _buildQuantitySelector(context, quantity, cartItem!)
+                : _buildAddButton(context, isInCart, quantity);
+          },
+        ),
       ],
     );
   }
 
   /// Builds the ADD button with enhanced interactions
-  Widget _buildAddButton(BuildContext context) {
+  Widget _buildAddButton(BuildContext context, bool isInCart, int quantity) {
     return EnhancedAddToCartButton(
       onPressed: widget.product.inStock ? () => _addToCart(context) : () {},
       isLoading: false, // You can add loading state if needed
-      isInCart: _isInCart,
-      quantity: _quantity,
+      isInCart: isInCart,
+      quantity: quantity,
       addText: 'ADD',
       inCartText: 'ADDED',
       showQuantityControls: false, // We handle quantity separately
@@ -308,10 +308,10 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
   }
 
   /// Builds the quantity selector for items already in cart
-  Widget _buildQuantitySelector(BuildContext context) {
+  Widget _buildQuantitySelector(BuildContext context, int quantity, CartItem cartItem) {
     // If product is not in cart, show the add button instead
-    if (_quantity <= 0) {
-      return _buildAddButton(context);
+    if (quantity <= 0) {
+      return _buildAddButton(context, false, 0);
     }
 
     // Use GestureDetector to stop tap events from propagating to the parent card
@@ -341,16 +341,9 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
                   // Haptic feedback
                   HapticFeedback.lightImpact();
 
-                  // Update state immediately for better UX
-                  if (mounted) {
-                    setState(() {
-                      _quantity = _quantity - 1;
-                      if (_quantity <= 0) {
-                        _isInCart = false;
-                      }
-                    });
-                  }
-                  _updateQuantity(context, _quantity);
+                  // Calculate new quantity
+                  final newQuantity = quantity - 1;
+                  _updateQuantity(context, quantity, newQuantity);
                 },
                 child: Container(
                   width: 20, // Reduced to fit within 70px container
@@ -370,7 +363,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               width: 27, // Extra 1px safety buffer (20+27+20=67, leaves 3px buffer)
               alignment: Alignment.center,
               child: Text(
-                '$_quantity',
+                '$quantity',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 14, // Restored original size
@@ -387,13 +380,9 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
                   // Haptic feedback
                   HapticFeedback.lightImpact();
 
-                  // Update state immediately for better UX
-                  if (mounted) {
-                    setState(() {
-                      _quantity = _quantity + 1;
-                    });
-                  }
-                  _updateQuantity(context, _quantity);
+                  // Calculate new quantity
+                  final newQuantity = quantity + 1;
+                  _updateQuantity(context, quantity, newQuantity);
                 },
                 child: Container(
                   width: 20, // Reduced to fit within 70px container
@@ -433,13 +422,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
     // User is authenticated, proceed with adding to cart
     debugPrint('🔓 CART PROTECTION: Authenticated user adding ${widget.product.name} to cart');
 
-    // Update state immediately for better UX
-    if (mounted) {
-      setState(() {
-        _isInCart = true;
-        _quantity = _quantity + 1;
-      });
-    }
+    // Provider handles optimistic updates automatically - no local state needed
 
     // Note: Loading indicator removed - floating cart button provides sufficient feedback
 
@@ -525,13 +508,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       }
 
       // We already updated the state at the beginning for better UX
-      // Just make sure it's still correct
-      if (mounted) {
-        setState(() {
-          _isInCart = true;
-          _quantity = _quantity > 0 ? _quantity : 1; // Ensure at least 1
-        });
-      }
+      // Provider handles state updates automatically
 
       // Force refresh the cart state
       try {
@@ -555,9 +532,9 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
   }
 
   /// Update quantity of product in cart
-  Future<void> _updateQuantity(BuildContext context, int newQuantity) async {
+  Future<void> _updateQuantity(BuildContext context, int currentQuantity, int newQuantity) async {
     // Don't proceed if the quantity is the same
-    if (newQuantity == _quantity && newQuantity > 0) {
+    if (newQuantity == currentQuantity && newQuantity > 0) {
       return;
     }
 
@@ -583,13 +560,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
             );
 
             if (success) {
-              // Update state
-              if (mounted) {
-                setState(() {
-                  _isInCart = false;
-                  _quantity = 0;
-                });
-              }
+              // Provider handles state updates automatically
 
               // Success feedback disabled for early launch
               if (context.mounted) {
@@ -633,13 +604,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               json.encode(cartItems),
             );
 
-            // Update state
-            if (mounted) {
-              setState(() {
-                _isInCart = false;
-                _quantity = 0;
-              });
-            }
+            // Provider handles state updates automatically
 
             // Success feedback disabled for early launch
             if (context.mounted) {
@@ -668,12 +633,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
             );
 
             if (success) {
-              // Update state
-              if (mounted) {
-                setState(() {
-                  _quantity = newQuantity;
-                });
-              }
+              // Provider handles state updates automatically
 
               return;
             }
@@ -712,12 +672,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               json.encode(cartItems),
             );
 
-            // Update state
-            if (mounted) {
-              setState(() {
-                _quantity = newQuantity;
-              });
-            }
+            // Provider handles state updates automatically
           }
         }
       }
@@ -740,25 +695,25 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
 
   /// Get the quantity text (e.g., 500g, 1L, etc.)
   String _getQuantityText() {
-    // Try to get from attributes first
+    // First check the dedicated weight field from database
+    if (widget.product.weight != null && widget.product.weight!.isNotEmpty) {
+      return widget.product.weight!;
+    }
+
+    // Try to get from attributes as fallback
     if (widget.product.attributes != null) {
       final weight = widget.product.attributes!['weight'] as String?;
+      final unit = widget.product.attributes!['unit'] as String?;
       final volume = widget.product.attributes!['volume'] as String?;
       final quantity = widget.product.attributes!['quantity'] as String?;
 
-      if (weight != null) return weight;
-      if (volume != null) return volume;
-      if (quantity != null) return quantity;
+      if (weight != null && weight.isNotEmpty) return weight;
+      if (unit != null && unit.isNotEmpty) return unit;
+      if (volume != null && volume.isNotEmpty) return volume;
+      if (quantity != null && quantity.isNotEmpty) return quantity;
     }
 
-    // Default fallbacks based on product name or category
-    if (widget.product.name.toLowerCase().contains('milk')) return '500ml';
-    if (widget.product.name.toLowerCase().contains('bread')) return '400g';
-    if (widget.product.name.toLowerCase().contains('egg')) return '6 pcs';
-    if (widget.product.name.toLowerCase().contains('rice')) return '1kg';
-    if (widget.product.name.toLowerCase().contains('oil')) return '1L';
-
-    // Default
+    // Default fallback
     return '1 pc';
   }
 }

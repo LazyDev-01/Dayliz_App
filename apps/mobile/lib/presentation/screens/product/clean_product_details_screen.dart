@@ -6,7 +6,7 @@ import '../../../domain/entities/product.dart';
 import '../../../domain/entities/cart_item.dart';
 import '../../providers/product_detail_providers.dart';
 import '../../providers/cart_providers.dart';
-import '../../providers/wishlist_providers.dart';
+
 import '../../widgets/auth/auth_guard.dart';
 import '../../widgets/common/unified_app_bar.dart';
 
@@ -34,31 +34,6 @@ class CleanProductDetailsScreen extends ConsumerWidget {
         title: productState.product?.name ?? 'Product Details',
         fallbackRoute: '/home',
         actions: [
-          // Wishlist button
-          Consumer(
-            builder: (context, ref, child) {
-              final isInWishlist = ref.watch(isProductInWishlistProvider(productId));
-
-              return isInWishlist.when(
-                data: (isInWishlist) => IconButton(
-                  icon: Icon(
-                    isInWishlist ? Icons.favorite : Icons.favorite_border,
-                    color: isInWishlist ? Colors.red : const Color(0xFF374151),
-                  ),
-                  onPressed: () => _toggleWishlist(context, ref),
-                  tooltip: isInWishlist ? 'Remove from wishlist' : 'Add to wishlist',
-                ),
-                loading: () => const IconButton(
-                  icon: Icon(Icons.favorite_border, color: Color(0xFF374151)),
-                  onPressed: null,
-                ),
-                error: (_, __) => IconButton(
-                  icon: const Icon(Icons.favorite_border, color: Color(0xFF374151)),
-                  onPressed: () => _toggleWishlist(context, ref),
-                ),
-              );
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.share, color: Color(0xFF374151)),
             onPressed: () => _shareProduct(context, productState.product),
@@ -71,24 +46,7 @@ class CleanProductDetailsScreen extends ConsumerWidget {
     );
   }
 
-  void _toggleWishlist(BuildContext context, WidgetRef ref) async {
-    final product = ref.read(productByIdNotifierProvider(productId)).product;
-    if (product == null) return;
 
-    final isInWishlist = await ref.read(wishlistNotifierProvider.notifier).isInWishlist(productId);
-
-    if (isInWishlist) {
-      await ref.read(wishlistNotifierProvider.notifier).removeFromWishlist(productId);
-      if (context.mounted) {
-        _showSnackBar(context, '${product.name} removed from wishlist');
-      }
-    } else {
-      await ref.read(wishlistNotifierProvider.notifier).addToWishlist(productId);
-      if (context.mounted) {
-        _showSnackBar(context, '${product.name} added to wishlist');
-      }
-    }
-  }
 
   void _shareProduct(BuildContext context, Product? product) {
     if (product == null) return;
@@ -333,7 +291,7 @@ Download Dayliz App for the best grocery deals!
                       '₹${product.discountedPrice.toStringAsFixed(0)}',
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).primaryColor,
+                        color: Colors.grey[800], // Changed from primaryColor to dark grey
                       ),
                     ),
 
@@ -375,7 +333,7 @@ Download Dayliz App for the best grocery deals!
 
                 const SizedBox(height: 20),
 
-                // Stock status indicator (simplified - no quantity shown)
+                // Stock status indicator with low stock warning
                 if (!product.inStock)
                   Row(
                     children: [
@@ -397,9 +355,64 @@ Download Dayliz App for the best grocery deals!
                         ),
                       ),
                     ],
+                  )
+                else if (product.inStock &&
+                         product.stockQuantity != null &&
+                         product.stockQuantity! > 0 &&
+                         product.stockQuantity! < 5)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Colors.orange, Colors.deepOrange],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.orange.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Only ${product.stockQuantity} left in stock',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                 const SizedBox(height: 24),
+
+                // Nutritional Information Section (controlled by nutri_active flag)
+                if (product.nutriActive && product.nutritionalInfo != null && product.nutritionalInfo!.isNotEmpty)
+                  _buildNutritionalInfoSection(context, product.nutritionalInfo!),
+
+                const SizedBox(height: 24),
+
+                // Seller Information Section
+                _buildSellerInfoSection(context, product),
+
+                const SizedBox(height: 24),
+
+                // Similar Products Section
+                _buildSimilarProductsSection(context, ref, relatedProductsState),
 
                 // Add to cart moved to bottom navigation bar
               ],
@@ -707,5 +720,486 @@ Download Dayliz App for the best grocery deals!
     }
 
     return attributes.isNotEmpty ? attributes.join(' • ') : 'Product details';
+  }
+
+  /// Builds the nutritional information section with table format
+  Widget _buildNutritionalInfoSection(BuildContext context, Map<String, dynamic> nutritionalInfo) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section title
+          Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: Colors.grey[700],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Nutritional Information',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Nutritional info table
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(2.5),
+                  1: FlexColumnWidth(1.5),
+                },
+                children: [
+                // Table header
+                TableRow(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(8),
+                      topRight: Radius.circular(8),
+                    ),
+                  ),
+                  children: [
+                    _buildTableCell(
+                      'Nutrient',
+                      isHeader: true,
+                      context: context,
+                    ),
+                    _buildTableCell(
+                      'Amount',
+                      isHeader: true,
+                      context: context,
+                    ),
+                  ],
+                ),
+                // Table rows for nutritional data
+                ...nutritionalInfo.entries.map((entry) {
+                  return TableRow(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: Colors.grey[200]!, width: 0.5),
+                      ),
+                    ),
+                    children: [
+                      _buildTableCell(
+                        _formatNutritionalKey(entry.key),
+                        context: context,
+                      ),
+                      _buildTableCell(
+                        entry.value.toString(),
+                        context: context,
+                        isValue: true,
+                      ),
+                    ],
+                  );
+                }).toList(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Helper method to build table cells for nutritional information
+  Widget _buildTableCell(
+    String text, {
+    required BuildContext context,
+    bool isHeader = false,
+    bool isValue = false,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: isHeader ? 12 : 10,
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: isHeader ? 14 : 13,
+          fontWeight: isHeader
+              ? FontWeight.bold
+              : isValue
+                  ? FontWeight.w600
+                  : FontWeight.w500,
+          color: isHeader
+              ? Colors.grey[800]
+              : isValue
+                  ? Colors.grey[900]
+                  : Colors.grey[700],
+          letterSpacing: isHeader ? 0.5 : 0,
+        ),
+        textAlign: isValue ? TextAlign.right : TextAlign.left,
+      ),
+    );
+  }
+
+  /// Helper method to format nutritional info keys for display
+  String _formatNutritionalKey(String key) {
+    // Convert snake_case to Title Case
+    return key
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
+  }
+
+  /// Builds the seller information section
+  Widget _buildSellerInfoSection(BuildContext context, Product product) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section title
+          Row(
+            children: [
+              Icon(
+                Icons.store_outlined,
+                color: Colors.grey[700],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Seller Information',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Seller details
+          _buildSellerInfoRow(
+            context,
+            'Seller Name',
+            product.vendorName ?? 'Dayliz Fresh',
+            Icons.business,
+          ),
+          const SizedBox(height: 8),
+
+          _buildSellerInfoRow(
+            context,
+            'FSSAI License',
+            product.vendorFssaiLicense ?? 'FSSAI-12345678901234',
+            Icons.verified_outlined,
+          ),
+          const SizedBox(height: 8),
+
+          _buildSellerInfoRow(
+            context,
+            'Address',
+            product.vendorAddress ?? 'Tura, Meghalaya, India',
+            Icons.location_on_outlined,
+          ),
+          const SizedBox(height: 8),
+          const SizedBox(height: 8),
+
+          _buildSellerInfoRow(
+            context,
+            'Customer Support',
+            'support@dayliz.in',
+            Icons.support_agent_outlined,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Helper method to build seller info rows
+  Widget _buildSellerInfoRow(BuildContext context, String label, String value, IconData icon) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: Colors.grey[600],
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[800],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Builds the similar products section
+  Widget _buildSimilarProductsSection(BuildContext context, WidgetRef ref, RelatedProductsState relatedProductsState) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section title
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.recommend_outlined,
+                color: Colors.grey[700],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'You might also like',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Products content
+        if (relatedProductsState.isLoading)
+          _buildSimilarProductsLoading()
+        else if (relatedProductsState.errorMessage != null)
+          _buildSimilarProductsError(context, ref)
+        else if (relatedProductsState.products.isEmpty)
+          _buildNoSimilarProducts()
+        else
+          _buildSimilarProductsList(context, relatedProductsState.products),
+      ],
+    );
+  }
+
+  /// Builds loading state for similar products
+  Widget _buildSimilarProductsLoading() {
+    return SizedBox(
+      height: 200,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: 3,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Container(
+              width: 140,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Builds error state for similar products
+  Widget _buildSimilarProductsError(BuildContext context, WidgetRef ref) {
+    return Container(
+      height: 100,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Failed to load similar products',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () {
+              ref.read(relatedProductsNotifierProvider(productId).notifier)
+                  .getRelatedProducts(productId);
+            },
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Builds no similar products state
+  Widget _buildNoSimilarProducts() {
+    return Container(
+      height: 100,
+      alignment: Alignment.center,
+      child: Text(
+        'No similar products found',
+        style: TextStyle(
+          color: Colors.grey[600],
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+
+  /// Builds the horizontal list of similar products
+  Widget _buildSimilarProductsList(BuildContext context, List<Product> products) {
+    return SizedBox(
+      height: 200,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: products.length,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        itemBuilder: (context, index) {
+          final product = products[index];
+          return Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: _buildSimilarProductCard(context, product),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Builds individual similar product card
+  Widget _buildSimilarProductCard(BuildContext context, Product product) {
+    return GestureDetector(
+      onTap: () {
+        // Navigate to the product details
+        context.push('/clean/product/${product.id}');
+      },
+      child: Container(
+        width: 140,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Product image
+            Expanded(
+              flex: 3,
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                  child: Image.network(
+                    product.mainImageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+
+            // Product details
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Product name
+                    Text(
+                      product.name,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Spacer(),
+
+                    // Price
+                    Text(
+                      '₹${product.discountedPrice.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

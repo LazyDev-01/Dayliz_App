@@ -134,42 +134,43 @@ class _OrderCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Order ID and Status in separate rows for better visibility
+              Text(
+                'Order #${order.orderNumber ?? order.id}',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(
-                      'Order #${order.orderNumber ?? order.id}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                  _buildStatusChip(context, order.status),
+                  Text(
+                    currencyFormat.format(order.total),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  _buildStatusChip(context, order.status),
                 ],
               ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(
-                      '${order.items.length} ${order.items.length == 1 ? 'item' : 'items'}',
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    '${order.items.length} ${order.items.length == 1 ? 'item' : 'items'}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
                     ),
                   ),
                   Text(
-                    currencyFormat.format(order.total),
-                    style: theme.textTheme.titleMedium,
+                    'Placed on ${_formatDate(order.createdAt)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Placed on ${_formatDate(order.createdAt)}',
-                style: theme.textTheme.bodySmall,
               ),
             ],
           ),
@@ -182,13 +183,10 @@ class _OrderCard extends StatelessWidget {
     Color chipColor;
 
     switch (status) {
-      case domain.Order.statusPending:
-        chipColor = Colors.blue;
-        break;
       case domain.Order.statusProcessing:
         chipColor = Colors.orange;
         break;
-      case domain.Order.statusShipped:
+      case domain.Order.statusOutForDelivery:
         chipColor = Colors.purple;
         break;
       case domain.Order.statusDelivered:
@@ -201,22 +199,31 @@ class _OrderCard extends StatelessWidget {
         chipColor = Colors.grey;
     }
 
-    return Chip(
-      label: Text(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: chipColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
         _formatStatus(status),
         style: const TextStyle(
           color: Colors.white,
           fontSize: 12,
+          fontWeight: FontWeight.w500,
         ),
       ),
-      backgroundColor: chipColor,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
   String _formatStatus(String status) {
     if (status.isEmpty) return '';
+
+    // Handle special case for out_for_delivery
+    if (status == 'out_for_delivery') {
+      return 'Out for Delivery';
+    }
+
     return status[0].toUpperCase() + status.substring(1);
   }
 

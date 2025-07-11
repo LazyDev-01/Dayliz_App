@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/errors/failures.dart';
 import '../../core/network/network_info.dart';
@@ -116,6 +117,19 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await remoteDataSource.logout();
       await localDataSource.logout();
+
+      // Also clear user profile cache during logout
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('user_profile');
+        await prefs.remove('user_addresses');
+        await prefs.remove('user_preferences');
+        debugPrint('✅ Cleared user profile cache during logout');
+      } catch (e) {
+        // Continue with logout even if profile cache clearing fails
+        debugPrint('Warning: Failed to clear user profile cache during logout: $e');
+      }
+
       return const Right(true);
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));

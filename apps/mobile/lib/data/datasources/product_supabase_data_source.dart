@@ -31,7 +31,8 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       // Build the base query - temporarily simplified to avoid relationship issues
       var query = supabaseClient
           .from('products')
-          .select('*');
+          .select('*')
+          .eq('is_active', true); // Only show active products
 
       // Apply filters
       if (categoryId != null) {
@@ -61,7 +62,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       // Get total count for pagination metadata
       // For now, we'll use a simplified approach to get total count
       // In production, you might want to implement a more efficient counting method
-      var countQuery = supabaseClient.from('products').select('id');
+      var countQuery = supabaseClient.from('products').select('id').eq('is_active', true);
 
       // Apply same filters to count query
       if (categoryId != null) {
@@ -124,7 +125,8 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       // Start building the query - temporarily simplified to avoid relationship issues
       var query = supabaseClient
           .from('products')
-          .select('*');
+          .select('*')
+          .eq('is_active', true); // Only show active products
 
       // Apply filters
       if (categoryId != null) {
@@ -192,11 +194,14 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
         id: json['id'].toString(),
         name: json['product_name'] ?? json['name'] ?? '',
         description: json['description'] ?? '',
-        price: json['retail_sale_price'] != null
-            ? (json['retail_sale_price'] as num).toDouble()
+        price: json['mrp'] != null
+            ? (json['mrp'] as num).toDouble()
             : json['price'] != null
                 ? (json['price'] as num).toDouble()
                 : 0.0,
+        retailPrice: json['retail_sale_price'] != null
+            ? (json['retail_sale_price'] as num).toDouble()
+            : null,
         discountPercentage: json['discount_percentage'] != null
             ? (json['discount_percentage'] as num).toDouble()
             : null,
@@ -211,13 +216,20 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
         categoryId: json['category_id']?.toString() ?? '',
         subcategoryId: json['subcategory_id']?.toString(),
         brand: json['brand'],
+        weight: json['weight']?.toString(),
         attributes: json['attributes'],
+        nutritionalInfo: json['nutritional_info'],
         tags: json['tags'] != null ? List<String>.from(json['tags']) : null,
         createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
         updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
         onSale: isOnSale,
         categoryName: categoryName,
         subcategoryName: subcategoryName,
+        vendorId: json['vendor_id'],
+        vendorName: json['vendor_name'],
+        vendorFssaiLicense: json['vendor_fssai_license'],
+        vendorAddress: json['vendor_address'],
+        nutriActive: json['nutri_active'] ?? false,
       );
 
       // Convert to ProductModel
@@ -236,14 +248,26 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
         .toList();
   }
 
-  /// Parse a single product response without images to avoid relationship errors
+  /// Parse a single product response with vendor information
   ProductModel _parseProductResponseWithoutImages(Map<String, dynamic> json) {
-    // Create a Product entity without images
+    // Vendor information will be null for now
+    // This can be enhanced later with a separate vendor data fetching mechanism
+    String? vendorId;
+    String? vendorName;
+    String? vendorFssaiLicense;
+    String? vendorAddress;
+
+    // Create a Product entity with vendor information
     final product = Product(
       id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       description: json['description'] ?? '',
-      price: json['price'] != null ? (json['price'] as num).toDouble() : 0.0,
+      price: json['mrp'] != null
+          ? (json['mrp'] as num).toDouble()
+          : json['price'] != null ? (json['price'] as num).toDouble() : 0.0,
+      retailPrice: json['retail_sale_price'] != null
+          ? (json['retail_sale_price'] as num).toDouble()
+          : null,
       discountPercentage: json['discount_percentage'] != null
           ? (json['discount_percentage'] as num).toDouble()
           : null,
@@ -256,9 +280,18 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       categoryId: json['category_id']?.toString() ?? '',
       subcategoryId: json['subcategory_id']?.toString(),
       brand: json['brand'],
+      weight: json['weight']?.toString(),
+      attributes: json['attributes'],
+      nutritionalInfo: json['nutritional_info'],
+      tags: json['tags'] != null ? List<String>.from(json['tags']) : null,
       onSale: json['discount_percentage'] != null && (json['discount_percentage'] as num) > 0,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      vendorId: vendorId,
+      vendorName: vendorName,
+      vendorFssaiLicense: vendorFssaiLicense,
+      vendorAddress: vendorAddress,
+      nutriActive: json['nutri_active'] ?? false,
     );
 
     // Convert to ProductModel
@@ -333,6 +366,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       final response = await supabaseClient
           .from('products')
           .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)')
+          .eq('is_active', true) // Only show active products
           .not('discount_percentage', 'is', null)
           .gt('discount_percentage', 0)
           .order('discount_percentage', ascending: false)
@@ -412,6 +446,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
         response = await supabaseClient
             .from('products')
             .select('*')
+            .eq('is_active', true) // Only show active products
             .or('name.ilike.%$sanitizedQuery%,description.ilike.%$sanitizedQuery%,brand.ilike.%$sanitizedQuery%')
             .order('created_at', ascending: false)
             .range(offset ?? 0, offset != null && limit != null ? offset + limit - 1 : 999)

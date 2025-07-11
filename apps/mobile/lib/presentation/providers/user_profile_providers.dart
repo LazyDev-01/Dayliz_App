@@ -115,6 +115,12 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
     state = state.copyWith(isLoading: false);
   }
 
+  /// Clear user profile data (called during logout)
+  void clearProfile() {
+    debugPrint('UserProfileNotifier: Clearing user profile data');
+    state = const UserProfileState();
+  }
+
   /// NOTE: Manual profile creation removed as database trigger handles this automatically
   /// The handle_new_user() trigger creates profiles when users sign up via Google Sign-In
 
@@ -916,13 +922,19 @@ final autoLoadUserProfileProvider = Provider<void>(
     debugPrint('autoLoadUserProfileProvider: Initializing');
     final authState = ref.watch(authNotifierProvider);
 
-    debugPrint('autoLoadUserProfileProvider: Current auth state - isAuthenticated: ${authState.isAuthenticated}, hasUser: ${authState.user != null}');
+    debugPrint('autoLoadUserProfileProvider: Current auth state - isAuthenticated: ${authState.isAuthenticated}, hasUser: ${authState.user != null}, isLoggingOut: ${authState.isLoggingOut}');
 
     // Listen for changes in auth state
     ref.listen(authNotifierProvider, (previous, current) {
       debugPrint('autoLoadUserProfileProvider: Auth state changed');
-      debugPrint('autoLoadUserProfileProvider: Previous state - isAuthenticated: ${previous?.isAuthenticated}, hasUser: ${previous?.user != null}');
-      debugPrint('autoLoadUserProfileProvider: Current state - isAuthenticated: ${current.isAuthenticated}, hasUser: ${current.user != null}');
+      debugPrint('autoLoadUserProfileProvider: Previous state - isAuthenticated: ${previous?.isAuthenticated}, hasUser: ${previous?.user != null}, isLoggingOut: ${previous?.isLoggingOut}');
+      debugPrint('autoLoadUserProfileProvider: Current state - isAuthenticated: ${current.isAuthenticated}, hasUser: ${current.user != null}, isLoggingOut: ${current.isLoggingOut}');
+
+      // Skip all profile operations if logging out
+      if (current.isLoggingOut) {
+        debugPrint('autoLoadUserProfileProvider: Logout in progress, skipping profile operations');
+        return;
+      }
 
       // If user just became authenticated, load their profile
       if (current.isAuthenticated && current.user != null &&
@@ -936,13 +948,22 @@ final autoLoadUserProfileProvider = Provider<void>(
           ref.read(userProfileNotifierProvider.notifier).resetLoadingState();
         }
 
-        // Load profile
-        ref.read(userProfileNotifierProvider.notifier).loadUserProfile(current.user!.id);
+        // Load profile and addresses
+        final notifier = ref.read(userProfileNotifierProvider.notifier);
+        notifier.loadUserProfile(current.user!.id);
+        notifier.loadAddresses(current.user!.id);
+      }
+
+      // If user just logged out, clear their profile data
+      if (!current.isAuthenticated && current.user == null &&
+          (previous != null && (previous.isAuthenticated || previous.user != null))) {
+        debugPrint('autoLoadUserProfileProvider: User just logged out, clearing profile data');
+        ref.read(userProfileNotifierProvider.notifier).clearProfile();
       }
     });
 
-    // If already authenticated, load profile
-    if (authState.isAuthenticated && authState.user != null) {
+    // If already authenticated and not logging out, load profile
+    if (authState.isAuthenticated && authState.user != null && !authState.isLoggingOut) {
       debugPrint('autoLoadUserProfileProvider: User already authenticated, scheduling profile load for user ID: ${authState.user!.id}');
 
       // Use a delayed future to avoid conflicts with other initialization
@@ -954,11 +975,17 @@ final autoLoadUserProfileProvider = Provider<void>(
           ref.read(userProfileNotifierProvider.notifier).resetLoadingState();
         }
 
-        debugPrint('autoLoadUserProfileProvider: Loading profile for user ID: ${authState.user!.id}');
-        ref.read(userProfileNotifierProvider.notifier).loadUserProfile(authState.user!.id);
+        debugPrint('autoLoadUserProfileProvider: Loading profile and addresses for user ID: ${authState.user!.id}');
+        final notifier = ref.read(userProfileNotifierProvider.notifier);
+        notifier.loadUserProfile(authState.user!.id);
+        notifier.loadAddresses(authState.user!.id);
       });
     } else {
-      debugPrint('autoLoadUserProfileProvider: User not authenticated, skipping profile load');
+      if (authState.isLoggingOut) {
+        debugPrint('autoLoadUserProfileProvider: Logout in progress, skipping profile load');
+      } else {
+        debugPrint('autoLoadUserProfileProvider: User not authenticated, skipping profile load');
+      }
     }
 
     return;

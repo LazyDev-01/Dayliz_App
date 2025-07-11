@@ -1,0 +1,25 @@
+- How are you checking if the user is new(first time) or existing user?
+- How are we validating zones while fetching gps coordinates? Are we just cross-checking which zone user falls under or also cheking region?
+
+
+
+
+Improvements:
+1. If the user is first time then what is the ui flow?
+2. If the user has signed out or there is a session time out due to app inactivity and later opens the app again. Then what is the flow?
+3. Have we implemented any inactive app session? If app is not opened or used for several days then is there a app timeout feature implemented?
+4. 
+
+GPS OFF:
+
+- Scenario 1: App opens -> splash screen -> location access -> Home screen
+- Scenario 2(new user : New device) - App opens -> onboarding screens -> authentication page -> splash screen -> location access -> Home screen
+- Scenario 3(Existing user :New device) - App opens -> onboarding screens -> authentication page -> splash screen -> location access -> Home screen
+- Scenario 4(Logged out/inactive session/timeout) : App opens -> authentication screen -> splash screen -> location access -> Home screen
+
+GPS ON:
+
+- Scenario 1 : App opens -> splash screen -> Home screen
+- Scenario 2(new user : New device) - App opens -> onboarding screens -> authentication page -> splash screen -> Home screen
+- Scenario 3(Existing user :New device) - App opens -> onboarding screens -> authentication page -> splash screen -> Home screen
+- Scenario 4(Logged out/inactive session/timeout) : App opens -> authentication screen -> splash screen -> Home screen

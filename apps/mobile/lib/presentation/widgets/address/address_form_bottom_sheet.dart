@@ -77,10 +77,49 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
     super.initState();
     _isEditing = widget.address != null || widget.addressId != null;
 
-    // Initialize controllers - GPS data takes priority for Area/Locality field
+    // Initialize controllers with proper field mapping
+    // address_line_1 = Street + Area combined (from Google Maps thoroughfare + subLocality)
+    // address_line_2 = Left empty for manual user entry
+
+    String addressLine1 = '';
+
+    if (widget.locationData != null) {
+      // Use detailed address components for better field mapping
+      final locationData = widget.locationData!;
+
+      // Build address_line_1 from street + area combined
+      final addressParts = <String>[];
+
+      // Add house number and street name
+      if (locationData.subThoroughfare != null && locationData.subThoroughfare!.isNotEmpty) {
+        addressParts.add(locationData.subThoroughfare!); // House number
+      }
+      if (locationData.thoroughfare != null && locationData.thoroughfare!.isNotEmpty) {
+        addressParts.add(locationData.thoroughfare!); // Street name
+      }
+
+      // Add area/locality
+      if (locationData.subLocality != null && locationData.subLocality!.isNotEmpty) {
+        addressParts.add(locationData.subLocality!); // Area/neighborhood
+      } else if (locationData.locality != null && locationData.locality!.isNotEmpty) {
+        addressParts.add(locationData.locality!); // Locality fallback
+      }
+
+      if (addressParts.isNotEmpty) {
+        addressLine1 = addressParts.join(', ');
+      } else {
+        // Fallback: use first part of full address
+        final fullAddressParts = locationData.address.split(', ');
+        if (fullAddressParts.isNotEmpty) {
+          addressLine1 = fullAddressParts[0].trim();
+        }
+      }
+    }
+
     _addressLine1Controller = TextEditingController(text:
-      widget.locationData?.locality ?? widget.address?.addressLine1 ?? '');
-    _addressLine2Controller = TextEditingController(text: widget.address?.addressLine2 ?? '');
+      addressLine1.isNotEmpty ? addressLine1 : (widget.address?.addressLine1 ?? ''));
+    _addressLine2Controller = TextEditingController(text:
+      widget.address?.addressLine2 ?? ''); // Keep existing address_line_2 for manual entry
 
     // GPS location data takes priority, then existing address, then empty
     _cityController = TextEditingController(text:
@@ -95,7 +134,7 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
     _landmarkController = TextEditingController(text: widget.address?.landmark ?? '');
     _additionalInfoController = TextEditingController(text: widget.address?.additionalInfo ?? '');
     _recipientNameController = TextEditingController(text: widget.address?.recipientName ?? '');
-    _floorController = TextEditingController(text: ''); // Initialize with empty string
+    _floorController = TextEditingController(text: widget.address?.floor ?? ''); // Initialize with existing floor data
     _addressType = widget.address?.addressType;
 
     // Store location data - GPS data takes priority over existing address data
@@ -179,6 +218,7 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
         longitude: _longitude,
         zoneId: _zoneId,
         recipientName: _recipientNameController.text.isEmpty ? null : _recipientNameController.text,
+        floor: _floorController.text.isEmpty ? null : _floorController.text,
       );
 
       try {
@@ -248,9 +288,9 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6B7C32).withAlpha(26) : Colors.white,
+          color: isSelected ? Colors.grey[800] : Colors.grey[200],
           border: Border.all(
-            color: isSelected ? const Color(0xFF6B7C32) : const Color(0xFF9CAF50),
+            color: isSelected ? Colors.grey[800]! : Colors.grey[300]!,
             width: 1,
           ),
           borderRadius: BorderRadius.circular(6),
@@ -260,7 +300,7 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
           children: [
             Icon(
               icon,
-              color: isSelected ? const Color(0xFF6B7C32) : const Color(0xFF9CAF50),
+              color: isSelected ? Colors.white : Colors.grey[600],
               size: 16,
             ),
             const SizedBox(width: 2),
@@ -268,8 +308,8 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
               child: Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? const Color(0xFF6B7C32) : const Color(0xFF9CAF50),
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Colors.white : Colors.grey[600],
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   fontSize: 12,
                 ),
                 overflow: TextOverflow.ellipsis,

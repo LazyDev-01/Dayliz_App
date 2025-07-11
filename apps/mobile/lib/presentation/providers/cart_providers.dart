@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../core/errors/failures.dart';
+import '../../core/models/coupon.dart';
+import '../../core/services/coupon_service.dart';
 import '../../domain/entities/cart_item.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/usecases/get_cart_items_usecase.dart';
@@ -40,6 +42,8 @@ class CartState {
   final List<CartItem> items;
   final double totalPrice;
   final int itemCount;
+  final AppliedCoupon? appliedCoupon;
+  final String? couponErrorMessage;
 
   /// Total quantity of items (sum of all quantities)
   int get totalQuantity => items.fold(0, (total, item) => total + item.quantity);
@@ -50,6 +54,8 @@ class CartState {
     this.items = const [],
     this.totalPrice = 0.0,
     this.itemCount = 0,
+    this.appliedCoupon,
+    this.couponErrorMessage,
   });
 
   CartState copyWith({
@@ -58,13 +64,20 @@ class CartState {
     List<CartItem>? items,
     double? totalPrice,
     int? itemCount,
+    AppliedCoupon? appliedCoupon,
+    String? couponErrorMessage,
+    bool clearError = false,
+    bool clearCouponError = false,
+    bool clearCoupon = false,
   }) {
     return CartState(
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       items: items ?? this.items,
       totalPrice: totalPrice ?? this.totalPrice,
       itemCount: itemCount ?? this.itemCount,
+      appliedCoupon: clearCoupon ? null : (appliedCoupon ?? this.appliedCoupon),
+      couponErrorMessage: clearCouponError ? null : (couponErrorMessage ?? this.couponErrorMessage),
     );
   }
 }
@@ -90,13 +103,57 @@ class CartNotifier extends StateNotifier<CartState> {
     required this.getCartItemCountUseCase,
     required this.isInCartUseCase,
   }) : super(CartState()) {
-    // Initialize cart count immediately to ensure UI shows correct count
-    _initializeCartCount();
-    debugPrint('🛒 CART NOTIFIER: Initialized with cart count initialization');
+    // Initialize cart data immediately to ensure UI shows correct state
+    _initializeCartData();
+    debugPrint('🛒 CART NOTIFIER: Initialized with full cart data initialization');
   }
 
-  /// Initialize cart count without loading full cart data
-  Future<void> _initializeCartCount() async {
+  /// Initialize cart data including items and count for proper app startup
+  Future<void> _initializeCartData() async {
+    try {
+      debugPrint('🛒 CART INIT: Starting cart data initialization...');
+
+      // Load cart items first (this will also give us the count)
+      final result = await getCartItemsUseCase();
+      result.fold(
+        (failure) {
+          debugPrint('🛒 CART INIT: Failed to load cart items - ${failure.message}');
+          // Fallback to just loading count
+          _initializeCartCountOnly();
+        },
+        (items) {
+          debugPrint('🛒 CART INIT: Loaded ${items.length} cart items');
+
+          // Calculate totals
+          final totalPrice = items.fold<double>(
+            0.0,
+            (total, item) => total + (item.product.discountedPrice * item.quantity),
+          );
+          final itemCount = items.fold<int>(
+            0,
+            (total, item) => total + item.quantity,
+          );
+
+          // Update state with loaded data
+          state = state.copyWith(
+            items: items,
+            totalPrice: totalPrice,
+            itemCount: itemCount,
+            isLoading: false,
+          );
+
+          debugPrint('🛒 CART INIT: ✅ Cart initialized with $itemCount items, total: ₹$totalPrice');
+        },
+      );
+    } catch (e) {
+      debugPrint('🛒 CART INIT: Error during initialization - $e');
+      // Fallback to count-only initialization
+      _initializeCartCountOnly();
+    }
+  }
+
+  /// Fallback method to initialize only cart count
+  Future<void> _initializeCartCountOnly() async {
     try {
       final result = await getCartItemCountUseCase();
       result.fold(
@@ -213,7 +270,7 @@ class CartNotifier extends StateNotifier<CartState> {
     // Calculate new totals optimistically
     final newTotalPrice = updatedItems.fold<double>(
       0.0,
-      (total, item) => total + (item.product.price * item.quantity),
+      (total, item) => total + (item.product.discountedPrice * item.quantity),
     );
     final newItemCount = updatedItems.fold<int>(
       0,
@@ -358,7 +415,7 @@ class CartNotifier extends StateNotifier<CartState> {
     // Calculate new totals optimistically
     final newTotalPrice = updatedItems.fold<double>(
       0.0,
-      (total, item) => total + (item.product.price * item.quantity),
+      (total, item) => total + (item.product.discountedPrice * item.quantity),
     );
     final newItemCount = updatedItems.fold<int>(
       0,
@@ -443,6 +500,45 @@ class CartNotifier extends StateNotifier<CartState> {
       (failure) => false,
       (isInCart) => isInCart,
     );
+  }
+
+  /// Apply coupon to cart
+  Future<bool> applyCoupon(String couponCode) async {
+    // Clear any previous coupon error
+    state = state.copyWith(clearCouponError: true);
+
+    // Calculate current cart total
+    final cartTotal = state.items.fold<double>(0, (sum, item) => sum + (item.quantity * item.product.price));
+
+    // Validate coupon
+    final validationResult = CouponService.validateCoupon(couponCode, cartTotal);
+
+    if (validationResult.isSuccess && validationResult.appliedCoupon != null) {
+      // Apply coupon successfully
+      state = state.copyWith(
+        appliedCoupon: validationResult.appliedCoupon,
+        clearCouponError: true,
+      );
+      debugPrint('🎫 COUPON: Applied ${couponCode} successfully');
+      return true;
+    } else {
+      // Show error message
+      state = state.copyWith(
+        couponErrorMessage: validationResult.errorMessage,
+        clearCoupon: true,
+      );
+      debugPrint('🎫 COUPON: Failed to apply ${couponCode} - ${validationResult.errorMessage}');
+      return false;
+    }
+  }
+
+  /// Remove applied coupon
+  void removeCoupon() {
+    state = state.copyWith(
+      clearCoupon: true,
+      clearCouponError: true,
+    );
+    debugPrint('🎫 COUPON: Removed applied coupon');
   }
 
   /// Refresh cart data silently (without loading state)

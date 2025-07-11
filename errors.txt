@@ -1,0 +1,260 @@
+C:\Users\HP\Project_dayliz\apps\mobile>flutter run
+Launching lib\main.dart on IV2201 in debug mode...
+lib/presentation/screens/location/location_access_screen.dart:11:8: Error: Error when reading 'lib/core/theme/app_colors.dart': The system cannot find the path specified.
+
+import '../../../core/theme/app_colors.dart';
+       ^
+lib/presentation/screens/location/service_not_available_screen.dart:11:8: Error: Error when reading 'lib/core/theme/app_colors.dart': The system cannot find the path specified.
+
+import '../../../core/theme/app_colors.dart';
+       ^
+lib/presentation/screens/location/location_access_screen.dart:12:8: Error: Error when reading 'lib/core/theme/app_theme.dart': The system cannot find the path specified.
+
+import '../../../core/theme/app_theme.dart';
+       ^
+lib/presentation/screens/location/service_not_available_screen.dart:12:8: Error: Error when reading 'lib/core/theme/app_theme.dart': The system cannot find the path specified.
+
+import '../../../core/theme/app_theme.dart';
+       ^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:6:8: Error: Error when reading 'lib/core/theme/app_colors.dart': The system cannot find the path specified.
+
+import '../../../core/theme/app_colors.dart';
+       ^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:7:8: Error: Error when reading 'lib/core/theme/app_theme.dart': The system cannot find the path specified.
+
+import '../../../core/theme/app_theme.dart';
+       ^
+lib/presentation/screens/location/service_not_available_screen.dart:309:29: Error: Type 'LocationData' not found.
+  Widget _buildLocationInfo(LocationData locationData) {
+                            ^^^^^^^^^^^^
+lib/presentation/screens/location/location_access_screen.dart:184:22: Error: The getter 'AppColors' isn't defined for the class '_LocationAccessScreenState'.
+ - '_LocationAccessScreenState' is from 'package:dayliz_app/presentation/screens/location/location_access_screen.dart' ('lib/presentation/screens/location/location_access_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+              color: AppColors.primary.withOpacity(0.1),
+                     ^^^^^^^^^
+lib/presentation/screens/location/location_access_screen.dart:190:22: Error: The getter 'AppColors' isn't defined for the class '_LocationAccessScreenState'.
+ - '_LocationAccessScreenState' is from 'package:dayliz_app/presentation/screens/location/location_access_screen.dart' ('lib/presentation/screens/location/location_access_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+              color: AppColors.primary,
+                     ^^^^^^^^^
+lib/presentation/screens/location/location_access_screen.dart:229:18: Error: The getter 'AppTheme' isn't defined for the class '_LocationAccessScreenState'.
+ - '_LocationAccessScreenState' is from 'package:dayliz_app/presentation/screens/location/location_access_screen.dart' ('lib/presentation/screens/location/location_access_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+          style: AppTheme.textTheme.headlineSmall?.copyWith(
+                 ^^^^^^^^
+lib/presentation/screens/location/location_access_screen.dart:231:20: Error: The getter 'AppColors' isn't defined for the class '_LocationAccessScreenState'.
+ - '_LocationAccessScreenState' is from 'package:dayliz_app/presentation/screens/location/location_access_screen.dart' ('lib/presentation/screens/location/location_access_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+            color: AppColors.textPrimary,
+                   ^^^^^^^^^
+lib/presentation/screens/location/location_access_screen.dart:240:18: Error: The getter 'AppTheme' isn't defined for the class '_LocationAccessScreenState'.
+ - '_LocationAccessScreenState' is from 'package:dayliz_app/presentation/screens/location/location_access_screen.dart' ('lib/presentation/screens/location/location_access_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+          style: AppTheme.textTheme.bodyLarge?.copyWith(
+                 ^^^^^^^^
+lib/presentation/screens/location/location_access_screen.dart:241:20: Error: The getter 'AppColors' isn't defined for the class '_LocationAccessScreenState'.
+ - '_LocationAccessScreenState' is from 'package:dayliz_app/presentation/screens/location/location_access_screen.dart' ('lib/presentation/screens/location/location_access_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+            color: AppColors.textSecondary,
+                   ^^^^^^^^^
+lib/presentation/screens/location/location_access_screen.dart:257:18: Error: The getter 'AppTheme' isn't defined for the class '_LocationAccessScreenState'.
+ - '_LocationAccessScreenState' is from 'package:dayliz_app/presentation/screens/location/location_access_screen.dart' ('lib/presentation/screens/location/location_access_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+          style: AppTheme.textTheme.bodyMedium?.copyWith(
+                 ^^^^^^^^
+lib/presentation/screens/location/location_access_screen.dart:258:20: Error: The getter 'AppColors' isn't defined for the class '_LocationAccessScreenState'.
+ - '_LocationAccessScreenState' is from 'package:dayliz_app/presentation/screens/location/location_access_screen.dart' ('lib/presentation/screens/location/location_access_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+            color: AppColors.textSecondary,
+                   ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:150:22: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+              color: AppColors.lightGrey,
+                     ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:159:26: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+                  color: AppColors.textSecondary,
+                         ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:165:26: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+                  color: AppColors.textSecondary.withOpacity(0.5),
+                         ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:181:18: Error: The getter 'AppTheme' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+          style: AppTheme.textTheme.headlineMedium?.copyWith(
+                 ^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:183:20: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+            color: AppColors.textPrimary,
+                   ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:193:18: Error: The getter 'AppTheme' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+          style: AppTheme.textTheme.titleMedium?.copyWith(
+                 ^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:194:20: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+            color: AppColors.textSecondary,
+                   ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:205:18: Error: The getter 'AppTheme' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+          style: AppTheme.textTheme.bodyLarge?.copyWith(
+                 ^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:206:20: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+            color: AppColors.textSecondary,
+                   ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:268:22: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+              color: AppColors.primary.withOpacity(0.1),
+                     ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:273:22: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+              color: AppColors.primary,
+                     ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:286:26: Error: The getter 'AppTheme' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+                  style: AppTheme.textTheme.bodyLarge?.copyWith(
+                         ^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:288:28: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+                    color: AppColors.textPrimary,
+                           ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:296:26: Error: The getter 'AppTheme' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+                  style: AppTheme.textTheme.bodyMedium?.copyWith(
+                         ^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:297:28: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+                    color: AppColors.textSecondary,
+                           ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:309:29: Error: 'LocationData' isn't a type.
+  Widget _buildLocationInfo(LocationData locationData) {
+                            ^^^^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:313:16: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+        color: AppColors.lightGrey,
+               ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:316:18: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+          color: AppColors.primary.withOpacity(0.2),
+                 ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:324:20: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+            color: AppColors.primary,
+                   ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:336:26: Error: The getter 'AppTheme' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+                  style: AppTheme.textTheme.bodySmall?.copyWith(
+                         ^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:337:28: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+                    color: AppColors.textSecondary,
+                           ^^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:346:26: Error: The getter 'AppTheme' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+                  style: AppTheme.textTheme.bodyMedium?.copyWith(
+                         ^^^^^^^^
+lib/presentation/screens/location/service_not_available_screen.dart:347:28: Error: The getter 'AppColors' isn't defined for the class '_ServiceNotAvailableScreenState'.
+ - '_ServiceNotAvailableScreenState' is from 'package:dayliz_app/presentation/screens/location/service_not_available_screen.dart' ('lib/presentation/screens/location/service_not_available_screen.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+                    color: AppColors.textPrimary,
+                           ^^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:166:18: Error: The getter 'AppColors' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+          color: AppColors.textSecondary.withOpacity(0.3),
+                 ^^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:179:18: Error: The getter 'AppTheme' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+          style: AppTheme.textTheme.headlineSmall?.copyWith(
+                 ^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:181:20: Error: The getter 'AppColors' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+            color: AppColors.textPrimary,
+                   ^^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:189:18: Error: The getter 'AppTheme' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+          style: AppTheme.textTheme.bodyMedium?.copyWith(
+                 ^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:190:20: Error: The getter 'AppColors' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+            color: AppColors.textSecondary,
+                   ^^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:201:16: Error: The getter 'AppColors' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+        color: AppColors.lightGrey,
+               ^^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:205:15: Error: The getter 'AppColors' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+            ? AppColors.primary
+              ^^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:217:22: Error: The getter 'AppTheme' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+          hintStyle: AppTheme.textTheme.bodyMedium?.copyWith(
+                     ^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:218:20: Error: The getter 'AppColors' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+            color: AppColors.textSecondary.withOpacity(0.7),
+                   ^^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:223:16: Error: The getter 'AppTheme' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+        style: AppTheme.textTheme.bodyMedium?.copyWith(
+               ^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:224:18: Error: The getter 'AppColors' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppColors'.
+          color: AppColors.textPrimary,
+                 ^^^^^^^^^
+lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart:253:22: Error: The getter 'AppTheme' isn't defined for the class '_ManualAddressEntryBottomSheetState'.
+ - '_ManualAddressEntryBottomSheetState' is from 'package:dayliz_app/presentation/widgets/location/manual_address_entry_bottom_sheet.dart' ('lib/presentation/widgets/location/manual_address_entry_bottom_sheet.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'AppTheme'.
+              style: AppTheme.textTheme.bodySmall?.copyWith(
+                     ^^^^^^^^
+Target kernel_snapshot_program failed: Exception
+
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileFlutterBuildDebug'.
+> Process 'command 'C:\Users\HP\Cursor\Flutter\flutter_windows_3.29.2-stable\flutter\bin\flutter.bat'' finished with non-zero exit value 1
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1m 25s
+Running Gradle task 'assembleDebug'...                             86.3s
+Error: Gradle task assembleDebug failed with exit code 1

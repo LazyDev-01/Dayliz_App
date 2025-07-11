@@ -144,10 +144,10 @@ void main() {
 
   test('should handle orders with different statuses', () async {
     // arrange
-    final tOrderPending = tOrder.copyWith(status: 'pending');
-    final tOrderProcessing = tOrder.copyWith(status: 'processing', id: 'order-2');
+    final tOrderProcessing = tOrder.copyWith(status: 'processing');
+    final tOrderOutForDelivery = tOrder.copyWith(status: 'out_for_delivery', id: 'order-2');
     final tOrderDelivered = tOrder.copyWith(status: 'delivered', id: 'order-3');
-    final tMixedOrders = [tOrderPending, tOrderProcessing, tOrderDelivered];
+    final tMixedOrders = [tOrderProcessing, tOrderOutForDelivery, tOrderDelivered];
 
     when(mockOrderRepository.getOrders())
         .thenAnswer((_) async => Right(tMixedOrders));
@@ -161,8 +161,8 @@ void main() {
       (failure) => fail('Should return orders'),
       (orders) {
         expect(orders.length, 3);
-        expect(orders[0].status, 'pending');
-        expect(orders[1].status, 'processing');
+        expect(orders[0].status, 'processing');
+        expect(orders[1].status, 'out_for_delivery');
         expect(orders[2].status, 'delivered');
       },
     );

@@ -9,9 +9,8 @@ import 'payment_method_model.dart';
 /// Data model for Order entity
 class OrderModel extends Order {
   // Order status constants
-  static const String statusPending = 'pending';
   static const String statusProcessing = 'processing';
-  static const String statusShipped = 'shipped';
+  static const String statusOutForDelivery = 'out_for_delivery';
   static const String statusDelivered = 'delivered';
   static const String statusCancelled = 'cancelled';
   static const String statusRefunded = 'refunded';

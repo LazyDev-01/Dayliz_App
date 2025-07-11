@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/address_formatter.dart';
 import '../../../domain/entities/address.dart';
 import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
@@ -120,7 +121,7 @@ class CleanAddressSelectionWidget extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${address.addressLine1}, ${address.city}, ${address.state}',
+                          AddressFormatter.formatAddressCompact(address),
                           style: theme.textTheme.bodyMedium,
                         ),
                         if (address.landmark != null && address.landmark!.isNotEmpty) ...[

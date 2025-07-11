@@ -107,9 +107,8 @@ class OrderLocalDataSource implements OrderDataSource {
         final stats = <String, int>{};
 
         // Initialize with all possible statuses
-        stats[OrderModel.statusPending] = 0;
         stats[OrderModel.statusProcessing] = 0;
-        stats[OrderModel.statusShipped] = 0;
+        stats[OrderModel.statusOutForDelivery] = 0;
         stats[OrderModel.statusDelivered] = 0;
         stats[OrderModel.statusCancelled] = 0;
         stats[OrderModel.statusRefunded] = 0;

@@ -7,6 +7,7 @@ class ProductModel extends Product {
     required String name,
     required String description,
     required double price,
+    double? retailPrice,
     double? discountPercentage,
     double? rating,
     int? reviewCount,
@@ -17,15 +18,23 @@ class ProductModel extends Product {
     required String categoryId,
     String? subcategoryId,
     String? brand,
+    String? weight,
     Map<String, dynamic>? attributes,
+    Map<String, dynamic>? nutritionalInfo,
     List<String>? tags,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? vendorId,
+    String? vendorName,
+    String? vendorFssaiLicense,
+    String? vendorAddress,
+    bool nutriActive = false,
   }) : super(
           id: id,
           name: name,
           description: description,
           price: price,
+          retailPrice: retailPrice,
           discountPercentage: discountPercentage,
           rating: rating,
           reviewCount: reviewCount,
@@ -36,10 +45,17 @@ class ProductModel extends Product {
           categoryId: categoryId,
           subcategoryId: subcategoryId,
           brand: brand,
+          weight: weight,
           attributes: attributes,
+          nutritionalInfo: nutritionalInfo,
           tags: tags,
           createdAt: createdAt,
           updatedAt: updatedAt,
+          vendorId: vendorId,
+          vendorName: vendorName,
+          vendorFssaiLicense: vendorFssaiLicense,
+          vendorAddress: vendorAddress,
+          nutriActive: nutriActive,
         );
 
   /// Create a ProductModel from a Product entity
@@ -62,10 +78,17 @@ class ProductModel extends Product {
       categoryId: domainProduct.categoryId,
       subcategoryId: domainProduct.subcategoryId,
       brand: domainProduct.brand,
+      weight: domainProduct.weight,
       attributes: domainProduct.attributes,
+      nutritionalInfo: domainProduct.nutritionalInfo,
       tags: domainProduct.tags,
       createdAt: domainProduct.createdAt,
       updatedAt: domainProduct.updatedAt,
+      vendorId: domainProduct.vendorId,
+      vendorName: domainProduct.vendorName,
+      vendorFssaiLicense: domainProduct.vendorFssaiLicense,
+      vendorAddress: domainProduct.vendorAddress,
+      nutriActive: domainProduct.nutriActive,
     );
   }
 
@@ -76,6 +99,7 @@ class ProductModel extends Product {
       name: json['name'],
       description: json['description'],
       price: json['price'].toDouble(),
+      retailPrice: json['retail_price']?.toDouble(),
       discountPercentage: json['discount_percentage']?.toDouble(),
       rating: json['rating']?.toDouble(),
       reviewCount: json['review_count'],
@@ -88,7 +112,9 @@ class ProductModel extends Product {
       categoryId: json['category_id'],
       subcategoryId: json['subcategory_id'],
       brand: json['brand'],
+      weight: json['weight'],
       attributes: json['attributes'],
+      nutritionalInfo: json['nutritional_info'],
       tags: json['tags'] != null ? List<String>.from(json['tags']) : null,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
@@ -96,6 +122,11 @@ class ProductModel extends Product {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
+      vendorId: json['vendor_id'],
+      vendorName: json['vendor_name'],
+      vendorFssaiLicense: json['vendor_fssai_license'],
+      vendorAddress: json['vendor_address'],
+      nutriActive: json['nutri_active'] ?? false,
     );
   }
 
@@ -117,9 +148,15 @@ class ProductModel extends Product {
       'subcategory_id': subcategoryId,
       'brand': brand,
       'attributes': attributes,
+      'nutritional_info': nutritionalInfo,
       'tags': tags,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      'vendor_id': vendorId,
+      'vendor_name': vendorName,
+      'vendor_fssai_license': vendorFssaiLicense,
+      'vendor_address': vendorAddress,
+      'nutri_active': nutriActive,
     };
   }
 
@@ -129,6 +166,7 @@ class ProductModel extends Product {
     String? name,
     String? description,
     double? price,
+    double? retailPrice,
     double? discountPercentage,
     double? rating,
     int? reviewCount,
@@ -139,16 +177,24 @@ class ProductModel extends Product {
     String? categoryId,
     String? subcategoryId,
     String? brand,
+    String? weight,
     Map<String, dynamic>? attributes,
+    Map<String, dynamic>? nutritionalInfo,
     List<String>? tags,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? vendorId,
+    String? vendorName,
+    String? vendorFssaiLicense,
+    String? vendorAddress,
+    bool? nutriActive,
   }) {
     return ProductModel(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
       price: price ?? this.price,
+      retailPrice: retailPrice ?? this.retailPrice,
       discountPercentage: discountPercentage ?? this.discountPercentage,
       rating: rating ?? this.rating,
       reviewCount: reviewCount ?? this.reviewCount,
@@ -159,10 +205,17 @@ class ProductModel extends Product {
       categoryId: categoryId ?? this.categoryId,
       subcategoryId: subcategoryId ?? this.subcategoryId,
       brand: brand ?? this.brand,
+      weight: weight ?? this.weight,
       attributes: attributes ?? this.attributes,
+      nutritionalInfo: nutritionalInfo ?? this.nutritionalInfo,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      vendorId: vendorId ?? this.vendorId,
+      vendorName: vendorName ?? this.vendorName,
+      vendorFssaiLicense: vendorFssaiLicense ?? this.vendorFssaiLicense,
+      vendorAddress: vendorAddress ?? this.vendorAddress,
+      nutriActive: nutriActive ?? this.nutriActive,
     );
   }
 }

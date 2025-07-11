@@ -41,7 +41,7 @@ const demoOrders: Order[] = [
   {
     id: "ORD-001",
     user_id: "USR-123",
-    status: "pending",
+    status: "processing",
     total_amount: 78.95,
     created_at: "2023-06-05T14:30:00Z",
     updated_at: "2023-06-05T14:30:00Z",
@@ -65,7 +65,7 @@ const demoOrders: Order[] = [
   {
     id: "ORD-003",
     user_id: "USR-789",
-    status: "shipped",
+    status: "out_for_delivery",
     total_amount: 59.99,
     created_at: "2023-06-03T11:45:00Z",
     updated_at: "2023-06-04T08:30:00Z",
@@ -214,11 +214,11 @@ export default function OrdersPage() {
   // Get badge variant based on order status
   const getStatusBadgeVariant = (status: Order["status"]) => {
     switch (status) {
-      case "pending":
+      case "processing":
         return { variant: "outline" as const, className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" }
       case "packed":
         return { variant: "outline" as const, className: "bg-blue-100 text-blue-800 hover:bg-blue-100" }
-      case "shipped":
+      case "out_for_delivery":
         return { variant: "outline" as const, className: "bg-purple-100 text-purple-800 hover:bg-purple-100" }
       case "delivered":
         return { variant: "outline" as const, className: "bg-green-100 text-green-800 hover:bg-green-100" }
@@ -262,9 +262,9 @@ export default function OrdersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
                   <SelectItem value="packed">Packed</SelectItem>
-                  <SelectItem value="shipped">Shipped</SelectItem>
+                  <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
                   <SelectItem value="delivered">Delivered</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
@@ -362,9 +362,9 @@ export default function OrdersPage() {
                               <SelectValue placeholder="Update" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="processing">Processing</SelectItem>
                               <SelectItem value="packed">Packed</SelectItem>
-                              <SelectItem value="shipped">Shipped</SelectItem>
+                              <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
                               <SelectItem value="delivered">Delivered</SelectItem>
                               <SelectItem value="cancelled">Cancelled</SelectItem>
                             </SelectContent>

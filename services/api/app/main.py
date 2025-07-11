@@ -8,6 +8,10 @@ from app.api.v1.cart import router as cart_router
 from app.api.v1.orders import router as orders_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.drivers import router as drivers_router
+from app.api.v1.monitoring import router as monitoring_router
+
+# Import monitoring
+from app.core.monitoring import MonitoringMiddleware, monitoring_service
 
 app = FastAPI(
     title="Dayliz API",
@@ -24,6 +28,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add monitoring middleware
+app.add_middleware(MonitoringMiddleware)
+
 # Include routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(products_router, prefix="/api/v1/products", tags=["Products"])
@@ -31,6 +38,7 @@ app.include_router(cart_router, prefix="/api/v1/cart", tags=["Cart"])
 app.include_router(orders_router, prefix="/api/v1/orders", tags=["Orders"])
 app.include_router(payments_router, prefix="/api/v1/payments", tags=["Payments"])
 app.include_router(drivers_router, prefix="/api/v1/drivers", tags=["Drivers"])
+app.include_router(monitoring_router, prefix="/api/v1/monitoring", tags=["Monitoring"])
 
 @app.get("/")
 async def root():

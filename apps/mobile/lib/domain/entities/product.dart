@@ -6,6 +6,7 @@ class Product extends Equatable {
   final String name;
   final String description;
   final double price;
+  final double? retailPrice;
   final double? discountPercentage;
   final double? rating;
   final int? reviewCount;
@@ -16,7 +17,9 @@ class Product extends Equatable {
   final String categoryId;
   final String? subcategoryId;
   final String? brand;
+  final String? weight;
   final Map<String, dynamic>? attributes;
+  final Map<String, dynamic>? nutritionalInfo;
   final List<String>? tags;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -24,12 +27,18 @@ class Product extends Equatable {
   final bool onSale;
   final String? categoryName;
   final String? subcategoryName;
+  final String? vendorId;
+  final String? vendorName;
+  final String? vendorFssaiLicense;
+  final String? vendorAddress;
+  final bool nutriActive;
 
   const Product({
     required this.id,
     required this.name,
     required this.description,
     required this.price,
+    this.retailPrice,
     this.discountPercentage,
     this.rating,
     this.reviewCount,
@@ -40,7 +49,9 @@ class Product extends Equatable {
     required this.categoryId,
     this.subcategoryId,
     this.brand,
+    this.weight,
     this.attributes,
+    this.nutritionalInfo,
     this.tags,
     this.createdAt,
     this.updatedAt,
@@ -48,6 +59,11 @@ class Product extends Equatable {
     this.onSale = false,
     this.categoryName,
     this.subcategoryName,
+    this.vendorId,
+    this.vendorName,
+    this.vendorFssaiLicense,
+    this.vendorAddress,
+    this.nutriActive = false,
   });
 
   @override
@@ -56,6 +72,7 @@ class Product extends Equatable {
         name,
         description,
         price,
+        retailPrice,
         discountPercentage,
         rating,
         reviewCount,
@@ -66,7 +83,9 @@ class Product extends Equatable {
         categoryId,
         subcategoryId,
         brand,
+        weight,
         attributes,
+        nutritionalInfo,
         tags,
         createdAt,
         updatedAt,
@@ -74,14 +93,32 @@ class Product extends Equatable {
         onSale,
         categoryName,
         subcategoryName,
+        vendorId,
+        vendorName,
+        vendorFssaiLicense,
+        vendorAddress,
+        nutriActive,
       ];
 
-  /// Calculate the discounted price of the product
+  /// Get the original price (MRP) of the product
+  double get originalPrice {
+    return price; // price field contains MRP
+  }
+
+
+
+  /// Get the discounted price of the product
   double get discountedPrice {
-    if (discountPercentage == null || discountPercentage == 0) {
-      return price;
+    // Use retail price if available, otherwise calculate from MRP and discount
+    if (retailPrice != null) {
+      return retailPrice!;
     }
-    return price * (1 - (discountPercentage! / 100));
+
+    if (discountPercentage == null || discountPercentage == 0) {
+      return price; // No discount, return MRP
+    }
+    // Calculate discounted price: MRP - (MRP * discount / 100)
+    return price - (price * discountPercentage! / 100);
   }
 
   /// Returns a copy of this Product with the given fields replaced
@@ -90,6 +127,7 @@ class Product extends Equatable {
     String? name,
     String? description,
     double? price,
+    double? retailPrice,
     double? discountPercentage,
     double? rating,
     int? reviewCount,
@@ -100,6 +138,7 @@ class Product extends Equatable {
     String? categoryId,
     String? subcategoryId,
     String? brand,
+    String? weight,
     Map<String, dynamic>? attributes,
     List<String>? tags,
     DateTime? createdAt,
@@ -114,6 +153,7 @@ class Product extends Equatable {
       name: name ?? this.name,
       description: description ?? this.description,
       price: price ?? this.price,
+      retailPrice: retailPrice ?? this.retailPrice,
       discountPercentage: discountPercentage ?? this.discountPercentage,
       rating: rating ?? this.rating,
       reviewCount: reviewCount ?? this.reviewCount,
@@ -124,6 +164,7 @@ class Product extends Equatable {
       categoryId: categoryId ?? this.categoryId,
       subcategoryId: subcategoryId ?? this.subcategoryId,
       brand: brand ?? this.brand,
+      weight: weight ?? this.weight,
       attributes: attributes ?? this.attributes,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,

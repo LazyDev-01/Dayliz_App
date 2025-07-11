@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/category.dart';
 
 import '../../providers/category_providers.dart';
 import '../../widgets/common/navigation_handler.dart';
-import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../product/clean_product_listing_screen.dart';
@@ -27,7 +26,7 @@ class CleanCategoriesScreen extends ConsumerWidget {
       ),
       body: categoriesAsync.when(
         data: (categories) => _buildCategoriesList(context, ref, categories),
-        loading: () => const LoadingIndicator(message: 'Loading categories...'),
+        loading: () => const CategoriesScreenSkeleton(),
         error: (error, stackTrace) => ErrorState(
           message: error.toString(),
           onRetry: () => ref.refresh(categoriesProvider),
@@ -156,45 +155,58 @@ class CleanCategoriesScreen extends ConsumerWidget {
             child: Container(
               width: double.infinity,
               margin: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.grey.shade300,
+                  width: 1.0,
+                ),
+              ),
               child: subcategory.imageUrl != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: CachedNetworkImage(
-                        imageUrl: subcategory.imageUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          decoration: BoxDecoration(
-                            color: themeColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
+                  ? Padding(
+                      padding: const EdgeInsets.all(8.0), // Add breathing space
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: CachedNetworkImage(
+                          imageUrl: subcategory.imageUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            decoration: BoxDecoration(
+                              color: themeColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.category,
+                              color: themeColor.withValues(alpha: 0.6),
+                              size: 32,
+                            ),
                           ),
-                          child: Icon(
-                            Icons.category,
-                            color: themeColor.withValues(alpha: 0.6),
-                            size: 32,
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          decoration: BoxDecoration(
-                            color: themeColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.category,
-                            color: themeColor.withValues(alpha: 0.6),
-                            size: 32,
+                          errorWidget: (context, url, error) => Container(
+                            decoration: BoxDecoration(
+                              color: themeColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.category,
+                              color: themeColor.withValues(alpha: 0.6),
+                              size: 32,
+                            ),
                           ),
                         ),
                       ),
                     )
-                  : Container(
-                      decoration: BoxDecoration(
-                        color: themeColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.category,
-                        color: themeColor.withValues(alpha: 0.6),
-                        size: 32,
+                  : Padding(
+                      padding: const EdgeInsets.all(8.0), // Add breathing space
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: themeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8), // Reduced to match padding
+                        ),
+                        child: Icon(
+                          Icons.category,
+                          color: themeColor.withValues(alpha: 0.6),
+                          size: 32,
+                        ),
                       ),
                     ),
             ),
