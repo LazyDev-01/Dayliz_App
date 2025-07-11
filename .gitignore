@@ -73,6 +73,7 @@ frontend_old_backup/
 # API Keys and secrets
 **/google-services.json
 **/GoogleService-Info.plist
+**/gradle.properties
 
 # Editor directories and files
 **/.vscode/
