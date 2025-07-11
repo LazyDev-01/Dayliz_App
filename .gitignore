@@ -75,6 +75,10 @@ frontend_old_backup/
 **/GoogleService-Info.plist
 **/gradle.properties
 
+# Build directories and cache files
+**/.next/
+**/build/
+
 # Editor directories and files
 **/.vscode/
 **/.idea/
