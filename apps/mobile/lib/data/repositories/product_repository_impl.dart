@@ -79,30 +79,13 @@ class ProductRepositoryImpl implements ProductRepository {
           return Right(PaginatedResponse(data: products, meta: meta));
         }
       } on ServerException catch (e) {
-        // Try to get from local cache if server fails
-        try {
-          final localProducts = await localDataSource.getCachedProducts();
-          final meta = PaginationMeta.fromParams(
-            params: pagination ?? const PaginationParams.defaultProducts(),
-            totalItems: localProducts.length,
-          );
-          return Right(PaginatedResponse(data: localProducts, meta: meta));
-        } catch (_) {
-          return Left(ServerFailure(message: e.message));
-        }
+        // Return server error instead of cached products to avoid confusion
+        return Left(ServerFailure(message: e.message));
       }
     } else {
-      // Try to get from local cache if offline
-      try {
-        final localProducts = await localDataSource.getCachedProducts();
-        final meta = PaginationMeta.fromParams(
-          params: pagination ?? const PaginationParams.defaultProducts(),
-          totalItems: localProducts.length,
-        );
-        return Right(PaginatedResponse(data: localProducts, meta: meta));
-      } on CacheException catch (e) {
-        return Left(CacheFailure(message: e.message));
-      }
+      // When offline, show connection error instead of cached products
+      // This prevents showing wrong products for subcategories
+      return const Left(NetworkFailure(message: 'No internet connection'));
     }
   }
 

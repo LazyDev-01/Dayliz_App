@@ -1,3 +1,4 @@
+import '../../core/services/geofencing_service.dart';
 import '../../domain/entities/geofencing/delivery_zone.dart';
 import '../../domain/entities/geofencing/town.dart';
 import '../../domain/entities/geofencing/city_boundary.dart';
@@ -227,6 +228,19 @@ class GeofencingHardcodedData {
   /// Get all active city boundaries
   static List<CityBoundary> getAllActiveCityBoundaries() {
     return cityBoundaries.where((city) => city.isActive).toList();
+  }
+
+  /// Detect which city boundary contains the given coordinates
+  /// Returns the first matching city boundary or null if outside all cities
+  /// This enables multi-city support by automatically detecting the user's city
+  static CityBoundary? detectCityBoundary(LatLng coordinates) {
+    for (final cityBoundary in cityBoundaries) {
+      if (cityBoundary.isActive &&
+          GeofencingService.isPointInPolygon(coordinates, cityBoundary.boundaryCoordinates)) {
+        return cityBoundary;
+      }
+    }
+    return null; // Outside all known cities
   }
 
   /// Update Zone-1 coordinates (call this when you have real coordinates)

@@ -12,7 +12,7 @@ import '../../../domain/entities/address.dart';
 import '../../providers/order_providers.dart';
 import '../../widgets/common/error_message.dart';
 import '../../widgets/common/loading_indicator.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/unified_app_bar.dart';
 
 class CleanOrderDetailScreen extends ConsumerStatefulWidget {
@@ -81,8 +81,7 @@ class _CleanOrderDetailScreenState extends ConsumerState<CleanOrderDetailScreen>
           loading: () => const Center(
             child: LoadingIndicator(message: 'Loading order details...'),
           ),
-          error: (error, stackTrace) => ErrorState(
-            error: error.toString(),
+          error: (error, stackTrace) => NetworkErrorWidgets.connectionProblem(
             onRetry: () => fetchOrderDetails(ref, widget.orderId),
           ),
         ),

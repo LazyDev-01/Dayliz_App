@@ -4,4 +4,8 @@ from app.schemas.product import Product, ProductCreate, ProductUpdate, ProductIn
 from app.schemas.cart import CartItem, CartItemCreate, CartItemUpdate, CartItemWithProduct, Cart
 from app.schemas.order import Order, OrderCreate, OrderUpdate, OrderItem, OrderWithItems, OrderList
 from app.schemas.driver import Driver, DriverCreate, DriverUpdate, DriverLocation, DriverList
-from app.schemas.payment import RazorpayOrderCreate, RazorpayOrderResponse, PaymentVerification, CODPayment, PaymentResponse
+from app.schemas.payment import (
+    RazorpayOrderCreate, RazorpayOrderResponse, PaymentVerification,
+    CODPayment, PaymentResponse, OrderWithPaymentCreate, PaymentStatusResponse,
+    PaymentMethodType, UpiApp, PaymentStatus
+)

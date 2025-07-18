@@ -1,0 +1,188 @@
+name: 🔍 Smart Change Detection
+
+on:
+  workflow_call:
+    outputs:
+      mobile:
+        description: "Mobile app changed"
+        value: ${{ jobs.detect-changes.outputs.mobile }}
+      agent:
+        description: "Agent app changed"
+        value: ${{ jobs.detect-changes.outputs.agent }}
+      vendor:
+        description: "Vendor panel changed"
+        value: ${{ jobs.detect-changes.outputs.vendor }}
+      admin:
+        description: "Admin panel changed"
+        value: ${{ jobs.detect-changes.outputs.admin }}
+      api:
+        description: "API service changed"
+        value: ${{ jobs.detect-changes.outputs.api }}
+      packages:
+        description: "Shared packages changed"
+        value: ${{ jobs.detect-changes.outputs.packages }}
+      docs:
+        description: "Documentation changed"
+        value: ${{ jobs.detect-changes.outputs.docs }}
+      infrastructure:
+        description: "Infrastructure changed"
+        value: ${{ jobs.detect-changes.outputs.infrastructure }}
+      force_all:
+        description: "Force deploy all apps"
+        value: ${{ jobs.detect-changes.outputs.force_all }}
+
+permissions:
+  contents: read
+
+jobs:
+  detect-changes:
+    name: 🔍 Analyze Changed Files
+    runs-on: ubuntu-latest
+    outputs:
+      mobile: ${{ steps.filter.outputs.mobile || steps.package-impact.outputs.mobile }}
+      agent: ${{ steps.filter.outputs.agent || steps.package-impact.outputs.agent }}
+      vendor: ${{ steps.filter.outputs.vendor || steps.package-impact.outputs.vendor }}
+      admin: ${{ steps.filter.outputs.admin || steps.package-impact.outputs.admin }}
+      api: ${{ steps.filter.outputs.api || steps.package-impact.outputs.api }}
+      packages: ${{ steps.filter.outputs.packages }}
+      docs: ${{ steps.filter.outputs.docs }}
+      infrastructure: ${{ steps.filter.outputs.infrastructure }}
+      force_all: ${{ github.event.inputs.force_all || 'false' }}
+      
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Detect File Changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            mobile:
+              - 'apps/mobile/**'
+            agent:
+              - 'apps/agent/**'
+            vendor:
+              - 'apps/vendor/**'
+            admin:
+              - 'apps/admin/**'
+            api:
+              - 'services/api/**'
+            packages:
+              - 'packages/**'
+            docs:
+              - 'docs/**'
+              - '*.md'
+              - 'README*'
+            infrastructure:
+              - '.github/workflows/**'
+              - 'scripts/**'
+              - 'tools/**'
+              - 'workspace.json'
+
+      - name: 📊 Analyze Package Impact
+        id: package-impact
+        if: steps.filter.outputs.packages == 'true'
+        run: |
+          echo "📦 Shared packages changed - analyzing impact..."
+          
+          # Check which specific packages changed
+          CHANGED_PACKAGES=""
+          
+          if git diff --name-only HEAD~1 HEAD | grep -q "packages/shared_types/"; then
+            CHANGED_PACKAGES="$CHANGED_PACKAGES shared_types"
+          fi
+          
+          if git diff --name-only HEAD~1 HEAD | grep -q "packages/ui_components/"; then
+            CHANGED_PACKAGES="$CHANGED_PACKAGES ui_components"
+          fi
+          
+          if git diff --name-only HEAD~1 HEAD | grep -q "packages/business_logic/"; then
+            CHANGED_PACKAGES="$CHANGED_PACKAGES business_logic"
+          fi
+          
+          if git diff --name-only HEAD~1 HEAD | grep -q "packages/utils/"; then
+            CHANGED_PACKAGES="$CHANGED_PACKAGES utils"
+          fi
+          
+          echo "📋 Changed packages: $CHANGED_PACKAGES"
+          
+          # Determine impact based on package dependencies
+          DEPLOY_MOBILE="false"
+          DEPLOY_AGENT="false"
+          DEPLOY_VENDOR="false"
+          DEPLOY_ADMIN="false"
+          DEPLOY_API="false"
+          
+          # Flutter packages affect both mobile and agent apps
+          if echo "$CHANGED_PACKAGES" | grep -E "(shared_types|ui_components|business_logic)"; then
+            DEPLOY_MOBILE="true"
+            DEPLOY_AGENT="true"
+            echo "🎯 Flutter-specific packages changed → Deploy Mobile + Agent"
+          fi
+          
+          # Utils package affects ALL apps
+          if echo "$CHANGED_PACKAGES" | grep -q "utils"; then
+            DEPLOY_MOBILE="true"
+            DEPLOY_AGENT="true"
+            DEPLOY_VENDOR="true"
+            DEPLOY_ADMIN="true"
+            echo "🎯 Utils package changed → Deploy ALL apps"
+          fi
+          
+          # Set outputs
+          echo "mobile=$DEPLOY_MOBILE" >> $GITHUB_OUTPUT
+          echo "agent=$DEPLOY_AGENT" >> $GITHUB_OUTPUT
+          echo "vendor=$DEPLOY_VENDOR" >> $GITHUB_OUTPUT
+          echo "admin=$DEPLOY_ADMIN" >> $GITHUB_OUTPUT
+          echo "api=$DEPLOY_API" >> $GITHUB_OUTPUT
+
+      - name: 📊 Change Detection Summary
+        run: |
+          echo "🔍 Smart Change Detection Results"
+          echo "================================="
+          echo "📱 Mobile App: ${{ steps.filter.outputs.mobile || steps.package-impact.outputs.mobile }}"
+          echo "🚚 Agent App: ${{ steps.filter.outputs.agent || steps.package-impact.outputs.agent }}"
+          echo "🏪 Vendor Panel: ${{ steps.filter.outputs.vendor || steps.package-impact.outputs.vendor }}"
+          echo "⚙️ Admin Panel: ${{ steps.filter.outputs.admin || steps.package-impact.outputs.admin }}"
+          echo "🔧 API Service: ${{ steps.filter.outputs.api || steps.package-impact.outputs.api }}"
+          echo "📦 Packages: ${{ steps.filter.outputs.packages }}"
+          echo "📚 Documentation: ${{ steps.filter.outputs.docs }}"
+          echo "🛠️ Infrastructure: ${{ steps.filter.outputs.infrastructure }}"
+          echo "🚀 Force All: ${{ github.event.inputs.force_all || 'false' }}"
+          echo ""
+          
+          # Calculate deployment efficiency
+          TOTAL_APPS=5
+          DEPLOYING_APPS=0
+          
+          if [[ "${{ steps.filter.outputs.mobile || steps.package-impact.outputs.mobile }}" == "true" ]]; then
+            DEPLOYING_APPS=$((DEPLOYING_APPS + 1))
+          fi
+          if [[ "${{ steps.filter.outputs.agent || steps.package-impact.outputs.agent }}" == "true" ]]; then
+            DEPLOYING_APPS=$((DEPLOYING_APPS + 1))
+          fi
+          if [[ "${{ steps.filter.outputs.vendor || steps.package-impact.outputs.vendor }}" == "true" ]]; then
+            DEPLOYING_APPS=$((DEPLOYING_APPS + 1))
+          fi
+          if [[ "${{ steps.filter.outputs.admin || steps.package-impact.outputs.admin }}" == "true" ]]; then
+            DEPLOYING_APPS=$((DEPLOYING_APPS + 1))
+          fi
+          if [[ "${{ steps.filter.outputs.api || steps.package-impact.outputs.api }}" == "true" ]]; then
+            DEPLOYING_APPS=$((DEPLOYING_APPS + 1))
+          fi
+          
+          EFFICIENCY=$((100 - (DEPLOYING_APPS * 100 / TOTAL_APPS)))
+          echo "📊 Deployment Efficiency: $EFFICIENCY% (deploying $DEPLOYING_APPS/$TOTAL_APPS apps)"
+          
+          if [[ $DEPLOYING_APPS -eq 0 ]]; then
+            echo "✅ No app deployments needed - only docs/infrastructure changes"
+          elif [[ $DEPLOYING_APPS -eq 1 ]]; then
+            echo "🎯 Optimal: Single app deployment"
+          elif [[ $DEPLOYING_APPS -lt $TOTAL_APPS ]]; then
+            echo "⚡ Efficient: Selective deployment"
+          else
+            echo "🔄 Full deployment required"
+          fi

@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 
 import '../../providers/paginated_product_providers.dart';
+import '../../providers/product_filter_provider.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/floating_cart_button.dart';
 import '../../widgets/product/clean_product_grid.dart';
+import '../../widgets/product/horizontal_filter_bar.dart';
+import '../../widgets/product/active_filter_chips.dart';
 import '../../../navigation/routes.dart';
 
 /// Clean product listing screen with optimized paginated architecture
 /// Features: RepaintBoundary optimization, smart state management, context-aware search
 /// Supports both single subcategory and virtual categories (multiple subcategories)
+/// Now includes advanced filtering and sorting capabilities
 class CleanProductListingScreen extends ConsumerStatefulWidget {
   final String? categoryId;
   final String? subcategoryId;
@@ -20,6 +25,7 @@ class CleanProductListingScreen extends ConsumerStatefulWidget {
   final String? searchQuery;
   final String? title;
   final bool isVirtual; // Indicates if this is a virtual category
+  final bool enableFiltering; // Enable advanced filtering UI
 
   const CleanProductListingScreen({
     Key? key,
@@ -29,6 +35,7 @@ class CleanProductListingScreen extends ConsumerStatefulWidget {
     this.searchQuery,
     this.title,
     this.isVirtual = false,
+    this.enableFiltering = false, // Default to disabled for backward compatibility
   }) : super(key: key);
 
   @override
@@ -41,7 +48,27 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
   @override
   void initState() {
     super.initState();
-    debugPrint('CleanProductListingScreen: Initialized with new paginated architecture');
+    debugPrint('CleanProductListingScreen: Initialized with filtering=${widget.enableFiltering}');
+
+    // Initialize filtered products if filtering is enabled
+    if (widget.enableFiltering) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _initializeFilteredProducts();
+      });
+    }
+  }
+
+  /// Initialize filtered products based on screen context
+  void _initializeFilteredProducts() {
+    final filterNotifier = ref.read(productFilterProvider.notifier);
+
+    // Set initial context-based filters and load products
+    if (widget.searchQuery != null) {
+      filterNotifier.updateSearch(widget.searchQuery);
+    } else {
+      // For non-search screens, trigger initial load with empty filter
+      filterNotifier.applyFiltersImmediately();
+    }
   }
 
   void _openScopedSearch() {
@@ -57,8 +84,8 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
 
   @override
   Widget build(BuildContext context) {
-    // Watch the appropriate provider based on screen type
-    final state = _getProductsState();
+    // Watch the appropriate provider based on screen type and filtering
+    final state = widget.enableFiltering ? _getFilteredProductsState() : _getProductsState();
 
     return Scaffold(
       appBar: UnifiedAppBars.withSearch(
@@ -69,7 +96,20 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
       ),
       body: Stack(
         children: [
-          _buildContent(state),
+          Column(
+            children: [
+              // Filter and sort bar (only if filtering is enabled)
+              if (widget.enableFiltering) ...[
+                const HorizontalFilterBar(),
+                const ActiveFilterChips(),
+              ],
+
+              // Main content
+              Expanded(
+                child: _buildContent(state),
+              ),
+            ],
+          ),
           // Floating cart button - appears when cart has items
           const FloatingCartButton(),
         ],
@@ -119,6 +159,22 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
     return ref.watch(paginatedAllProductsProvider);
   }
 
+  /// Get filtered products state (converts FilteredProductsState to PaginatedProductsState)
+  PaginatedProductsState _getFilteredProductsState() {
+    debugPrint('📱 PRODUCT_LISTING: Using filtered products provider');
+    final filteredState = ref.watch(filteredProductsProvider);
+
+    // Convert FilteredProductsState to PaginatedProductsState for compatibility
+    return PaginatedProductsState(
+      products: filteredState.products.toIList(), // Convert to IList
+      isLoading: filteredState.isLoading,
+      isLoadingMore: filteredState.isLoadingMore,
+      hasReachedEnd: !filteredState.hasMore,
+      errorMessage: filteredState.errorMessage,
+      // Note: PaginatedProductsState doesn't have totalCount, it uses meta instead
+    );
+  }
+
   String _getScreenTitle() {
     if (widget.title != null) return widget.title!;
     if (widget.searchQuery != null) return 'Search Results';
@@ -134,14 +190,21 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
     });
 
     try {
-      if (widget.subcategoryId != null) {
-        await ref.read(paginatedProductsBySubcategoryProvider(widget.subcategoryId!).notifier).refreshProducts();
-      } else if (widget.categoryId != null) {
-        await ref.read(paginatedProductsByCategoryProvider(widget.categoryId!).notifier).refreshProducts();
-      } else if (widget.searchQuery != null) {
-        await ref.read(paginatedSearchProductsProvider(widget.searchQuery!).notifier).refreshProducts();
+      if (widget.enableFiltering) {
+        // For filtered products, re-apply current filters
+        final currentFilter = ref.read(productFilterProvider);
+        await ref.read(filteredProductsProvider.notifier).applyFilters(currentFilter);
       } else {
-        await ref.read(paginatedAllProductsProvider.notifier).refreshProducts();
+        // Use original pagination providers
+        if (widget.subcategoryId != null) {
+          await ref.read(paginatedProductsBySubcategoryProvider(widget.subcategoryId!).notifier).refreshProducts();
+        } else if (widget.categoryId != null) {
+          await ref.read(paginatedProductsByCategoryProvider(widget.categoryId!).notifier).refreshProducts();
+        } else if (widget.searchQuery != null) {
+          await ref.read(paginatedSearchProductsProvider(widget.searchQuery!).notifier).refreshProducts();
+        } else {
+          await ref.read(paginatedAllProductsProvider.notifier).refreshProducts();
+        }
       }
     } finally {
       if (mounted) {
@@ -154,14 +217,20 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
 
   /// Load more products for infinite scroll
   void _loadMoreProducts() {
-    if (widget.subcategoryId != null) {
-      ref.read(paginatedProductsBySubcategoryProvider(widget.subcategoryId!).notifier).loadMoreProducts();
-    } else if (widget.categoryId != null) {
-      ref.read(paginatedProductsByCategoryProvider(widget.categoryId!).notifier).loadMoreProducts();
-    } else if (widget.searchQuery != null) {
-      ref.read(paginatedSearchProductsProvider(widget.searchQuery!).notifier).loadMoreProducts();
+    if (widget.enableFiltering) {
+      // For filtered products, load more with current filters
+      ref.read(filteredProductsProvider.notifier).loadMore();
     } else {
-      ref.read(paginatedAllProductsProvider.notifier).loadMoreProducts();
+      // Use original pagination providers
+      if (widget.subcategoryId != null) {
+        ref.read(paginatedProductsBySubcategoryProvider(widget.subcategoryId!).notifier).loadMoreProducts();
+      } else if (widget.categoryId != null) {
+        ref.read(paginatedProductsByCategoryProvider(widget.categoryId!).notifier).loadMoreProducts();
+      } else if (widget.searchQuery != null) {
+        ref.read(paginatedSearchProductsProvider(widget.searchQuery!).notifier).loadMoreProducts();
+      } else {
+        ref.read(paginatedAllProductsProvider.notifier).loadMoreProducts();
+      }
     }
   }
 
@@ -171,20 +240,8 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
     }
 
     if (state.errorMessage != null && state.products.isEmpty) {
-      return ErrorState(
-        message: state.errorMessage!,
-        onRetry: () {
-          // Trigger refresh through the provider
-          if (widget.subcategoryId != null) {
-            ref.read(paginatedProductsBySubcategoryProvider(widget.subcategoryId!).notifier).refreshProducts();
-          } else if (widget.categoryId != null) {
-            ref.read(paginatedProductsByCategoryProvider(widget.categoryId!).notifier).refreshProducts();
-          } else if (widget.searchQuery != null) {
-            ref.read(paginatedSearchProductsProvider(widget.searchQuery!).notifier).refreshProducts();
-          } else {
-            ref.read(paginatedAllProductsProvider.notifier).refreshProducts();
-          }
-        },
+      return NetworkErrorWidgets.connectionProblem(
+        onRetry: () => _refreshProducts(), // Use unified refresh method
       );
     }
 

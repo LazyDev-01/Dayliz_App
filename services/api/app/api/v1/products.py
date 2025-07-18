@@ -1,12 +1,58 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from typing import Optional, List
 
-from app.schemas.product import Product, ProductCreate, ProductUpdate, ProductListResponse
+from app.schemas.product import (
+    Product, ProductCreate, ProductUpdate, ProductListResponse,
+    ProductFilterRequest, ProductFilterResponse, SortOption, FilterSuggestion
+)
 from app.api.v1.auth import get_current_user
 from app.schemas.user import User
 from app.services.supabase import supabase_client
+from app.services.filter_engine import ProductFilterEngine
 
 router = APIRouter()
+
+# Initialize filter engine
+filter_engine = ProductFilterEngine(supabase_client)
+
+
+@router.post("/filter", response_model=ProductFilterResponse)
+async def filter_products(
+    filter_request: ProductFilterRequest = Body(...)
+):
+    """
+    Advanced product filtering with enterprise-grade filter engine.
+    Supports multiple filter types, sorting, and pagination.
+    """
+    try:
+        result = await filter_engine.apply_filters(
+            filters=filter_request.filters,
+            sort_option=filter_request.sort,
+            page=filter_request.page,
+            page_size=filter_request.page_size,
+            search_query=filter_request.search_query
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error filtering products: {str(e)}"
+        )
+
+
+@router.get("/filter-suggestions", response_model=List[FilterSuggestion])
+async def get_filter_suggestions():
+    """
+    Get available filter suggestions for the UI
+    """
+    try:
+        suggestions = await filter_engine.get_filter_suggestions()
+        return suggestions
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting filter suggestions: {str(e)}"
+        )
 
 
 @router.get("/", response_model=ProductListResponse)
@@ -19,21 +65,22 @@ async def get_products(
     is_featured: Optional[bool] = None,
 ):
     """
-    Get products with pagination and filters
+    Get products with pagination and basic filters (legacy endpoint)
+    For advanced filtering, use POST /filter endpoint
     """
     try:
         # Build Supabase query
         query = {"page": page, "page_size": page_size}
-        
+
         if category:
             query["category"] = category
-            
+
         if search:
             query["search"] = search
-            
+
         # Get products from Supabase
         result = await supabase_client.get_products(**query)
-        
+
         return {
             "total": result["count"],
             "products": result["data"],

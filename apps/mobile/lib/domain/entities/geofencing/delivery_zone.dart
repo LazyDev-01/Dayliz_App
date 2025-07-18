@@ -58,22 +58,22 @@ class DeliveryZone extends Equatable {
   final String name;
   final String townId;
   final int zoneNumber;
-  
+
   // Geofencing data
   final ZoneType zoneType;
-  
+
   // For polygon zones
   final List<LatLng>? boundaryCoordinates;
-  
+
   // For circular zones
   final LatLng? center;
   final double? radiusKm;
-  
+
   // Zone-specific settings (optional overrides)
   final int? customDeliveryFee;
   final int? customMinOrder;
   final String? customDeliveryTime;
-  
+
   // Status and metadata
   final bool isActive;
   final int priority;

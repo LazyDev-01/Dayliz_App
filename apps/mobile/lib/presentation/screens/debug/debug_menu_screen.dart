@@ -14,8 +14,10 @@ import '../categories/categories_screen_v2.dart';
 import '../auth/premium_auth_landing_screen.dart';
 import '../auth/phone_auth_screen.dart';
 import '../auth/otp_verification_screen.dart';
+import '../product/filtered_product_listing_screen.dart';
 
 import '../dev/cart_sync_test_screen.dart';
+import 'error_handling_test_screen.dart';
 import '../../../navigation/routes.dart';
 import '../../widgets/common/unified_app_bar.dart';
 
@@ -360,7 +362,73 @@ class DebugMenuScreen extends ConsumerWidget {
               );
             },
           ),
+          _buildDebugTile(
+            context,
+            title: 'Error Handling Test',
+            subtitle: 'Test the new user-friendly error handling and inline error widgets',
+            icon: Icons.error_outline,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ErrorHandlingTestScreen(),
+                ),
+              );
+            },
+          ),
 
+          // Product Filtering Testing Section
+          _buildSectionHeader('🔍 Product Filtering & Sorting'),
+          _buildDebugTile(
+            context,
+            title: 'New Product Filter System',
+            subtitle: 'Test the unified filter bottom sheet with horizontal scrollable filter bar',
+            icon: Icons.filter_list,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FilteredProductListingScreen(
+                    title: 'Filter Test - All Products',
+                  ),
+                ),
+              );
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Filter by Category Test',
+            subtitle: 'Test filtering with a specific category (if categories exist)',
+            icon: Icons.category,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FilteredProductListingScreen(
+                    categoryId: 'test-category',
+                    title: 'Filter Test - Category Products',
+                  ),
+                ),
+              );
+            },
+          ),
+          _buildDebugTile(
+            context,
+            title: 'Filter Search Results Test',
+            subtitle: 'Test filtering with search query',
+            icon: Icons.search,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FilteredProductListingScreen(
+                    searchQuery: 'test',
+                    title: 'Filter Test - Search Results',
+                  ),
+                ),
+              );
+            },
+          ),
 
         ],
       ),

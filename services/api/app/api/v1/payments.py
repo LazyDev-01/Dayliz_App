@@ -4,16 +4,22 @@ import logging
 from datetime import datetime
 
 from app.schemas.payment import (
-    RazorpayOrderCreate, 
-    RazorpayOrderResponse, 
-    PaymentVerification, 
-    CODPayment, 
-    PaymentResponse
+    RazorpayOrderCreate,
+    RazorpayOrderResponse,
+    PaymentVerification,
+    CODPayment,
+    PaymentResponse,
+    OrderWithPaymentCreate,
+    PaymentStatusResponse,
+    PaymentRetryRequest,
+    PaymentStatus,
+    UpiApp
 )
 from app.api.v1.auth import get_current_user
 from app.schemas.user import User
 from app.services.supabase import supabase_client
 from app.utils.payment_security import PaymentSecurityManager
+from app.services.payment_service import payment_service
 from app.core.config import settings
 
 router = APIRouter()
@@ -365,10 +371,211 @@ async def razorpay_webhook(request: Request):
         await payment_security.process_webhook(payload)
         
         return {"status": "success"}
-        
+
     except Exception as e:
         payment_logger.error(f"Webhook processing failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Webhook processing failed"
+        )
+
+
+# ============================================================================
+# ENHANCED UPI PAYMENT ENDPOINTS
+# ============================================================================
+
+@router.post("/create-order-with-payment")
+async def create_order_with_payment(
+    order_data: OrderWithPaymentCreate,
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Enhanced order creation with integrated payment processing
+
+    Flow:
+    1. Create order with status 'pending_payment' (for UPI) or 'processing' (for COD)
+    2. For UPI: Create Razorpay order and return payment details
+    3. For COD: Mark order as confirmed
+
+    Security Features:
+    - Amount validation against RBI limits
+    - User authentication required
+    - Comprehensive audit logging
+    - Fraud detection integration
+    """
+    try:
+        payment_logger.info(
+            f"Enhanced order creation initiated - User: {current_user.id}, "
+            f"Amount: ₹{order_data.total_amount}, Payment: {order_data.payment_method}, "
+            f"IP: {request.client.host}"
+        )
+
+        # Create order with payment processing
+        result = await payment_service.create_order_with_payment(
+            order_data=order_data,
+            user_id=current_user.id,
+            ip_address=request.client.host,
+            user_agent=request.headers.get("user-agent", "")
+        )
+
+        payment_logger.info(
+            f"Order created successfully - Order ID: {result['order_id']}, "
+            f"Payment Required: {result['payment_required']}"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        payment_logger.error(
+            f"Enhanced order creation failed - User: {current_user.id}, "
+            f"Error: {str(e)}, IP: {request.client.host}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Order creation failed. Please try again."
+        )
+
+
+@router.get("/status/{order_id}", response_model=PaymentStatusResponse)
+async def get_payment_status(
+    order_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get current payment status for an order
+
+    Used for:
+    - Real-time payment status updates
+    - Timeout detection
+    - Retry eligibility checking
+    - Progress tracking
+    """
+    try:
+        # Get order details
+        order = await supabase_client.get_order(order_id, current_user.id)
+
+        if not order:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Order not found or unauthorized access."
+            )
+
+        # Get payment order details if exists
+        payment_order = None
+        if order.get("razorpay_order_id"):
+            payment_order = await supabase_client.get_payment_order(
+                order["razorpay_order_id"]
+            )
+
+        # Determine if retry is possible
+        can_retry = (
+            order.get("payment_status") in ["payment_failed", "payment_timeout"] and
+            order.get("payment_retry_count", 0) < 3
+        )
+
+        return PaymentStatusResponse(
+            order_id=order_id,
+            payment_status=order.get("payment_status", "pending"),
+            razorpay_order_id=order.get("razorpay_order_id"),
+            payment_id=order.get("payment_id"),
+            timeout_at=order.get("payment_timeout_at"),
+            retry_count=order.get("payment_retry_count", 0),
+            can_retry=can_retry,
+            failure_reason=payment_order.get("failure_reason") if payment_order else None
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        payment_logger.error(f"Payment status check failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get payment status"
+        )
+
+
+@router.post("/retry/{order_id}")
+async def retry_payment(
+    order_id: str,
+    retry_data: PaymentRetryRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retry failed payment for an order
+
+    Features:
+    - Maximum 3 retry attempts
+    - New Razorpay order creation
+    - Updated timeout handling
+    - Comprehensive logging
+    """
+    try:
+        payment_logger.info(
+            f"Payment retry initiated - User: {current_user.id}, "
+            f"Order: {order_id}, IP: {request.client.host}"
+        )
+
+        # Get order details
+        order = await supabase_client.get_order(order_id, current_user.id)
+
+        if not order:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Order not found or unauthorized access."
+            )
+
+        # Check retry eligibility
+        if order.get("payment_status") not in ["payment_failed", "payment_timeout"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Payment retry not allowed for current order status."
+            )
+
+        retry_count = order.get("payment_retry_count", 0)
+        if retry_count >= 3:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum retry attempts exceeded."
+            )
+
+        # Create new Razorpay order for retry
+        razorpay_response = await payment_service._create_razorpay_order(
+            order_id=order_id,
+            amount=float(order["total_amount"]),
+            user_id=current_user.id,
+            upi_app=retry_data.upi_app,
+            ip_address=request.client.host,
+            user_agent=request.headers.get("user-agent", "")
+        )
+
+        # Update retry count
+        await supabase_client.update_order(order_id, {
+            "payment_retry_count": retry_count + 1,
+            "payment_status": "payment_processing",
+            "updated_at": datetime.now().isoformat()
+        })
+
+        payment_logger.info(
+            f"Payment retry successful - Order: {order_id}, "
+            f"Retry Count: {retry_count + 1}"
+        )
+
+        return {
+            "success": True,
+            "message": "Payment retry initiated",
+            "razorpay_order": razorpay_response,
+            "retry_count": retry_count + 1
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        payment_logger.error(f"Payment retry failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Payment retry failed. Please try again."
         )

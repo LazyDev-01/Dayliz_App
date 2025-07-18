@@ -204,15 +204,14 @@ class _ServiceNotAvailableScreenState extends ConsumerState<ServiceNotAvailableS
     return Padding(
       padding: EdgeInsets.all(24.w),
       child: DaylizButton(
-        label: 'Try Different Location',
+        label: 'Change Location',
         onPressed: () {
-          // Reset location gating and go back to location access
-          ref.read(locationGatingProvider.notifier).reset();
-          context.go('/location-access');
+          // Navigate to location search screen instead of location access
+          context.push('/location-search');
         },
         type: DaylizButtonType.primary,
         isFullWidth: true,
-        leadingIcon: Icons.location_searching,
+        // Removed GPS icon as requested
       ),
     );
   }

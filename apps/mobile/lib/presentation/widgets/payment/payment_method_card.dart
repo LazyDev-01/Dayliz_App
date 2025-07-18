@@ -19,29 +19,33 @@ class PaymentMethodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: isSelected ? 2 : 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: isSelected
-            ? BorderSide(color: theme.colorScheme.primary, width: 2)
-            : BorderSide.none,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
                 children: [
-                  _buildPaymentMethodIcon(),
-                  const SizedBox(width: 12),
+                  // Icon
+                  _buildModernPaymentMethodIcon(),
+                  const SizedBox(width: 16),
+                  
+                  // Payment method details
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,92 +54,114 @@ class PaymentMethodCard extends StatelessWidget {
                           children: [
                             Text(
                               paymentMethod.nickName ?? _getDefaultTitle(),
-                              style: theme.textTheme.titleMedium,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87,
+                              ),
                             ),
                             if (paymentMethod.isDefault) ...[
                               const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
+                                  horizontal: 6,
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: Colors.green.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Text(
+                                child: const Text(
                                   'Default',
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    color: theme.colorScheme.primary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.green,
                                   ),
                                 ),
                               ),
                             ],
                           ],
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           _getCardDetails(),
-                          style: theme.textTheme.bodyMedium?.copyWith(
+                          style: TextStyle(
+                            fontSize: 13,
                             color: Colors.grey[600],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Radio<bool>(
-                    value: true,
-                    groupValue: isSelected,
-                    onChanged: (_) => onTap(),
-                    activeColor: theme.colorScheme.primary,
+                  
+                  // Circular checkbox
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? Colors.green : Colors.grey[400]!,
+                        width: 2,
+                      ),
+                      color: isSelected ? Colors.green : Colors.transparent,
+                    ),
+                    child: isSelected
+                        ? const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 16,
+                          )
+                        : null,
                   ),
                 ],
               ),
-              if (onDelete != null || onSetDefault != null) ...[
-                const SizedBox(height: 8),
-                const Divider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (onSetDefault != null && !paymentMethod.isDefault)
-                      TextButton(
-                        onPressed: onSetDefault,
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 0,
-                          ),
-                        ),
-                        child: const Text('Set as Default'),
-                      ),
-                    if (onDelete != null) ...[
-                      const SizedBox(width: 8),
-                      TextButton(
-                        onPressed: onDelete,
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 0,
-                          ),
-                          foregroundColor: Colors.red,
-                        ),
-                        child: const Text('Delete'),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ],
+            ),
           ),
-        ),
+          if (onDelete != null || onSetDefault != null) ...[
+            const Divider(height: 1, color: Colors.grey),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (onSetDefault != null && !paymentMethod.isDefault)
+                    TextButton(
+                      onPressed: onSetDefault,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 0,
+                        ),
+                      ),
+                      child: const Text('Set as Default'),
+                    ),
+                  if (onDelete != null)
+                    TextButton(
+                      onPressed: onDelete,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 0,
+                        ),
+                      ),
+                      child: const Text('Delete'),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _buildPaymentMethodIcon() {
-    IconData iconData;
-    Color iconColor;
+  Widget _buildModernPaymentMethodIcon() {
+    IconData iconData = Icons.payment;
+    Color iconColor = Colors.grey;
+    String? iconAsset;
 
     switch (paymentMethod.type) {
       case PaymentMethod.typeCreditCard:
@@ -152,12 +178,25 @@ class PaymentMethodCard extends StatelessWidget {
         }
         break;
       case PaymentMethod.typeUpi:
-        iconData = Icons.account_balance;
-        iconColor = Colors.green;
+        // Check if it's a specific UPI app
+        final upiId = paymentMethod.details['upi_id'] as String? ?? '';
+        if (upiId.contains('googlepay') || upiId.contains('gpay')) {
+          iconAsset = 'assets/icons/googlepay.png';
+          iconColor = const Color(0xFF4285F4);
+        } else if (upiId.contains('paytm')) {
+          iconAsset = 'assets/icons/paytm.png';
+          iconColor = const Color(0xFF00BAF2);
+        } else if (upiId.contains('phonepe')) {
+          iconAsset = 'assets/icons/phonepe.png';
+          iconColor = const Color(0xFF5F259F);
+        } else {
+          iconData = Icons.account_balance_wallet;
+          iconColor = Colors.purple;
+        }
         break;
       case PaymentMethod.typeCod:
-        iconData = Icons.money;
-        iconColor = Colors.green.shade800;
+        iconAsset = 'assets/icons/cash.png';
+        iconColor = Colors.green;
         break;
       default:
         iconData = Icons.payment;
@@ -165,30 +204,42 @@ class PaymentMethodCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
-        color: iconColor.withOpacity(0.1),
+        color: iconAsset != null ? Colors.transparent : iconColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(
-        iconData,
-        color: iconColor,
-        size: 24,
-      ),
+      child: iconAsset != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                iconAsset,
+                width: 32,
+                height: 32,
+                fit: BoxFit.contain,
+              ),
+            )
+          : Icon(
+              iconData,
+              color: iconColor,
+              size: 20,
+            ),
     );
   }
 
   String _getDefaultTitle() {
     switch (paymentMethod.type) {
       case PaymentMethod.typeCreditCard:
+        return 'Credit Card';
       case PaymentMethod.typeDebitCard:
-        return paymentMethod.cardType?.toUpperCase() ?? 'Card';
+        return 'Debit Card';
       case PaymentMethod.typeUpi:
         return 'UPI';
       case PaymentMethod.typeCod:
         return 'Cash on Delivery';
       default:
-        return paymentMethod.type;
+        return 'Payment Method';
     }
   }
 
@@ -196,18 +247,18 @@ class PaymentMethodCard extends StatelessWidget {
     switch (paymentMethod.type) {
       case PaymentMethod.typeCreditCard:
       case PaymentMethod.typeDebitCard:
-        if (paymentMethod.cardNumber != null && paymentMethod.expiryDate != null) {
-          return '•••• ${paymentMethod.cardNumber} | Expires ${paymentMethod.expiryDate}';
-        } else if (paymentMethod.cardNumber != null) {
-          return '•••• ${paymentMethod.cardNumber}';
+        final cardNumber = paymentMethod.details['card_number'] as String? ?? '';
+        if (cardNumber.isNotEmpty) {
+          return '**** **** **** ${cardNumber.substring(cardNumber.length - 4)}';
         }
-        return 'Credit/Debit Card';
+        return 'Card ending in ****';
       case PaymentMethod.typeUpi:
-        return paymentMethod.upiId ?? 'UPI Payment';
+        final upiId = paymentMethod.details['upi_id'] as String? ?? '';
+        return upiId.isNotEmpty ? upiId : 'UPI ID';
       case PaymentMethod.typeCod:
-        return 'Pay when you receive your order';
+        return 'Pay when your order is delivered';
       default:
-        return '';
+        return paymentMethod.displayName;
     }
   }
 }

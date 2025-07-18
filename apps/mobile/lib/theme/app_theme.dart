@@ -304,7 +304,7 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.surface,
-        selectedItemColor: AppColors.deepForestGreen,
+        selectedItemColor: Color(0xFF424242), // Dark grey instead of green
         unselectedItemColor: textSecondaryColor,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -420,7 +420,7 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Color(0xFF1E1E1E),
-        selectedItemColor: AppColors.deepForestGreen,
+        selectedItemColor: Color(0xFF424242), // Dark grey instead of green
         unselectedItemColor: Color(0xFFAAAAAA),
         type: BottomNavigationBarType.fixed,
         elevation: 8,

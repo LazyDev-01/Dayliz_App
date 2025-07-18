@@ -1,38 +1,27 @@
-I/flutter (23604): GoRouter: INFO: pushing /clean/product/599be5aa-738b-467d-a765-5a56cd2e8a36
-I/flutter (23604): 🔄 ROUTER: Redirect called for /clean/product/599be5aa-738b-467d-a765-5a56cd2e8a36
-I/flutter (23604): 🔄 ROUTER: Full URI: /clean/product/599be5aa-738b-467d-a765-5a56cd2e8a36
-I/flutter (23604): 🔄 ROUTER: Query params: {}
-I/flutter (23604): 🔄 ROUTER: Auth: true, Loading: false
-I/flutter (23604): 📱 PRODUCT_LISTING: ========== PROVIDER SELECTION DEBUG ==========
-I/flutter (23604): 📱 PRODUCT_LISTING: isVirtual: false
-I/flutter (23604): 📱 PRODUCT_LISTING: subcategoryIds: null
-I/flutter (23604): 📱 PRODUCT_LISTING: subcategoryId: 1b614fbd-5a8a-4d91-a22a-29b9441f8d8e
-I/flutter (23604): 📱 PRODUCT_LISTING: categoryId: null
-I/flutter (23604): 📱 PRODUCT_LISTING: title: null
-I/flutter (23604): 📱 PRODUCT_LISTING: Using single subcategory provider
-I/flutter (23604): 📱 PRODUCT_LISTING: Subcategory ID: 1b614fbd-5a8a-4d91-a22a-29b9441f8d8e
-I/flutter (23604): isProductInCartProvider: Repository check for 599be5aa-738b-467d-a765-5a56cd2e8a36 returned false
-
-══╡ EXCEPTION CAUGHT BY IMAGE RESOURCE SERVICE ╞════════════════════════════════════════════════════
-The following _ClientSocketException was thrown resolving an image codec:
-ClientException with SocketException: Failed host lookup: 'via.placeholder.com' (OS Error: No
-address associated with hostname, errno = 7), uri=https://via.placeholder.com/150
-
-When the exception was thrown, this was the stack
-
-Image provider: CachedNetworkImageProvider("https://via.placeholder.com/150", scale: 1.0)
- Image key: CachedNetworkImageProvider("https://via.placeholder.com/150", scale: 1.0):
-  CachedNetworkImageProvider("https://via.placeholder.com/150", scale: 1.0)
-════════════════════════════════════════════════════════════════════════════════════════════════════
-
-W/System  (23604): A resource failed to call close.
-I/flutter (23604): ProductSupabaseDataSource: Fetching product with ID: 599be5aa-738b-467d-a765-5a56cd2e8a36 from Supabase
-I/flutter (23604): ProductSupabaseDataSource: Retrieved product with ID: 599be5aa-738b-467d-a765-5a56cd2e8a36
-Another exception was thrown: 'package:flutter/src/widgets/basic.dart': Failed assertion: line 3482 pos 14: 'aspectRatio > 0.0': is not true.
-Another exception was thrown: HttpException: Invalid statusCode: 400, uri =
-https://zdezerezpbeuebnompyj.supabase.co/storage/v1/object/public/categories/Grocery%20and%20Kitchen/Atta%20Rice%20and%20Daal/aata_multigrain.webp
-I/flutter (23604): ProductSupabaseDataSource: Fetching related products for product ID: 599be5aa-738b-467d-a765-5a56cd2e8a36
-I/flutter (23604): ProductSupabaseDataSource: Fetching product with ID: 599be5aa-738b-467d-a765-5a56cd2e8a36 from Supabase
-I/flutter (23604): ProductSupabaseDataSource: Retrieved product with ID: 599be5aa-738b-467d-a765-5a56cd2e8a36
-I/flutter (23604): ProductSupabaseDataSource: Retrieved 5 related products
-Another exception was thrown: 'package:flutter/src/widgets/basic.dart': Failed assertion: line 3482 pos 14: 'aspectRatio > 0.0': is not true.
+I/flutter ( 7273): 🔍 DEBUG: City boundary data: CityBoundary(id: tura-city-boundary, name: Tura, state: Meghalaya, country: India, coordinates: 82 points, isActive: true)
+I/flutter ( 7273): 🔍 DEBUG: Boundary coordinates count: 82
+I/flutter ( 7273): 🔍 DEBUG: Testing coordinates LatLng(25.5139923, 90.2166168) against 82 boundary points
+I/flutter ( 7273): 🔍 DEBUG: Point in polygon result: true
+I/flutter ( 7273): 🔍 DEBUG: Starting Tier 2 - zone detection
+I/flutter ( 7273): 🔍 REPO DEBUG: Starting zone detection for coordinates: LatLng(25.5139923, 90.2166168)
+I/flutter ( 7273): ❌ Error adding full-text search to products table: PostgrestException(message: Could not find the function public.exec_sql(sql) in the schema cache, code: PGRST202, details: Searched for the function public.exec_sql with parameter sql or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache., hint: Perhaps you meant to call the function public.execute_sql)
+I/flutter ( 7273): ! Warning: Could not add full-text search to products table
+I/flutter ( 7273): Running migration: Add geospatial functions
+I/flutter ( 7273): Error checking if function exists: PostgrestException(message: Could not find the function public.exec_sql(sql) in the schema cache, code: PGRST202, details: Searched for the function public.exec_sql with parameter sql or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache., hint: Perhaps you meant to call the function public.execute_sql)
+I/flutter ( 7273): ❌ Error adding geospatial functions: PostgrestException(message: Could not find the function public.exec_sql(sql) in the schema cache, code: PGRST202, details: Searched for the function public.exec_sql with parameter sql or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache., hint: Perhaps you meant to call the function public.execute_sql)
+I/flutter ( 7273): ! Warning: Could not add geospatial functions
+I/flutter ( 7273): Database migrations completed
+I/flutter ( 7273): ✅ Database migrations completed
+I/flutter ( 7273): 🔍 REPO DEBUG: getAllActiveZones result type: Left<Failure, List<DeliveryZone>>
+I/flutter ( 7273): ❌ REPO DEBUG: Failed to get zones: Failed to fetch zones: Exception: Failed to fetch all active zones: type 'Null' is not a subtype of type 'String' in type cast
+I/flutter ( 7273): ❌ DEBUG: Zone detection failed with error: Failed to fetch zones: Exception: Failed to fetch all active zones: type 'Null' is not a subtype of type 'String' in type cast
+I/flutter ( 7273): User is authenticated with valid session
+I/flutter ( 7273): 🔄 Seeding database with test data...
+I/flutter ( 7273): User is authenticated with valid session
+I/flutter ( 7273): GoRouter: INFO: going to /service-not-available
+I/flutter ( 7273): 🔄 ROUTER: Redirect called for /service-not-available
+I/flutter ( 7273): 🔄 ROUTER: Full URI: /service-not-available
+I/flutter ( 7273): 🔄 ROUTER: Query params: {}
+I/flutter ( 7273): 🔄 ROUTER: Auth: true, Loading: false
+I/flutter ( 7273): ✅ Database seeding completed
+I/flutter ( 7273): ✅ Background initialization completed

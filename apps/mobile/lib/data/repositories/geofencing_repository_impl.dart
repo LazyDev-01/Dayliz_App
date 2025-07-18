@@ -6,8 +6,6 @@ import '../../domain/entities/geofencing/town.dart';
 import '../../domain/entities/geofencing/zone_detection_result.dart';
 import '../../domain/repositories/geofencing_repository.dart';
 import '../datasources/geofencing_remote_data_source.dart';
-import '../models/geofencing/delivery_zone_model.dart';
-import '../models/geofencing/town_model.dart';
 
 /// Implementation of GeofencingRepository
 class GeofencingRepositoryImpl implements GeofencingRepository {
@@ -85,27 +83,32 @@ class GeofencingRepositoryImpl implements GeofencingRepository {
     try {
       // Get all active zones
       final zonesResult = await getAllActiveZones();
-      
+
       return zonesResult.fold(
         (failure) => Left(failure),
-        (zones) async {
+        (zones) {
           // Check each zone to see if coordinates fall within it
           for (final zone in zones) {
             if (GeofencingService.isPointInZone(coordinates, zone)) {
-              // Found a zone! Get the town information
-              final townResult = await getTownById(zone.townId);
-              
-              return townResult.fold(
-                (failure) => Left(failure),
-                (town) => Right(ZoneDetectionResult.found(
-                  zone: zone,
-                  town: town,
-                  coordinates: coordinates,
-                )),
+              // Found a zone! Create a town from zone data (simplified structure)
+              final town = Town(
+                id: zone.id, // Use zone ID as town ID
+                name: zone.name, // Use zone name as town name
+                state: 'Meghalaya', // Default state (can be made dynamic later)
+                deliveryFee: 25, // Default delivery fee
+                minOrderAmount: 200, // Default minimum order
+                estimatedDeliveryTime: '30-45 mins', // Default delivery time
+                isActive: zone.isActive,
               );
+
+              return Right(ZoneDetectionResult.found(
+                zone: zone,
+                town: town,
+                coordinates: coordinates,
+              ));
             }
           }
-          
+
           // No zone found
           return Right(ZoneDetectionResult.notFound(
             coordinates: coordinates,

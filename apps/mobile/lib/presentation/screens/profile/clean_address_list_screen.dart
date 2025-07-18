@@ -8,7 +8,7 @@ import '../../../domain/entities/address.dart';
 import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../widgets/common/unified_app_bar.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/haptic_widgets.dart';
@@ -180,8 +180,7 @@ class _CleanAddressListScreenState extends ConsumerState<CleanAddressListScreen>
             itemCount: 3,
           )
         : profileState.addressErrorMessage != null
-          ? ErrorState(
-              message: profileState.addressErrorMessage!,
+          ? NetworkErrorWidgets.connectionProblem(
               onRetry: () async {
                 final notifier = ref.refresh(userProfileNotifierProvider);
                 debugPrint('Refreshed userProfileNotifierProvider: ${notifier.hashCode}');

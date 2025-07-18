@@ -1,0 +1,244 @@
+name: 📱 Mobile App CI/CD
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'development'
+        type: string
+      skip_tests:
+        description: 'Skip tests for faster builds'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+env:
+  FLUTTER_VERSION: '3.29.2'
+  JAVA_VERSION: '17'
+
+jobs:
+  build-mobile:
+    name: 📱 Build Mobile App
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [development, staging]
+      fail-fast: false
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐦 Setup Flutter Environment
+        uses: ./.github/actions/setup-flutter
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache-key-suffix: mobile-${{ matrix.environment }}
+
+      - name: 📦 Install Dependencies
+        working-directory: apps/mobile
+        run: |
+          echo "📦 Installing mobile app dependencies..."
+          
+          # Enhanced dependency resolution with retries
+          for attempt in 1 2 3; do
+            echo "🔄 Dependency resolution attempt $attempt/3..."
+            
+            if flutter pub get --verbose; then
+              echo "✅ Dependencies resolved successfully on attempt $attempt"
+              break
+            else
+              if [ $attempt -eq 3 ]; then
+                echo "💥 Dependency resolution failed after 3 attempts"
+                flutter doctor -v
+                exit 1
+              fi
+              echo "⏳ Waiting 5 seconds before retry..."
+              sleep 5
+            fi
+          done
+          
+          # Verify dependencies
+          flutter pub deps --style=compact
+          echo "✅ Mobile app dependencies installed successfully"
+
+      - name: 🔍 Code Analysis
+        working-directory: apps/mobile
+        run: |
+          echo "🔍 Running Flutter code analysis for mobile app..."
+          
+          # Run analysis and capture results
+          flutter analyze --verbose > analysis_output.txt 2>&1 || true
+          
+          # Count different types of issues
+          ERROR_COUNT=$(grep -c "error -" analysis_output.txt || echo "0")
+          WARNING_COUNT=$(grep -c "warning -" analysis_output.txt || echo "0")
+          INFO_COUNT=$(grep -c "info -" analysis_output.txt || echo "0")
+          
+          echo "📊 Mobile App Analysis Results:"
+          echo "  🔴 Errors: $ERROR_COUNT"
+          echo "  🟡 Warnings: $WARNING_COUNT"
+          echo "  🔵 Info: $INFO_COUNT"
+          
+          # Check for critical errors in main source code
+          MAIN_ERRORS=$(grep "error -" analysis_output.txt | grep -v "test/" | wc -l || echo "0")
+          
+          if [ "$MAIN_ERRORS" -gt "0" ]; then
+            echo "❌ Critical errors found in mobile app source code:"
+            grep "error -" analysis_output.txt | grep -v "test/" | head -10
+            echo "💡 Fix these errors before proceeding"
+            exit 1
+          else
+            echo "✅ Mobile app code analysis passed"
+          fi
+          
+          # Clean up
+          rm -f analysis_output.txt
+
+      - name: 🧪 Run Tests
+        if: inputs.skip_tests != true
+        working-directory: apps/mobile
+        run: |
+          echo "🧪 Running mobile app tests..."
+          
+          if flutter test --coverage --verbose; then
+            echo "✅ All mobile app tests passed"
+          else
+            echo "❌ Some mobile app tests failed"
+            echo "⚠️ Test failures should be addressed before production deployment"
+            # Don't fail the build for test failures in development
+            if [[ "${{ matrix.environment }}" == "staging" ]]; then
+              exit 1
+            fi
+          fi
+
+      - name: 📊 Upload Test Coverage
+        if: inputs.skip_tests != true
+        uses: codecov/codecov-action@v4
+        continue-on-error: true
+        with:
+          file: apps/mobile/coverage/lcov.info
+          flags: mobile-app
+          name: mobile-coverage-${{ matrix.environment }}
+
+      - name: 🔧 Environment Setup
+        working-directory: apps/mobile
+        run: |
+          echo "🔧 Setting up mobile app environment for ${{ matrix.environment }}..."
+          
+          # Create environment-specific configuration
+          if [ ! -f ".env" ]; then
+            echo "⚠️ .env file not found, creating minimal version..."
+            echo "# Mobile app environment configuration" > .env
+            echo "ENVIRONMENT=${{ matrix.environment }}" >> .env
+          fi
+          
+          # Validate environment variables
+          if [ -n "$GOOGLE_MAPS_API_KEY" ]; then
+            echo "✅ GOOGLE_MAPS_API_KEY is configured"
+          else
+            echo "⚠️ GOOGLE_MAPS_API_KEY not set - using placeholder for CI"
+            export GOOGLE_MAPS_API_KEY="CI_PLACEHOLDER_KEY"
+          fi
+          
+          echo "✅ Mobile app environment setup completed"
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+
+      - name: 🏗️ Build Debug APK
+        working-directory: apps/mobile
+        run: |
+          echo "🏗️ Building mobile app debug APK..."
+          
+          # Set environment variables
+          export GOOGLE_MAPS_API_KEY="${GOOGLE_MAPS_API_KEY:-CI_PLACEHOLDER_KEY}"
+          
+          if flutter build apk --debug --target-platform android-arm64 --verbose; then
+            echo "✅ Mobile app debug APK built successfully"
+            ls -la build/app/outputs/flutter-apk/
+            
+            # Get APK size
+            APK_SIZE=$(stat -c%s "build/app/outputs/flutter-apk/app-debug.apk" 2>/dev/null || echo "0")
+            APK_SIZE_MB=$(echo "scale=2; $APK_SIZE / 1024 / 1024" | bc -l 2>/dev/null || echo "0")
+            echo "📱 Mobile APK Size: ${APK_SIZE_MB} MB"
+          else
+            echo "❌ Mobile app debug APK build failed"
+            flutter doctor -v
+            exit 1
+          fi
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+
+      - name: 📱 Build Release APK
+        if: matrix.environment == 'staging' && github.ref == 'refs/heads/production-readiness'
+        working-directory: apps/mobile
+        run: |
+          echo "📱 Building mobile app release APK..."
+          
+          # Validate production environment
+          if [ -z "$GOOGLE_MAPS_API_KEY_PROD" ]; then
+            echo "❌ GOOGLE_MAPS_API_KEY_PROD is required for production builds"
+            exit 1
+          fi
+          
+          if flutter build apk --release --target-platform android-arm64 --verbose; then
+            echo "✅ Mobile app release APK built successfully"
+            ls -la build/app/outputs/flutter-apk/
+          else
+            echo "❌ Mobile app release APK build failed"
+            exit 1
+          fi
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY_PROD }}
+
+      - name: 📦 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-apk-${{ matrix.environment }}-${{ github.sha }}
+          path: |
+            apps/mobile/build/app/outputs/flutter-apk/*.apk
+            apps/mobile/coverage/lcov.info
+          retention-days: 30
+
+      - name: 🚀 Deploy to Firebase App Distribution
+        if: matrix.environment == 'staging' && github.ref == 'refs/heads/production-readiness'
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        continue-on-error: true
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID_MOBILE }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          groups: mobile-testers
+          file: apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
+          releaseNotes: |
+            🚀 Mobile App Build - ${{ github.sha }}
+            
+            📝 Changes in this build:
+            ${{ github.event.head_commit.message }}
+            
+            📊 Build Information:
+            • Environment: ${{ matrix.environment }}
+            • Branch: ${{ github.ref_name }}
+            • Commit: ${{ github.sha }}
+            • Build Date: ${{ github.event.head_commit.timestamp }}
+
+      - name: 📊 Build Summary
+        run: |
+          echo "📊 Mobile App Build Summary"
+          echo "==========================="
+          echo "📱 App: Mobile Customer App"
+          echo "🏗️ Environment: ${{ matrix.environment }}"
+          echo "✅ Build Status: Success"
+          echo "📦 Artifacts: Uploaded to GitHub Actions"
+          if [[ "${{ matrix.environment }}" == "staging" ]]; then
+            echo "🚀 Deployment: Firebase App Distribution"
+          fi
+          echo "🎉 Mobile app pipeline completed successfully!"

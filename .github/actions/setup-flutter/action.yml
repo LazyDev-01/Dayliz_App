@@ -1,0 +1,73 @@
+name: 'Setup Flutter Environment'
+description: 'Sets up Flutter with caching and validation'
+
+inputs:
+  flutter-version:
+    description: 'Flutter version to install'
+    required: false
+    default: '3.29.2'
+  java-version:
+    description: 'Java version for Android builds'
+    required: false
+    default: '17'
+  cache-key-suffix:
+    description: 'Additional cache key suffix'
+    required: false
+    default: ''
+
+outputs:
+  flutter-version:
+    description: 'Installed Flutter version'
+    value: ${{ steps.flutter-setup.outputs.flutter-version }}
+  cache-hit:
+    description: 'Whether cache was hit'
+    value: ${{ steps.flutter-cache.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: ☕ Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: ${{ inputs.java-version }}
+
+    - name: 📦 Cache Flutter SDK
+      id: flutter-cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ runner.tool_cache }}/flutter
+          ~/.pub-cache
+        key: flutter-${{ inputs.flutter-version }}-${{ runner.os }}-${{ inputs.cache-key-suffix }}
+        restore-keys: |
+          flutter-${{ inputs.flutter-version }}-${{ runner.os }}-
+          flutter-${{ inputs.flutter-version }}-
+
+    - name: 🐦 Setup Flutter
+      id: flutter-setup
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ inputs.flutter-version }}
+        channel: 'stable'
+        cache: true
+
+    - name: 🔍 Validate Flutter Installation
+      shell: bash
+      run: |
+        echo "🔍 Validating Flutter installation..."
+        flutter --version
+        flutter doctor -v
+        echo "✅ Flutter validation complete"
+
+    - name: 📊 Flutter Environment Info
+      shell: bash
+      run: |
+        echo "📊 Flutter Environment Information"
+        echo "=================================="
+        echo "Flutter Version: $(flutter --version | head -n1)"
+        echo "Dart Version: $(dart --version)"
+        echo "Java Version: $(java -version 2>&1 | head -n1)"
+        echo "Cache Hit: ${{ steps.flutter-cache.outputs.cache-hit }}"
+        echo "Tool Cache: ${{ runner.tool_cache }}"
+        echo "Pub Cache: ~/.pub-cache"

@@ -17,6 +17,7 @@ import '../../widgets/animations/animated_empty_state.dart';
 import '../../widgets/common/common_bottom_nav_bar.dart';
 import '../../widgets/common/navigation_handler.dart';
 import '../../widgets/common/unified_app_bar.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/skeleton_loading.dart';
 import '../../../domain/entities/address.dart';
@@ -120,24 +121,8 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
 
     // Show error state if there's an error
     if (cartState.errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
-            const SizedBox(height: 16),
-            Text(
-              cartState.errorMessage!,
-              style: const TextStyle(fontSize: 16, color: AppColors.error),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => ref.read(cartNotifierProvider.notifier).getCartItems(),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+      return NetworkErrorWidgets.connectionProblem(
+        onRetry: () => ref.read(cartNotifierProvider.notifier).getCartItems(),
       );
     }
 

@@ -1,10 +1,10 @@
 import os
 from typing import Any, Dict, Optional
-from pydantic import BaseSettings, PostgresDsn, validator
-from pydantic_settings import BaseSettings as PydanticBaseSettings
+from pydantic import field_validator
+from pydantic_settings import BaseSettings
 
 
-class Settings(PydanticBaseSettings):
+class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Dayliz"
     
@@ -34,7 +34,8 @@ class Settings(PydanticBaseSettings):
     # CORS
     BACKEND_CORS_ORIGINS: list = ["*"]
     
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
     def assemble_cors_origins(cls, v: str | list[str]) -> list[str] | str:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]

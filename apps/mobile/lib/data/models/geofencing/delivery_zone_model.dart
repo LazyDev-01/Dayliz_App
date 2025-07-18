@@ -44,12 +44,12 @@ class DeliveryZoneModel extends DeliveryZone {
     return DeliveryZoneModel(
       id: json['id'] as String,
       name: json['name'] as String,
-      townId: json['town_id'] as String,
+      townId: json['town_id'] as String? ?? 'tura-default', // Handle null town_id since we removed towns table
       zoneNumber: json['zone_number'] as int,
       zoneType: zoneType,
       boundaryCoordinates: boundaryCoordinates,
       center: center,
-      radiusKm: json['radius_km'] != null 
+      radiusKm: json['radius_km'] != null
           ? (json['radius_km'] as num).toDouble()
           : null,
       customDeliveryFee: json['custom_delivery_fee'] as int?,

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../widgets/common/loading_indicator.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/unified_app_bar.dart';
 
 /// A Clean Architecture implementation of the user preferences screen
@@ -67,8 +67,7 @@ class _CleanPreferencesScreenState extends ConsumerState<CleanPreferencesScreen>
       body: userProfileState.isLoading || _isLoading
           ? const LoadingIndicator(message: 'Loading preferences...')
           : userProfileState.errorMessage != null
-              ? ErrorState(
-                  message: userProfileState.errorMessage!,
+              ? NetworkErrorWidgets.connectionProblem(
                   onRetry: _loadUserPreferences,
                 )
               : _buildPreferencesContent(userProfileState),

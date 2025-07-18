@@ -10,7 +10,7 @@ import '../../../domain/entities/order.dart' as domain;
 import '../../providers/order_providers.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
-import '../../widgets/common/error_state.dart';
+
 
 /// A screen that displays order confirmation details after a successful order placement
 class CleanOrderConfirmationScreen extends ConsumerStatefulWidget {

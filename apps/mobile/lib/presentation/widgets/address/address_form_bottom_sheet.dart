@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/error_handling/unified_validation_system.dart';
 import '../../../core/services/location_service.dart';
 import '../../../domain/entities/address.dart';
 import '../../providers/user_profile_providers.dart';
@@ -536,26 +537,12 @@ class _AddressFormBottomSheetState extends ConsumerState<AddressFormBottomSheet>
                   ),
                   const SizedBox(height: 12),
 
-                  // Area/Street
-                  TextFormField(
+                  // Area/Street - Updated to use UniversalFormField
+                  UniversalFormField(
                     controller: _addressLine1Controller,
-                    style: const TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      labelText: 'Street / Area / Locality *',
-                      labelStyle: TextStyle(color: Colors.grey[600]),
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey[400]!),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
+                    labelText: 'Street / Area / Locality *',
+                    hintText: 'Enter your street address',
+                    prefixIcon: Icons.location_on_outlined,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter area and locality';

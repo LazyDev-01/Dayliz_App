@@ -8,7 +8,7 @@ import '../../providers/order_providers.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../order/order_summary_screen.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/skeleton_loaders.dart';
 
@@ -84,8 +84,7 @@ class _CleanOrderListScreenState extends ConsumerState<CleanOrderListScreen> {
             itemSkeleton: OrderSkeleton(),
             itemCount: 5,
           ),
-          error: (error, stackTrace) => ErrorState(
-            error: error.toString(),
+          error: (error, stackTrace) => NetworkErrorWidgets.connectionProblem(
             onRetry: () {
               fetchOrders(ref);
             },

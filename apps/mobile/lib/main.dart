@@ -17,6 +17,7 @@ import 'package:dayliz_app/core/services/firebase_notification_service.dart';
 import 'package:dayliz_app/core/services/conditional_firebase_service.dart';
 import 'package:dayliz_app/core/utils/image_preloader.dart';
 import 'package:dayliz_app/core/storage/hive_config.dart';
+import 'package:dayliz_app/core/error_handling/global_error_handler.dart';
 // Clean architecture imports
 import 'package:dayliz_app/presentation/providers/auth_providers.dart' as clean_auth;
 import 'package:dayliz_app/presentation/providers/theme_providers.dart';
@@ -107,6 +108,10 @@ Future<void> main() async {
   debugPrint('🚀 App startup initiated at: ${appStartTime.toIso8601String()}');
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize global error handling system
+  GlobalErrorHandler.initialize();
+  debugPrint('🛡️ Global error handling initialized');
 
   // STEP 1: IMMEDIATE CONNECTIVITY CHECK (HIGHEST PRIORITY)
   debugPrint('🌐 Checking internet connectivity...');
@@ -262,6 +267,10 @@ Future<void> _initializeEssentialServices() async {
     final supabaseService = SupabaseService.instance;
     await supabaseService.initialize();
     debugPrint('✅ SupabaseService initialized');
+
+    // Initialize Supabase-specific error handling
+    GlobalErrorHandler.initializeSupabaseErrorHandling();
+    debugPrint('✅ Supabase error handling initialized');
 
     // Initialize basic authentication components
     await di.initAuthentication();
@@ -893,7 +902,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           key: state.pageKey,
           child: const CleanUserProfileScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
           },
         ),
       ),

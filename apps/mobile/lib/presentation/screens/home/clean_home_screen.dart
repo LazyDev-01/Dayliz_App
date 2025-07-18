@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../widgets/common/unified_app_bar.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
+
+import '../../../core/services/connectivity_checker.dart';
 import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/skeleton_loading.dart';
 import '../../providers/home_providers.dart';
@@ -16,12 +18,19 @@ import '../../providers/user_profile_providers.dart';
 
 /// A clean architecture implementation of the home screen
 /// Updated with compact product cards and improved category alignment
-/// Converted to ConsumerWidget for better performance and caching
-class CleanHomeScreen extends ConsumerWidget {
+/// Converted to ConsumerStatefulWidget for refresh state management
+class CleanHomeScreen extends ConsumerStatefulWidget {
   const CleanHomeScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CleanHomeScreen> createState() => _CleanHomeScreenState();
+}
+
+class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
+  bool _isRefreshing = false;
+
+  @override
+  Widget build(BuildContext context) {
     // Initialize auto-load provider to ensure addresses are loaded
     ref.read(autoLoadUserProfileProvider);
 
@@ -50,79 +59,107 @@ class CleanHomeScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(BuildContext context, WidgetRef ref) {
-    // Watch featured products
+    // Watch featured products and sale products
     final featuredProductsState = ref.watch(featuredProductsNotifierProvider);
     final saleProductsState = ref.watch(saleProductsNotifierProvider);
 
-    // Check if we need to load data
-    final bool needsLoading = featuredProductsState.products.isEmpty &&
-                              saleProductsState.products.isEmpty &&
-                              !featuredProductsState.isLoading &&
-                              !saleProductsState.isLoading;
+    // Check if we need to trigger initial loading (only if never loaded before)
+    final bool needsInitialLoading = !featuredProductsState.hasLoaded &&
+                                     !saleProductsState.hasLoaded &&
+                                     !featuredProductsState.isLoading &&
+                                     !saleProductsState.isLoading;
 
-    if (needsLoading) {
-      // Trigger loading only if data is empty and not already loading
+    if (needsInitialLoading) {
+      // Trigger loading only if never loaded before and not currently loading
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (featuredProductsState.products.isEmpty && !featuredProductsState.isLoading) {
+        if (!featuredProductsState.hasLoaded && !featuredProductsState.isLoading) {
           ref.read(featuredProductsNotifierProvider.notifier).loadFeaturedProducts(limit: 10);
         }
-        if (saleProductsState.products.isEmpty && !saleProductsState.isLoading) {
+        if (!saleProductsState.hasLoaded && !saleProductsState.isLoading) {
           ref.read(saleProductsNotifierProvider.notifier).loadSaleProducts(limit: 10);
         }
       });
     }
 
-    // Show loading skeleton if both are loading or empty
-    if ((featuredProductsState.isLoading && featuredProductsState.products.isEmpty) ||
-        (saleProductsState.isLoading && saleProductsState.products.isEmpty)) {
+    // Show loading skeleton only during initial load (when loading for the first time)
+    final bool isInitialLoading = (featuredProductsState.isLoading && !featuredProductsState.hasLoaded) ||
+                                  (saleProductsState.isLoading && !saleProductsState.hasLoaded);
+
+    if (isInitialLoading || _isRefreshing) {
       return _buildHomeScreenSkeleton();
     }
 
-    // Show error if both have errors
-    if (featuredProductsState.errorMessage != null && saleProductsState.errorMessage != null) {
-      return ErrorState(
-        message: 'Failed to load home data',
-        onRetry: () {
-          ref.read(featuredProductsNotifierProvider.notifier).loadFeaturedProducts(limit: 10);
-          ref.read(saleProductsNotifierProvider.notifier).loadSaleProducts(limit: 10);
-        },
-      );
-    }
+    // Simple network check like categories screen - check connectivity directly
+    return FutureBuilder<bool>(
+      future: ConnectivityChecker.hasConnection(fastMode: true), // Use fast mode for better performance
+      builder: (context, snapshot) {
+        final hasConnection = snapshot.data ?? true;
 
-    return RefreshIndicator(
-      onRefresh: () => _handleRefresh(ref),
-      color: Theme.of(context).primaryColor,
-      backgroundColor: Colors.white,
-      child: CustomScrollView(
-        slivers: [
-            // Banner carousel placeholder
-            _buildBannerPlaceholder(),
+        // If no internet connection, show error (like categories screen)
+        if (!hasConnection) {
+          return NetworkErrorWidgets.connectionProblem(
+            onRetry: () {
+              // Optimistic retry: Skip connectivity check and directly load data
+              // This provides immediate feedback and faster response
+              _performOptimisticRetry(ref);
+            },
+          );
+        }
 
-            // Categories section with improved alignment
-            const SliverToBoxAdapter(
-              child: HomeCategoriesSection(),
-            ),
+        // If internet is available, show content regardless of individual section errors
+        return RefreshIndicator(
+          onRefresh: _handleRefresh,
+          color: Theme.of(context).primaryColor,
+          backgroundColor: Colors.white,
+          child: CustomScrollView(
+            slivers: [
+              // Banner carousel placeholder
+              _buildBannerPlaceholder(),
 
-            // Featured products section with compact cards
-            _buildFeaturedProductsSection(context, ref),
+              // Categories section with improved alignment
+              const SliverToBoxAdapter(
+                child: HomeCategoriesSection(),
+              ),
 
-            // Sale products section with compact cards
-            _buildSaleProductsSection(context, ref),
+              // Featured products section with compact cards
+              _buildFeaturedProductsSection(context, ref),
 
-            // All products section with pagination
-            _buildAllProductsSection(context, ref),
+              // Sale products section with compact cards
+              _buildSaleProductsSection(context, ref),
 
-            // Bottom padding
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 24),
-            ),
-          ],
-      ),
+              // All products section with pagination
+              _buildAllProductsSection(context, ref),
+
+              // Bottom padding
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 24),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
+  /// Optimistic retry: Skip connectivity check and directly load data
+  /// This provides immediate feedback and faster response (1-2 seconds vs 5-9 seconds)
+  void _performOptimisticRetry(WidgetRef ref) {
+    // Directly trigger data loading without connectivity check
+    // This is much faster and provides immediate user feedback
+    ref.read(featuredProductsNotifierProvider.notifier).loadFeaturedProducts(limit: 10);
+    ref.read(saleProductsNotifierProvider.notifier).loadSaleProducts(limit: 10);
+
+    // Also refresh other sections for good measure
+    ref.read(bannerNotifierProvider.notifier).refreshBanners();
+    ref.read(paginatedAllProductsProvider.notifier).refreshProducts();
+  }
+
   /// Handle pull-to-refresh action
-  Future<void> _handleRefresh(WidgetRef ref) async {
+  Future<void> _handleRefresh() async {
+    setState(() {
+      _isRefreshing = true;
+    });
+
     try {
       // Create a list of futures for parallel execution
       final List<Future> refreshFutures = [];
@@ -155,7 +192,13 @@ class CleanHomeScreen extends ConsumerWidget {
 
     } catch (e) {
       // Handle refresh errors gracefully
-      debugPrint('Refresh error: $e');
+      // Error is handled silently for better UX
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
     }
   }
 
@@ -273,6 +316,13 @@ class CleanHomeScreen extends ConsumerWidget {
   Widget _buildFeaturedProductsSection(BuildContext context, WidgetRef ref) {
     final featuredProductsState = ref.watch(featuredProductsNotifierProvider);
 
+    // Don't show the section if there are no featured products and loading is complete
+    if (featuredProductsState.products.isEmpty &&
+        featuredProductsState.hasLoaded &&
+        !featuredProductsState.isLoading) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
     return SliverToBoxAdapter(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,6 +387,13 @@ class CleanHomeScreen extends ConsumerWidget {
 
   Widget _buildSaleProductsSection(BuildContext context, WidgetRef ref) {
     final saleProductsState = ref.watch(saleProductsNotifierProvider);
+
+    // Don't show the section if there are no sale products and loading is complete
+    if (saleProductsState.products.isEmpty &&
+        saleProductsState.hasLoaded &&
+        !saleProductsState.isLoading) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
 
     return SliverToBoxAdapter(
       child: Column(

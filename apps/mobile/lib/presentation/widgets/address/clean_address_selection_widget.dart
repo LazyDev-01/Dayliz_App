@@ -6,7 +6,7 @@ import '../../../core/utils/address_formatter.dart';
 import '../../../domain/entities/address.dart';
 import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
-import '../common/error_state.dart';
+import '../common/inline_error_widget.dart';
 import '../common/loading_indicator.dart';
 import '../common/empty_state.dart';
 
@@ -33,8 +33,7 @@ class CleanAddressSelectionWidget extends ConsumerWidget {
     }
 
     if (profileState.addressErrorMessage != null) {
-      return ErrorState(
-        message: profileState.addressErrorMessage!,
+      return NetworkErrorWidgets.connectionProblem(
         onRetry: () async {
           final user = ref.read(currentUserProvider);
           if (user != null) {

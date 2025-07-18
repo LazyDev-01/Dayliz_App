@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../domain/entities/banner.dart' as banner_entity;
 import '../../providers/banner_providers.dart';
+
 import 'banner_carousel.dart';
 
 /// Enhanced banner carousel that integrates with Riverpod state management
@@ -114,49 +116,35 @@ class _EnhancedBannerCarouselState extends ConsumerState<EnhancedBannerCarousel>
       height: widget.height,
       margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.red[50],
+        color: Colors.grey[100],
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.red[200]!),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
       ),
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 48,
-              color: Colors.red[400],
+        child: GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            ref.read(bannerNotifierProvider.notifier).refreshBanners();
+          },
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Failed to load banners',
-              style: TextStyle(
-                color: Colors.red[700],
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+            child: Icon(
+              Icons.refresh,
+              color: Colors.grey[600],
+              size: 20,
             ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: TextStyle(
-                color: Colors.red[600],
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                ref.read(bannerNotifierProvider.notifier).refreshBanners();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[400],
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Retry'),
-            ),
-          ],
+          ),
         ),
       ),
     );

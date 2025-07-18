@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../domain/entities/category.dart';
 
 import '../../providers/category_providers.dart';
 import '../../widgets/common/navigation_handler.dart';
 import '../../widgets/common/skeleton_loaders.dart';
-import '../../widgets/common/error_state.dart';
-import '../../widgets/common/unified_app_bar.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../product/clean_product_listing_screen.dart';
 
 class CleanCategoriesScreen extends ConsumerWidget {
@@ -21,14 +21,39 @@ class CleanCategoriesScreen extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
-      appBar: UnifiedAppBars.simple(
-        title: 'Categories',
+      appBar: AppBar(
+        title: const Text(
+          'Categories',
+          style: TextStyle(
+            color: Color(0xFF424242), // Dark grey color
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF424242), // Dark grey color
+        elevation: 4,
+        shadowColor: Colors.black.withValues(alpha: 0.3),
+        surfaceTintColor: Colors.white,
+        scrolledUnderElevation: 4,
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.search,
+              color: Color(0xFF424242), // Dark grey color
+            ),
+            onPressed: () {
+              // Navigate to search screen like home screen search bar
+              context.push('/search');
+            },
+            tooltip: 'Search',
+          ),
+        ],
       ),
       body: categoriesAsync.when(
         data: (categories) => _buildCategoriesList(context, ref, categories),
         loading: () => const CategoriesScreenSkeleton(),
-        error: (error, stackTrace) => ErrorState(
-          message: error.toString(),
+        error: (error, stackTrace) => NetworkErrorWidgets.connectionProblem(
           onRetry: () => ref.refresh(categoriesProvider),
         ),
       ),

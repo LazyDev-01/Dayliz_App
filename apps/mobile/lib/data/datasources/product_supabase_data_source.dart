@@ -28,11 +28,10 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       final paginationParams = pagination ?? const PaginationParams.defaultProducts();
       debugPrint('ProductSupabaseDataSource: Fetching paginated products (page: ${paginationParams.page}, limit: ${paginationParams.limit})');
 
-      // Build the base query - temporarily simplified to avoid relationship issues
+      // Build the base query using the view with images
       var query = supabaseClient
-          .from('products')
-          .select('*')
-          .eq('is_active', true); // Only show active products
+          .from('products_with_images')
+          .select('*');
 
       // Apply filters
       if (categoryId != null) {
@@ -62,7 +61,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       // Get total count for pagination metadata
       // For now, we'll use a simplified approach to get total count
       // In production, you might want to implement a more efficient counting method
-      var countQuery = supabaseClient.from('products').select('id').eq('is_active', true);
+      var countQuery = supabaseClient.from('products_with_images').select('id');
 
       // Apply same filters to count query
       if (categoryId != null) {
@@ -91,7 +90,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
 
       debugPrint('ProductSupabaseDataSource: Retrieved ${response.length} products (total: $totalItems)');
 
-      final products = _parseProductsResponse(response);
+      final products = _parseProductsResponseFromView(response);
       final meta = PaginationMeta.fromParams(
         params: paginationParams,
         totalItems: totalItems,
@@ -122,11 +121,16 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
     try {
       debugPrint('ProductSupabaseDataSource: Fetching products from Supabase');
 
-      // Start building the query - temporarily simplified to avoid relationship issues
+      // Calculate pagination parameters
+      int? offset;
+      if (page != null && limit != null) {
+        offset = (page - 1) * limit;
+      }
+
+      // Use the robust view with proper image handling
       var query = supabaseClient
-          .from('products')
-          .select('*')
-          .eq('is_active', true); // Only show active products
+          .from('products_with_images')
+          .select('*');
 
       // Apply filters
       if (categoryId != null) {
@@ -138,36 +142,50 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       }
 
       if (searchQuery != null && searchQuery.isNotEmpty) {
-        query = query.ilike('name', '%$searchQuery%');
-      }
-
-      if (minPrice != null) {
-        query = query.gte('price', minPrice);
-      }
-
-      if (maxPrice != null) {
-        query = query.lte('price', maxPrice);
+        query = query.or('product_name.ilike.%$searchQuery%,name.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
       }
 
       // Apply sorting
       String orderBy = sortBy ?? 'created_at';
       bool orderAscending = ascending ?? false;
 
-      // Apply pagination
-      int? offset;
-      if (page != null && limit != null) {
-        offset = (page - 1) * limit;
-      }
-
-      // Execute the query with all parameters
       final response = await query
           .order(orderBy, ascending: orderAscending)
-          .range(offset ?? 0, offset != null && limit != null ? offset + limit - 1 : 999)
-          .limit(limit ?? 100);
+          .range(offset ?? 0, offset != null && limit != null ? offset + limit - 1 : (limit ?? 100) - 1);
 
       debugPrint('ProductSupabaseDataSource: Retrieved ${response.length} products');
 
-      return _parseProductsResponse(response);
+      // Apply additional filters that aren't handled by the database function
+      List<dynamic> filteredResponse = response;
+
+      if (minPrice != null || maxPrice != null) {
+        filteredResponse = response.where((product) {
+          final price = product['retail_sale_price'] ?? product['mrp'] ?? product['price'] ?? 0;
+          final productPrice = (price as num).toDouble();
+
+          if (minPrice != null && productPrice < minPrice) return false;
+          if (maxPrice != null && productPrice > maxPrice) return false;
+
+          return true;
+        }).toList();
+      }
+
+      // Apply sorting if different from default
+      if (sortBy != null && sortBy != 'created_at') {
+        filteredResponse.sort((a, b) {
+          dynamic aValue = a[sortBy];
+          dynamic bValue = b[sortBy];
+
+          if (aValue == null && bValue == null) return 0;
+          if (aValue == null) return ascending == true ? -1 : 1;
+          if (bValue == null) return ascending == true ? 1 : -1;
+
+          int comparison = aValue.toString().compareTo(bValue.toString());
+          return ascending == true ? comparison : -comparison;
+        });
+      }
+
+      return _parseProductsResponseFromView(filteredResponse);
     } catch (e) {
       debugPrint('ProductSupabaseDataSource: Error fetching products: $e');
       throw ServerException(
@@ -176,20 +194,16 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
     }
   }
 
-  /// Parse the response from Supabase into a list of ProductModel objects
-  List<ProductModel> _parseProductsResponse(List<dynamic> response) {
+
+  /// Parse the response from the view into a list of ProductModel objects
+  List<ProductModel> _parseProductsResponseFromView(List<dynamic> response) {
     return response.map((json) {
-      // Use main_image_url from products table directly
-      String? imageUrl = json['main_image_url'];
+      // The view provides main_image_url directly
+      final imageUrl = json['main_image_url'] as String?;
 
-      // Use category and subcategory names from products table directly
-      String? categoryName = json['category_name'];
-      String? subcategoryName = json['subcategory_name'];
-
-      // Create a ProductModel from the JSON data
+      // Create a Product entity from the view response
       final isOnSale = json['discount_percentage'] != null && (json['discount_percentage'] as num) > 0;
 
-      // Create a Product entity first
       final product = Product(
         id: json['id'].toString(),
         name: json['product_name'] ?? json['name'] ?? '',
@@ -201,16 +215,16 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
                 : 0.0,
         retailPrice: json['retail_sale_price'] != null
             ? (json['retail_sale_price'] as num).toDouble()
-            : null,
+            : json['discounted_price'] != null
+                ? (json['discounted_price'] as num).toDouble()
+                : null,
         discountPercentage: json['discount_percentage'] != null
             ? (json['discount_percentage'] as num).toDouble()
             : null,
         rating: json['ratings_avg'] != null ? (json['ratings_avg'] as num).toDouble() : null,
         reviewCount: json['ratings_count'] != null ? (json['ratings_count'] as num).toInt() : null,
         mainImageUrl: imageUrl ?? 'https://via.placeholder.com/150',
-        additionalImages: json['additional_images'] != null
-            ? List<String>.from(json['additional_images'])
-            : null,
+        additionalImages: null, // View doesn't return additional images for performance
         inStock: json['in_stock'] == true || (json['stock_quantity'] != null && (json['stock_quantity'] as num) > 0),
         stockQuantity: json['stock_quantity'] != null ? (json['stock_quantity'] as num).toInt() : null,
         categoryId: json['category_id']?.toString() ?? '',
@@ -223,12 +237,12 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
         createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
         updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
         onSale: isOnSale,
-        categoryName: categoryName,
-        subcategoryName: subcategoryName,
-        vendorId: json['vendor_id'],
-        vendorName: json['vendor_name'],
-        vendorFssaiLicense: json['vendor_fssai_license'],
-        vendorAddress: json['vendor_address'],
+        categoryName: json['category_name'],
+        subcategoryName: json['subcategory_name'],
+        vendorId: null, // Not needed for listing
+        vendorName: null, // Not needed for listing
+        vendorFssaiLicense: null, // Not needed for listing
+        vendorAddress: null, // Not needed for listing
         nutriActive: json['nutri_active'] ?? false,
       );
 
@@ -237,66 +251,6 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
     }).toList();
   }
 
-  /// Extract additional images from the product_images array
-  List<String>? _extractAdditionalImages(List<dynamic>? productImages) {
-    if (productImages == null || productImages.isEmpty) {
-      return null;
-    }
-
-    return productImages
-        .map((img) => img['image_url'] as String)
-        .toList();
-  }
-
-  /// Parse a single product response with vendor information
-  ProductModel _parseProductResponseWithoutImages(Map<String, dynamic> json) {
-    // Vendor information will be null for now
-    // This can be enhanced later with a separate vendor data fetching mechanism
-    String? vendorId;
-    String? vendorName;
-    String? vendorFssaiLicense;
-    String? vendorAddress;
-
-    // Create a Product entity with vendor information
-    final product = Product(
-      id: json['id']?.toString() ?? '',
-      name: json['name'] ?? '',
-      description: json['description'] ?? '',
-      price: json['mrp'] != null
-          ? (json['mrp'] as num).toDouble()
-          : json['price'] != null ? (json['price'] as num).toDouble() : 0.0,
-      retailPrice: json['retail_sale_price'] != null
-          ? (json['retail_sale_price'] as num).toDouble()
-          : null,
-      discountPercentage: json['discount_percentage'] != null
-          ? (json['discount_percentage'] as num).toDouble()
-          : null,
-      rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
-      reviewCount: json['review_count'] != null ? (json['review_count'] as num).toInt() : null,
-      mainImageUrl: 'https://via.placeholder.com/150', // Default placeholder
-      additionalImages: null, // No additional images for now
-      inStock: json['stock_quantity'] != null ? (json['stock_quantity'] as num) > 0 : false,
-      stockQuantity: json['stock_quantity'] != null ? (json['stock_quantity'] as num).toInt() : null,
-      categoryId: json['category_id']?.toString() ?? '',
-      subcategoryId: json['subcategory_id']?.toString(),
-      brand: json['brand'],
-      weight: json['weight']?.toString(),
-      attributes: json['attributes'],
-      nutritionalInfo: json['nutritional_info'],
-      tags: json['tags'] != null ? List<String>.from(json['tags']) : null,
-      onSale: json['discount_percentage'] != null && (json['discount_percentage'] as num) > 0,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
-      vendorId: vendorId,
-      vendorName: vendorName,
-      vendorFssaiLicense: vendorFssaiLicense,
-      vendorAddress: vendorAddress,
-      nutriActive: json['nutri_active'] ?? false,
-    );
-
-    // Convert to ProductModel
-    return ProductModel.fromProduct(product);
-  }
 
   /// Get a single product by ID
   @override
@@ -305,15 +259,15 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       debugPrint('ProductSupabaseDataSource: Fetching product with ID: $id from Supabase');
 
       final response = await supabaseClient
-          .from('products')
+          .from('products_with_images')
           .select('*')
           .eq('id', id)
           .single();
 
       debugPrint('ProductSupabaseDataSource: Retrieved product with ID: $id');
 
-      // Parse the response without images to avoid relationship errors
-      return _parseProductResponseWithoutImages(response);
+      // Parse the response from the view with images
+      return _parseProductsResponseFromView([response]).first;
     } catch (e) {
       debugPrint('ProductSupabaseDataSource: Error fetching product: $e');
       throw ServerException(
@@ -322,7 +276,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
     }
   }
 
-  /// Get featured products
+  /// Get featured products (using latest products as featured for now)
   @override
   Future<List<ProductModel>> getFeaturedProducts({
     int? limit,
@@ -330,16 +284,16 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
     try {
       debugPrint('ProductSupabaseDataSource: Fetching featured products from Supabase');
 
+      // Since is_featured column doesn't exist, use latest products as featured
       final response = await supabaseClient
-          .from('products')
-          .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)')
-          .eq('is_featured', true)
+          .from('products_with_images')
+          .select('*')
           .order('created_at', ascending: false)
           .limit(limit ?? 10);
 
       debugPrint('ProductSupabaseDataSource: Retrieved ${response.length} featured products');
 
-      return _parseProductsResponse(response);
+      return _parseProductsResponseFromView(response);
     } catch (e) {
       debugPrint('ProductSupabaseDataSource: Error fetching featured products: $e');
       throw ServerException(
@@ -363,19 +317,19 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
         offset = (page - 1) * limit;
       }
 
+      // Get products with discounts (where retail_sale_price < mrp)
       final response = await supabaseClient
-          .from('products')
-          .select('*, product_images(image_url, is_primary), subcategories(name), categories(name)')
-          .eq('is_active', true) // Only show active products
-          .not('discount_percentage', 'is', null)
-          .gt('discount_percentage', 0)
-          .order('discount_percentage', ascending: false)
-          .range(offset ?? 0, offset != null && limit != null ? offset + limit - 1 : 999)
-          .limit(limit ?? 20);
+          .from('products_with_images')
+          .select('*')
+          .not('retail_sale_price', 'is', null)
+          .not('mrp', 'is', null)
+          .filter('retail_sale_price', 'lt', 'mrp')
+          .order('created_at', ascending: false)
+          .range(offset ?? 0, offset != null && limit != null ? offset + limit - 1 : (limit ?? 20) - 1);
 
       debugPrint('ProductSupabaseDataSource: Retrieved ${response.length} sale products');
 
-      return _parseProductsResponse(response);
+      return _parseProductsResponseFromView(response);
     } catch (e) {
       debugPrint('ProductSupabaseDataSource: Error fetching sale products: $e');
       throw ServerException(
@@ -399,7 +353,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
 
       // Get products from the same category, excluding the current product
       final response = await supabaseClient
-          .from('products')
+          .from('products_with_images')
           .select('*')
           .eq('category_id', categoryId)
           .neq('id', productId)
@@ -408,8 +362,8 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
 
       debugPrint('ProductSupabaseDataSource: Retrieved ${response.length} related products');
 
-      // Parse the response without images to avoid relationship errors
-      return response.map((json) => _parseProductResponseWithoutImages(json)).toList();
+      // Parse the response with images from the view
+      return _parseProductsResponseFromView(response);
     } catch (e) {
       debugPrint('ProductSupabaseDataSource: Error fetching related products: $e');
       throw ServerException(
@@ -444,9 +398,8 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       // Strategy 1: Try ILIKE search (most reliable for partial matches)
       try {
         response = await supabaseClient
-            .from('products')
+            .from('products_with_images')
             .select('*')
-            .eq('is_active', true) // Only show active products
             .or('name.ilike.%$sanitizedQuery%,description.ilike.%$sanitizedQuery%,brand.ilike.%$sanitizedQuery%')
             .order('created_at', ascending: false)
             .range(offset ?? 0, offset != null && limit != null ? offset + limit - 1 : 999)
@@ -462,7 +415,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
         try {
           final formattedQuery = _formatQueryForFullTextSearch(sanitizedQuery);
           response = await supabaseClient
-              .from('products')
+              .from('products_with_images')
               .select('*')
               .textSearch('name', formattedQuery, config: 'english')
               .order('created_at', ascending: false)
@@ -479,7 +432,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       if (response.isEmpty) {
         try {
           response = await supabaseClient
-              .from('products')
+              .from('products_with_images')
               .select('*')
               .ilike('description', '%$sanitizedQuery%')
               .order('created_at', ascending: false)
@@ -493,7 +446,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       }
 
       debugPrint('ProductSupabaseDataSource: Found ${response.length} products matching query: $query');
-      return _parseProductsResponse(response);
+      return _parseProductsResponseFromView(response);
 
     } catch (e) {
       debugPrint('ProductSupabaseDataSource: Error searching products: $e');
@@ -546,14 +499,14 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
       debugPrint('ProductSupabaseDataSource: Fetching products for category ID: $categoryId');
 
       final response = await supabaseClient
-          .from('products')
+          .from('products_with_images')
           .select('*')
           .eq('category_id', categoryId)
           .order('created_at', ascending: false);
 
       debugPrint('ProductSupabaseDataSource: Retrieved ${response.length} products for category ID: $categoryId');
 
-      return _parseProductsResponse(response);
+      return _parseProductsResponseFromView(response);
     } catch (e) {
       debugPrint('ProductSupabaseDataSource: Error fetching products by category: $e');
       throw ServerException(
@@ -578,7 +531,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
 
       for (final id in ids) {
         final response = await supabaseClient
-            .from('products')
+            .from('products_with_images')
             .select('*')
             .eq('id', id);
 
@@ -589,7 +542,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
 
       debugPrint('ProductSupabaseDataSource: Retrieved ${allResults.length} products for IDs: $ids');
 
-      return _parseProductsResponse(allResults);
+      return _parseProductsResponseFromView(allResults);
     } catch (e) {
       debugPrint('ProductSupabaseDataSource: Error fetching products by IDs: $e');
       throw ServerException(

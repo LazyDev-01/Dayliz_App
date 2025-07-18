@@ -8,7 +8,7 @@ import '../../../domain/entities/notification.dart';
 import '../../providers/notification_providers.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/empty_state.dart';
 
 /// Notifications screen showing user's notifications
@@ -168,8 +168,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
 
     if (state.errorMessage != null && state.notifications.isEmpty) {
-      return ErrorState(
-        message: state.errorMessage!,
+      return NetworkErrorWidgets.connectionProblem(
         onRetry: () => ref.read(notificationStateProvider.notifier).loadNotifications(refresh: true),
       );
     }

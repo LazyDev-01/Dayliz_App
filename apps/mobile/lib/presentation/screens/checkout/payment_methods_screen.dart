@@ -7,7 +7,7 @@ import '../../../domain/entities/payment_method.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/payment_method_providers.dart';
 import '../../widgets/common/empty_state.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/common/unified_app_bar.dart';
@@ -57,6 +57,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
     final paymentMethodState = ref.watch(paymentMethodNotifierProvider(userId));
 
     return Scaffold(
+      backgroundColor: Colors.grey[100], // Light grey background
       appBar: UnifiedAppBars.withBackButton(
         title: 'Payment Methods',
         fallbackRoute: '/checkout',
@@ -96,8 +97,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
 
     // Show error state
     if (state.errorMessage != null) {
-      return ErrorState(
-        message: state.errorMessage!,
+      return NetworkErrorWidgets.connectionProblem(
         onRetry: () => ref.read(paymentMethodNotifierProvider(userId).notifier).loadPaymentMethods(),
       );
     }

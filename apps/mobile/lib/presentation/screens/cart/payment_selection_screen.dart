@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../../theme/app_theme.dart';
 import '../../providers/cart_providers.dart';
 import '../../providers/user_profile_providers.dart';
@@ -22,7 +20,7 @@ class PaymentSelectionScreen extends ConsumerStatefulWidget {
 
 class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen> {
   // State for selected payment method
-  String? _selectedPaymentMethod = 'cod'; // Default to COD for Indian market
+  String? _selectedPaymentMethod; // No default selection
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +28,7 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
     final daylizTheme = theme.extension<DaylizThemeExtension>();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.grey[100], // Light grey background
       appBar: _buildAppBar(context, theme),
       body: _buildBody(context, theme, daylizTheme),
       bottomNavigationBar: _buildBottomSection(context, theme),
@@ -67,165 +65,298 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header text
-          const Text(
-            'Choose your payment method',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Select how you\'d like to pay for your order',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 24),
+          // UPI Section
+          _buildSectionHeader('Pay by UPI'),
+          const SizedBox(height: 12),
+          _buildUpiSection(),
 
-          // Payment methods list
-          ..._buildPaymentMethods(),
+          const SizedBox(height: 32),
+
+          // Cash on Delivery Section
+          _buildSectionHeader('Pay on Delivery'),
+          const SizedBox(height: 12),
+          _buildCodSection(),
         ],
       ),
     );
   }
 
-  /// Builds the list of payment method options
-  List<Widget> _buildPaymentMethods() {
-    final paymentMethods = _getPaymentMethods();
-
-    return paymentMethods.map((method) {
-      return Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: _buildPaymentMethodCard(method),
-      );
-    }).toList();
+  /// Builds section header
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
+      ),
+    );
   }
 
-  /// Builds individual payment method card
-  Widget _buildPaymentMethodCard(Map<String, dynamic> method) {
-    final isSelected = _selectedPaymentMethod == method['id'];
-    final isEnabled = method['enabled'] ?? true;
-
+  /// Builds UPI payment section
+  Widget _buildUpiSection() {
     return Container(
       decoration: BoxDecoration(
-        color: isEnabled ? Colors.white : Colors.grey[100],
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isSelected ? AppColors.success : AppColors.textSecondary.withValues(alpha: 0.2),
-          width: isSelected ? 2 : 1,
-        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: InkWell(
-        onTap: isEnabled ? () => _selectPaymentMethod(method['id']) : null,
+      child: Column(
+        children: [
+          // GooglePay (First)
+          _buildUpiOption(
+            id: 'googlepay',
+            name: 'GooglePay',
+            iconAsset: 'assets/icons/googlepay.png',
+            color: const Color(0xFF4285F4),
+            isFirst: true,
+          ),
+          _buildDivider(),
+
+          // Paytm (Second)
+          _buildUpiOption(
+            id: 'paytm',
+            name: 'Paytm',
+            iconAsset: 'assets/icons/paytm.png',
+            color: const Color(0xFF00BAF2),
+          ),
+          _buildDivider(),
+
+          // PhonePe (Third)
+          _buildUpiOption(
+            id: 'phonepe',
+            name: 'PhonePe',
+            iconAsset: 'assets/icons/phonepe.png',
+            color: const Color(0xFF5F259F),
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Builds Cash on Delivery section
+  Widget _buildCodSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Payment method icon
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: method['color'].withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  method['icon'],
-                  color: method['color'],
-                  size: 24,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: _buildPaymentOption(
+        id: 'cod',
+        name: 'Pay by Cash/QR',
+        iconAsset: 'assets/icons/cash.png',
+        color: Colors.green,
+        isEnabled: true,
+        isFirst: true,
+        isLast: true,
+      ),
+    );
+  }
+
+  /// Builds UPI option row
+  Widget _buildUpiOption({
+    required String id,
+    required String name,
+    IconData? icon,
+    String? iconAsset,
+    required Color color,
+    bool isFirst = false,
+    bool isLast = false,
+  }) {
+    final isSelected = _selectedPaymentMethod == id;
+
+    return InkWell(
+      onTap: () => _selectPaymentMethod(id),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.vertical(
+            top: isFirst ? const Radius.circular(12) : Radius.zero,
+            bottom: isLast ? const Radius.circular(12) : Radius.zero,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Icon or Image
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: iconAsset != null ? Colors.transparent : color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: iconAsset != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        iconAsset,
+                        width: 32,
+                        height: 32,
+                        fit: BoxFit.contain,
+                      ),
+                    )
+                  : Icon(
+                      icon!,
+                      color: color,
+                      size: 20,
+                    ),
+            ),
+            const SizedBox(width: 16),
+
+            // Name
+            Expanded(
+              child: Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
                 ),
               ),
-              const SizedBox(width: 16),
+            ),
 
-              // Payment method details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      method['title'],
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: !isEnabled
-                          ? Colors.grey[500]
-                          : isSelected
-                            ? AppColors.success
-                            : AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      method['subtitle'],
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: !isEnabled ? Colors.grey[500] : AppColors.textSecondary,
-                      ),
-                    ),
-                    if (method['badge'] != null) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: method['badgeColor'].withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          method['badge'],
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: method['badgeColor'],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+            // Circular checkbox
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? Colors.green : Colors.grey[400]!,
+                  width: 2,
                 ),
+                color: isSelected ? Colors.green : Colors.transparent,
               ),
-
-              // Selection indicator
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: !isEnabled
-                      ? Colors.grey[400]!
-                      : isSelected
-                        ? AppColors.success
-                        : AppColors.textSecondary.withValues(alpha: 0.3),
-                    width: 2,
-                  ),
-                  color: isSelected && isEnabled ? AppColors.success : Colors.transparent,
-                ),
-                child: isSelected && isEnabled
+              child: isSelected
                   ? const Icon(
                       Icons.check,
                       color: Colors.white,
                       size: 16,
                     )
                   : null,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  /// Builds divider between options
+  Widget _buildDivider() {
+    return Container(
+      height: 1,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      color: Colors.grey[200],
+    );
+  }
+
+  /// Builds payment option (for COD)
+  Widget _buildPaymentOption({
+    required String id,
+    required String name,
+    IconData? icon,
+    String? iconAsset,
+    required Color color,
+    required bool isEnabled,
+    bool isFirst = false,
+    bool isLast = false,
+  }) {
+    final isSelected = _selectedPaymentMethod == id;
+
+    return InkWell(
+      onTap: isEnabled ? () => _selectPaymentMethod(id) : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.vertical(
+            top: isFirst ? const Radius.circular(12) : Radius.zero,
+            bottom: isLast ? const Radius.circular(12) : Radius.zero,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Icon or SVG
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: iconAsset != null ? Colors.transparent : color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: iconAsset != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        iconAsset,
+                        width: 32,
+                        height: 32,
+                        fit: BoxFit.contain,
+                      ),
+                    )
+                  : Icon(
+                      icon!,
+                      color: color,
+                      size: 20,
+                    ),
+            ),
+            const SizedBox(width: 16),
+
+            // Name
+            Expanded(
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: isEnabled ? Colors.black87 : Colors.grey[500],
+                ),
+              ),
+            ),
+
+            // Circular checkbox
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: (isSelected && isEnabled) ? Colors.green : Colors.grey[400]!,
+                  width: 2,
+                ),
+                color: (isSelected && isEnabled) ? Colors.green : Colors.transparent,
+              ),
+              child: (isSelected && isEnabled)
+                  ? const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 16,
+                    )
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
 
   /// Builds the bottom section with proceed button
   Widget _buildBottomSection(BuildContext context, ThemeData theme) {
@@ -271,51 +402,7 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
     );
   }
 
-  /// Gets the list of available payment methods
-  List<Map<String, dynamic>> _getPaymentMethods() {
-    return [
-      {
-        'id': 'cod',
-        'title': 'Cash on Delivery',
-        'subtitle': 'Pay when your order arrives at your doorstep',
-        'icon': Icons.money,
-        'color': AppColors.success,
-        'badge': 'Most Popular',
-        'badgeColor': AppColors.success,
-        'enabled': true,
-      },
-      {
-        'id': 'upi',
-        'title': 'UPI (Google Pay, PhonePe, Paytm)',
-        'subtitle': 'Coming Soon!',
-        'icon': Icons.account_balance_wallet,
-        'color': Colors.grey,
-        'badge': null,
-        'badgeColor': null,
-        'enabled': false,
-      },
-      {
-        'id': 'card',
-        'title': 'Credit/Debit Card',
-        'subtitle': 'Coming Soon!',
-        'icon': Icons.credit_card,
-        'color': Colors.grey,
-        'badge': null,
-        'badgeColor': null,
-        'enabled': false,
-      },
-      {
-        'id': 'amazonpay',
-        'title': 'Amazon Pay',
-        'subtitle': 'Coming Soon!',
-        'icon': Icons.shopping_bag,
-        'color': Colors.grey,
-        'badge': null,
-        'badgeColor': null,
-        'enabled': false,
-      },
-    ];
-  }
+
 
   /// Handles payment method selection
   void _selectPaymentMethod(String methodId) {
@@ -326,9 +413,11 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
 
   /// Handles proceed to pay action
   void _handleProceed(BuildContext context) {
-    final selectedMethod = _getPaymentMethods().firstWhere(
-      (method) => method['id'] == _selectedPaymentMethod,
-    );
+    // Create a simple payment method object for the selected method
+    final selectedMethod = {
+      'id': _selectedPaymentMethod,
+      'title': _selectedPaymentMethod == 'cod' ? 'Cash on Delivery' : 'UPI Payment',
+    };
 
     // Navigate to order processing screen with order data
     _navigateToOrderProcessing(context, selectedMethod);

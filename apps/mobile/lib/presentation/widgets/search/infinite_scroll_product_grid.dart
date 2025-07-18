@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../domain/entities/product.dart';
 import '../../providers/paginated_search_providers.dart';
-import '../common/error_state.dart';
+import '../common/inline_error_widget.dart';
 import '../product/clean_product_card.dart';
 
 /// Infinite scroll product grid with lazy loading
@@ -185,32 +185,12 @@ class _InfiniteScrollProductGridState extends ConsumerState<InfiniteScrollProduc
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      color: Colors.red[400],
-                      size: 32,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Failed to load more results',
-                      style: TextStyle(
-                        color: Colors.red[600],
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        final actions = ref.read(paginatedSearchActionsProvider);
-                        actions.retry();
-                      },
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
+              child: NetworkErrorWidgets.connectionProblem(
+                onRetry: () {
+                  final actions = ref.read(paginatedSearchActionsProvider);
+                  actions.retry();
+                },
+                isCompact: true,
               ),
             ),
           ),
@@ -219,8 +199,7 @@ class _InfiniteScrollProductGridState extends ConsumerState<InfiniteScrollProduc
   }
 
   Widget _buildErrorState(String error) {
-    return ErrorState(
-      message: error,
+    return NetworkErrorWidgets.connectionProblem(
       onRetry: () {
         final actions = ref.read(paginatedSearchActionsProvider);
         actions.retry();

@@ -14,22 +14,26 @@ class FeaturedProductsState {
   final List<Product> products;
   final bool isLoading;
   final String? errorMessage;
+  final bool hasLoaded; // Track if loading has been attempted
 
   const FeaturedProductsState({
     this.products = const [],
     this.isLoading = false,
     this.errorMessage,
+    this.hasLoaded = false,
   });
 
   FeaturedProductsState copyWith({
     List<Product>? products,
     bool? isLoading,
     String? errorMessage,
+    bool? hasLoaded,
   }) {
     return FeaturedProductsState(
       products: products ?? this.products,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
+      hasLoaded: hasLoaded ?? this.hasLoaded,
     );
   }
 }
@@ -39,22 +43,26 @@ class SaleProductsState {
   final List<Product> products;
   final bool isLoading;
   final String? errorMessage;
+  final bool hasLoaded; // Track if loading has been attempted
 
   const SaleProductsState({
     this.products = const [],
     this.isLoading = false,
     this.errorMessage,
+    this.hasLoaded = false,
   });
 
   SaleProductsState copyWith({
     List<Product>? products,
     bool? isLoading,
     String? errorMessage,
+    bool? hasLoaded,
   }) {
     return SaleProductsState(
       products: products ?? this.products,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
+      hasLoaded: hasLoaded ?? this.hasLoaded,
     );
   }
 }
@@ -82,6 +90,7 @@ class FeaturedProductsNotifier extends StateNotifier<FeaturedProductsState> {
           state = state.copyWith(
             isLoading: false,
             errorMessage: _mapFailureToMessage(failure),
+            hasLoaded: true,
           );
         },
         (products) {
@@ -89,6 +98,7 @@ class FeaturedProductsNotifier extends StateNotifier<FeaturedProductsState> {
           state = state.copyWith(
             isLoading: false,
             products: products,
+            hasLoaded: true,
           );
         },
       );
@@ -97,6 +107,7 @@ class FeaturedProductsNotifier extends StateNotifier<FeaturedProductsState> {
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Unexpected error: ${e.toString()}',
+        hasLoaded: true,
       );
     }
   }
@@ -136,6 +147,7 @@ class SaleProductsNotifier extends StateNotifier<SaleProductsState> {
           state = state.copyWith(
             isLoading: false,
             errorMessage: _mapFailureToMessage(failure),
+            hasLoaded: true,
           );
         },
         (products) {
@@ -143,6 +155,7 @@ class SaleProductsNotifier extends StateNotifier<SaleProductsState> {
           state = state.copyWith(
             isLoading: false,
             products: products,
+            hasLoaded: true,
           );
         },
       );
@@ -151,6 +164,7 @@ class SaleProductsNotifier extends StateNotifier<SaleProductsState> {
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Unexpected error: ${e.toString()}',
+        hasLoaded: true,
       );
     }
   }

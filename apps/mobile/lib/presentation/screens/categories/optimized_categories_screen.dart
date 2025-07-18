@@ -7,7 +7,7 @@ import '../../../domain/entities/category.dart';
 import '../../providers/category_providers.dart';
 import '../../widgets/common/navigation_handler.dart';
 import '../../widgets/common/skeleton_loaders.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../product/clean_product_listing_screen.dart';
 
 /// Optimized Categories Screen with high-performance grid implementation
@@ -32,8 +32,7 @@ class OptimizedCategoriesScreen extends ConsumerWidget {
       body: categoriesAsync.when(
         data: (categories) => _buildOptimizedCategoriesList(context, categories),
         loading: () => const CategoriesScreenSkeleton(),
-        error: (error, stackTrace) => ErrorState(
-          message: error.toString(),
+        error: (error, stackTrace) => NetworkErrorWidgets.connectionProblem(
           onRetry: () => ref.refresh(categoriesProvider),
         ),
       ),

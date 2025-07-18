@@ -12,12 +12,12 @@ import '../../providers/payment_method_providers.dart';
 import '../../providers/user_profile_providers.dart';
 import '../../widgets/address/clean_address_selection_widget.dart';
 import '../../widgets/common/empty_state.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/payment/payment_method_card.dart';
-import '../../widgets/payment/modern_payment_options_widget.dart';
+
 import 'order_processing_screen.dart';
 
 class CleanCheckoutScreen extends ConsumerStatefulWidget {
@@ -177,8 +177,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
         if (paymentMethodState.isLoading)
           const Center(child: LoadingIndicator())
         else if (paymentMethodState.errorMessage != null)
-          ErrorState(
-            message: paymentMethodState.errorMessage!,
+          NetworkErrorWidgets.connectionProblem(
             onRetry: () => ref.read(paymentMethodNotifierProvider(userId).notifier).loadPaymentMethods(),
           )
         else if (paymentMethodState.methods.isEmpty)
@@ -598,20 +597,7 @@ class _CleanCheckoutScreenState extends ConsumerState<CleanCheckoutScreen> {
 
   /// Opens the modern payment options screen
   void _openPaymentOptions(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ModernPaymentOptionsWidget(
-          selectedPaymentMethod: _selectedPaymentMethod,
-          onPaymentMethodSelected: (method) {
-            setState(() {
-              _selectedPaymentMethod = method;
-            });
-            Navigator.pop(context);
-          },
-        ),
-      ),
-    );
+    context.push('/payment-selection');
   }
 
   /// Gets display name for payment method

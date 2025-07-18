@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import '../../../domain/entities/category.dart';
 import '../../providers/category_providers.dart';
 import '../../widgets/common/unified_app_bar.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/navigation_handler.dart';
 import '../product/clean_product_listing_screen.dart';
 import '../../widgets/common/skeleton_loaders.dart';
@@ -38,8 +38,7 @@ class _CategoriesScreenV2State extends ConsumerState<CategoriesScreenV2> {
       body: categoriesAsync.when(
         data: (categories) => _buildCategoriesV2Layout(context, categories),
         loading: () => const CategoriesScreenSkeleton(),
-        error: (error, stackTrace) => ErrorState(
-          message: error.toString(),
+        error: (error, stackTrace) => NetworkErrorWidgets.connectionProblem(
           onRetry: () => ref.refresh(categoriesProvider),
         ),
       ),

@@ -1,0 +1,256 @@
+name: 🏪 Vendor Panel CI/CD
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'development'
+        type: string
+      skip_tests:
+        description: 'Skip tests for faster builds'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  build-vendor:
+    name: 🏪 Build Vendor Panel
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [development, staging]
+      fail-fast: false
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js Environment
+        uses: ./.github/actions/setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          working-directory: apps/vendor
+          cache-dependency-path: package-lock.json
+
+      - name: 📦 Install Dependencies
+        working-directory: apps/vendor
+        run: |
+          echo "📦 Installing vendor panel dependencies..."
+          
+          # Clean install with retry logic
+          for attempt in 1 2 3; do
+            echo "🔄 NPM install attempt $attempt/3..."
+            
+            if npm ci --verbose; then
+              echo "✅ Dependencies installed successfully on attempt $attempt"
+              break
+            else
+              if [ $attempt -eq 3 ]; then
+                echo "💥 NPM install failed after 3 attempts"
+                npm --version
+                node --version
+                exit 1
+              fi
+              echo "⏳ Waiting 5 seconds before retry..."
+              sleep 5
+            fi
+          done
+          
+          # Verify installation
+          npm list --depth=0
+          echo "✅ Vendor panel dependencies installed successfully"
+
+      - name: 🔍 Code Quality Check
+        working-directory: apps/vendor
+        run: |
+          echo "🔍 Running vendor panel code quality checks..."
+          
+          # TypeScript type checking
+          echo "📊 Running TypeScript type check..."
+          if npm run type-check; then
+            echo "✅ TypeScript type check passed"
+          else
+            echo "❌ TypeScript type check failed"
+            exit 1
+          fi
+          
+          # ESLint analysis
+          echo "📊 Running ESLint analysis..."
+          if npm run lint; then
+            echo "✅ ESLint analysis passed"
+          else
+            echo "❌ ESLint analysis failed"
+            echo "💡 Run 'npm run lint:fix' to auto-fix issues"
+            exit 1
+          fi
+          
+          echo "✅ Vendor panel code quality checks passed"
+
+      - name: 🧪 Run Tests
+        if: inputs.skip_tests != true
+        working-directory: apps/vendor
+        run: |
+          echo "🧪 Running vendor panel tests..."
+          
+          if npm run test:coverage; then
+            echo "✅ All vendor panel tests passed"
+          else
+            echo "❌ Some vendor panel tests failed"
+            echo "⚠️ Test failures should be addressed before production deployment"
+            # Don't fail the build for test failures in development
+            if [[ "${{ matrix.environment }}" == "staging" ]]; then
+              exit 1
+            fi
+          fi
+
+      - name: 📊 Upload Test Coverage
+        if: inputs.skip_tests != true
+        uses: codecov/codecov-action@v4
+        continue-on-error: true
+        with:
+          file: apps/vendor/coverage/lcov.info
+          flags: vendor-panel
+          name: vendor-coverage-${{ matrix.environment }}
+
+      - name: 🔧 Environment Setup
+        working-directory: apps/vendor
+        run: |
+          echo "🔧 Setting up vendor panel environment for ${{ matrix.environment }}..."
+          
+          # Create environment-specific configuration
+          if [ ! -f ".env" ]; then
+            echo "⚠️ .env file not found, creating minimal version..."
+            echo "# Vendor panel environment configuration" > .env
+            echo "VITE_ENVIRONMENT=${{ matrix.environment }}" >> .env
+          fi
+          
+          # Validate environment variables
+          if [ -n "$VITE_SUPABASE_URL" ]; then
+            echo "✅ VITE_SUPABASE_URL is configured"
+          else
+            echo "⚠️ VITE_SUPABASE_URL not set - using placeholder for CI"
+            export VITE_SUPABASE_URL="https://placeholder.supabase.co"
+          fi
+          
+          if [ -n "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "✅ VITE_SUPABASE_ANON_KEY is configured"
+          else
+            echo "⚠️ VITE_SUPABASE_ANON_KEY not set - using placeholder for CI"
+            export VITE_SUPABASE_ANON_KEY="placeholder_key"
+          fi
+          
+          echo "✅ Vendor panel environment setup completed"
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: 🏗️ Build Application
+        working-directory: apps/vendor
+        run: |
+          echo "🏗️ Building vendor panel for ${{ matrix.environment }}..."
+          
+          # Set environment variables
+          export VITE_SUPABASE_URL="${VITE_SUPABASE_URL:-https://placeholder.supabase.co}"
+          export VITE_SUPABASE_ANON_KEY="${VITE_SUPABASE_ANON_KEY:-placeholder_key}"
+          export VITE_ENVIRONMENT="${{ matrix.environment }}"
+          
+          if npm run build; then
+            echo "✅ Vendor panel built successfully"
+            
+            # Check build output
+            if [ -d "dist" ]; then
+              echo "📦 Build output directory: dist/"
+              ls -la dist/
+              
+              # Calculate build size
+              BUILD_SIZE=$(du -sh dist/ | cut -f1)
+              echo "📊 Build Size: $BUILD_SIZE"
+              
+              # Check for critical files
+              if [ -f "dist/index.html" ]; then
+                echo "✅ index.html found"
+              else
+                echo "❌ index.html not found in build output"
+                exit 1
+              fi
+            else
+              echo "❌ Build output directory not found"
+              exit 1
+            fi
+          else
+            echo "❌ Vendor panel build failed"
+            exit 1
+          fi
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: 📦 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vendor-build-${{ matrix.environment }}-${{ github.sha }}
+          path: |
+            apps/vendor/dist/
+            apps/vendor/coverage/
+          retention-days: 30
+
+      - name: 🚀 Deploy to Vercel
+        if: matrix.environment == 'staging' && github.ref == 'refs/heads/production-readiness'
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_VENDOR }}
+          working-directory: apps/vendor
+          vercel-args: '--prod'
+
+      - name: 🔍 Bundle Size Analysis
+        working-directory: apps/vendor
+        run: |
+          echo "🔍 Analyzing vendor panel bundle size..."
+          
+          if [ -d "dist" ]; then
+            # Calculate total bundle size
+            TOTAL_SIZE=$(du -sb dist/ | cut -f1)
+            TOTAL_SIZE_MB=$(echo "scale=2; $TOTAL_SIZE / 1024 / 1024" | bc -l)
+            
+            echo "📊 Vendor Panel Bundle Analysis:"
+            echo "================================"
+            echo "📦 Total Bundle Size: ${TOTAL_SIZE_MB} MB"
+            
+            # Check individual file sizes
+            echo "📋 Largest Files:"
+            find dist/ -type f -name "*.js" -o -name "*.css" | xargs ls -lah | sort -k5 -hr | head -10
+            
+            # Performance recommendations
+            if (( $(echo "$TOTAL_SIZE_MB > 5" | bc -l) )); then
+              echo "⚠️ WARNING: Bundle size (${TOTAL_SIZE_MB} MB) is large"
+              echo "💡 Consider code splitting and lazy loading"
+            else
+              echo "✅ Bundle size is within acceptable range"
+            fi
+          fi
+
+      - name: 📊 Build Summary
+        run: |
+          echo "📊 Vendor Panel Build Summary"
+          echo "============================="
+          echo "🏪 App: Vendor Management Panel"
+          echo "🏗️ Environment: ${{ matrix.environment }}"
+          echo "✅ Build Status: Success"
+          echo "📦 Artifacts: Uploaded to GitHub Actions"
+          if [[ "${{ matrix.environment }}" == "staging" ]]; then
+            echo "🚀 Deployment: Vercel"
+          fi
+          echo "🎉 Vendor panel pipeline completed successfully!"

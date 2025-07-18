@@ -1,0 +1,103 @@
+name: 'Security Scanning'
+description: 'Comprehensive security scanning for all applications'
+
+inputs:
+  scan-type:
+    description: 'Type of security scan (basic, comprehensive)'
+    required: false
+    default: 'basic'
+  working-directory:
+    description: 'Working directory to scan'
+    required: false
+    default: '.'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 🕵️ Secret Detection with GitLeaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: 📋 Dependency Review
+      if: github.event_name == 'pull_request'
+      uses: actions/dependency-review-action@v4
+
+    - name: 🔍 Enhanced Security Analysis
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "🔍 Running enhanced security checks..."
+        
+        # Check for hardcoded secrets patterns
+        echo "🔍 Scanning for hardcoded credentials..."
+        secrets_found=false
+        
+        # Check for common patterns (using variables to avoid GitLeaks false positives)
+        GOOGLE_API_PATTERN="AIza[0-9A-Za-z_-]\{35\}"
+        GOOGLE_OAUTH_PATTERN="GOCSPX-[0-9A-Za-z_-]\{28\}"
+        SUPABASE_PATTERN="eyJ[0-9A-Za-z_-]\{100,\}"
+        
+        if grep -r "$GOOGLE_API_PATTERN" . --exclude-dir=.git --exclude-dir=.github --exclude-dir=build --exclude-dir=node_modules 2>/dev/null; then
+          echo "❌ Google API key pattern detected in code!"
+          secrets_found=true
+        fi
+        
+        if grep -r "$GOOGLE_OAUTH_PATTERN" . --exclude-dir=.git --exclude-dir=.github --exclude-dir=build --exclude-dir=node_modules 2>/dev/null; then
+          echo "❌ Google OAuth secret pattern detected in code!"
+          secrets_found=true
+        fi
+        
+        if grep -r "$SUPABASE_PATTERN" . --exclude-dir=.git --exclude-dir=.github --exclude-dir=build --exclude-dir=node_modules 2>/dev/null; then
+          echo "❌ Supabase JWT token pattern detected in code!"
+          secrets_found=true
+        fi
+        
+        # Check for common hardcoded patterns
+        if grep -r "password\s*=" . --exclude-dir=.git --exclude-dir=.github --exclude-dir=build --exclude-dir=node_modules 2>/dev/null; then
+          echo "⚠️ Warning: Potential hardcoded passwords found"
+          secrets_found=true
+        fi
+        
+        if grep -r "api_key\s*=" . --exclude-dir=.git --exclude-dir=.github --exclude-dir=build --exclude-dir=node_modules 2>/dev/null; then
+          echo "⚠️ Warning: Potential hardcoded API keys found"
+          secrets_found=true
+        fi
+        
+        if [ "$secrets_found" = true ]; then
+          echo "❌ Security issues detected - review required"
+          exit 1
+        else
+          echo "✅ No hardcoded secrets detected"
+        fi
+
+    - name: 🔒 File Permission Check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "🔒 Checking file permissions..."
+        
+        # Check for overly permissive files
+        if find . -type f -perm 777 2>/dev/null | grep -v ".git" | head -5; then
+          echo "⚠️ Warning: Files with 777 permissions found"
+        fi
+        
+        # Check for executable scripts
+        if find . -name "*.sh" -type f ! -perm -u+x 2>/dev/null | head -5; then
+          echo "ℹ️ Info: Shell scripts without execute permission found"
+        fi
+        
+        echo "✅ File permission check completed"
+
+    - name: 📊 Security Scan Summary
+      shell: bash
+      run: |
+        echo "📊 Security Scan Summary"
+        echo "========================"
+        echo "✅ Secret detection: Passed"
+        echo "✅ Hardcoded credential check: Passed"
+        echo "✅ File permission check: Passed"
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "✅ Dependency review: Completed"
+        fi
+        echo "🛡️ Security scan completed successfully"

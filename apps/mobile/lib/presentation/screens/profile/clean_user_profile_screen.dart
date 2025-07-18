@@ -15,7 +15,7 @@ import '../../../domain/entities/user_profile.dart';
 import '../../../domain/entities/user.dart' as domain;
 import '../../../core/constants/app_colors.dart';
 import '../../widgets/common/unified_app_bar.dart';
-import '../../widgets/common/error_state.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/skeleton_loading.dart';
 
@@ -137,8 +137,7 @@ class _CleanUserProfileScreenState extends ConsumerState<CleanUserProfileScreen>
       body: userProfileState.isLoading
           ? _buildProfileSkeleton()
           : userProfileState.errorMessage != null
-              ? ErrorState(
-                  message: userProfileState.errorMessage!,
+              ? NetworkErrorWidgets.connectionProblem(
                   onRetry: _loadUserData,
                 )
               : _buildProfileContent(userProfileState, currentUser),

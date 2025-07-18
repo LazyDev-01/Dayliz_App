@@ -1,13 +1,23 @@
 from supabase import create_client, Client
 from app.core.config import settings
+import os
 
 
 class SupabaseClient:
     def __init__(self):
-        self.url = settings.SUPABASE_URL
-        self.key = settings.SUPABASE_KEY
-        self.client = create_client(self.url, self.key)
-        self.auth = self.client.auth
+        self.url = settings.SUPABASE_URL or os.getenv("SUPABASE_URL")
+        self.key = settings.SUPABASE_KEY or os.getenv("SUPABASE_KEY")
+
+        if not self.url or not self.key:
+            print("⚠️ Warning: Supabase credentials not found. Using mock mode.")
+            self.client = None
+        else:
+            try:
+                self.client = create_client(self.url, self.key)
+            except Exception as e:
+                print(f"⚠️ Warning: Supabase connection failed: {e}. Using mock mode.")
+                self.client = None
+        self.auth = self.client.auth if self.client else None
         
     async def get_user(self, user_id: str):
         """Get user by ID from Supabase"""
@@ -37,28 +47,59 @@ class SupabaseClient:
             return None
     
     async def get_products(self, page=1, page_size=20, category=None, search=None):
-        """Get products with pagination and filters"""
+        """Get products with pagination and filters (legacy method)"""
         query = self.client.from_("products").select("*", count="exact")
-        
+
+        # Apply active filter
+        query = query.eq("is_active", True)
+
         # Apply filters
         if category:
-            query = query.eq("category", category)
-        
+            query = query.eq("category_name", category)
+
         if search:
-            query = query.ilike("name", f"%{search}%")
-        
+            query = query.or_(f"name.ilike.%{search}%,product_name.ilike.%{search}%,description.ilike.%{search}%")
+
         # Apply pagination
         start = (page - 1) * page_size
         end = start + page_size - 1
-        
+
         response = await query.order("created_at", desc=True).range(start, end).execute()
-        
+
         return {
             "data": response.data,
             "count": response.count,
             "page": page,
             "page_size": page_size
         }
+
+    async def get_product_categories(self):
+        """Get all product categories for filter suggestions"""
+        try:
+            response = await self.client.from_("categories").select("id, name").eq("is_active", True).execute()
+            return response.data or []
+        except Exception as e:
+            return []
+
+    async def get_product_brands(self):
+        """Get all product brands for filter suggestions"""
+        try:
+            response = await self.client.from_("products").select("brand").not_.is_("brand", "null").execute()
+            brands = list(set([item["brand"] for item in response.data if item["brand"]]))
+            return [{"name": brand} for brand in sorted(brands)]
+        except Exception as e:
+            return []
+
+    async def get_price_range(self):
+        """Get min and max prices for price range filter"""
+        try:
+            response = await self.client.from_("products").select("retail_sale_price").not_.is_("retail_sale_price", "null").execute()
+            prices = [float(item["retail_sale_price"]) for item in response.data if item["retail_sale_price"]]
+            if prices:
+                return {"min_price": min(prices), "max_price": max(prices)}
+            return {"min_price": 0, "max_price": 1000}
+        except Exception as e:
+            return {"min_price": 0, "max_price": 1000}
     
     async def get_cart_items(self, user_id: str):
         """Get cart items with product details for a user"""
@@ -151,10 +192,13 @@ class SupabaseClient:
             print(f"Error creating payment order: {e}")
             return None
 
-    async def get_payment_order(self, razorpay_order_id: str, user_id: str):
-        """Get payment order by Razorpay order ID and user ID"""
+    async def get_payment_order(self, razorpay_order_id: str, user_id: str = None):
+        """Get payment order by Razorpay order ID and optionally user ID"""
         try:
-            response = await self.client.from_("payment_orders").select("*").eq("razorpay_order_id", razorpay_order_id).eq("user_id", user_id).single().execute()
+            query = self.client.from_("payment_orders").select("*").eq("razorpay_order_id", razorpay_order_id)
+            if user_id:
+                query = query.eq("user_id", user_id)
+            response = await query.single().execute()
             return response.data
         except Exception as e:
             print(f"Error getting payment order: {e}")
@@ -255,6 +299,51 @@ class SupabaseClient:
         except Exception as e:
             print(f"Error getting order tracking: {e}")
             return None
+
+    async def create_order_item(self, item_data):
+        """Create order item"""
+        try:
+            response = await self.client.from_("order_items").insert(item_data).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            print(f"Error creating order item: {e}")
+            return None
+
+    async def create_webhook_event(self, webhook_data):
+        """Create webhook event record"""
+        try:
+            response = await self.client.from_("webhook_events").insert(webhook_data).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            print(f"Error creating webhook event: {e}")
+            return None
+
+    async def update_webhook_event(self, webhook_id: str, update_data):
+        """Update webhook event"""
+        try:
+            response = await self.client.from_("webhook_events").update(update_data).eq("id", webhook_id).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            print(f"Error updating webhook event: {e}")
+            return None
+
+    async def get_orders_by_status(self, user_id: str, status: str):
+        """Get orders by user ID and status"""
+        try:
+            response = await self.client.from_("orders").select("*").eq("user_id", user_id).eq("status", status).execute()
+            return response.data
+        except Exception as e:
+            print(f"Error getting orders by status: {e}")
+            return []
+
+    async def get_payment_orders_by_status(self, status: str, limit: int = 100):
+        """Get payment orders by status for processing"""
+        try:
+            response = await self.client.from_("payment_orders").select("*").eq("status", status).limit(limit).execute()
+            return response.data
+        except Exception as e:
+            print(f"Error getting payment orders by status: {e}")
+            return []
 
     # Driver management methods
     async def get_drivers(self, skip: int = 0, limit: int = 20, status_filter: str = None, zone_id: str = None):

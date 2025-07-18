@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/product.dart';
 import '../../providers/wishlist_providers.dart';
 import '../../widgets/common/empty_state.dart';
-import '../../widgets/common/error_state.dart';
-import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/product/clean_product_grid.dart';
@@ -81,8 +79,7 @@ class _CleanWishlistScreenState extends ConsumerState<CleanWishlistScreen> {
     }
 
     if (errorMessage != null && wishlistProducts.isEmpty) {
-      return ErrorState(
-        error: errorMessage,
+      return NetworkErrorWidgets.connectionProblem(
         onRetry: _loadWishlistItems,
       );
     }

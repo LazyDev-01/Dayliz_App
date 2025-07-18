@@ -43,7 +43,7 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> {
       backgroundColor: isDarkMode
           ? theme.bottomNavigationBarTheme.backgroundColor ?? const Color(0xFF1E1E1E)
           : theme.bottomNavigationBarTheme.backgroundColor ?? Colors.white,
-      selectedItemColor: theme.primaryColor,
+      selectedItemColor: const Color(0xFF424242), // Dark grey instead of green
       unselectedItemColor: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
       items: const [
         BottomNavigationBarItem(
@@ -68,8 +68,8 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> {
         ),
       ],
       elevation: 8.0, // Add shadow/box effect
-      selectedFontSize: 12,
-      unselectedFontSize: 10,
+      selectedFontSize: 12, // Same size as unselected to remove animation
+      unselectedFontSize: 12, // Same size as selected to remove animation
       showSelectedLabels: true,
       showUnselectedLabels: true,
     );

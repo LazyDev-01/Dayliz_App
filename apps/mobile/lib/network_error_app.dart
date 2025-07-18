@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/services/connectivity_checker.dart';
-import 'presentation/screens/network/network_error_screen.dart';
+import 'presentation/screens/network/simple_network_error_screen.dart';
 import 'main.dart' as main_app;
 
 /// Minimal app shown when there's no internet connection
@@ -23,7 +23,7 @@ class NetworkErrorApp extends StatelessWidget {
           title: 'Dayliz - Network Error',
           debugShowCheckedModeBanner: false,
           theme: _buildTheme(),
-          home: NetworkErrorScreen(
+          home: SimpleNetworkErrorScreen(
             onRetrySuccess: _onConnectionRestored,
           ),
         );

@@ -44,6 +44,21 @@ app.include_router(monitoring_router, prefix="/api/v1/monitoring", tags=["Monito
 async def root():
     return {"message": "Welcome to Dayliz API! Visit /docs for API documentation."}
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for UPI payment backend"""
+    return {
+        "status": "healthy",
+        "message": "Dayliz UPI Payment API is running",
+        "version": "1.0.0",
+        "features": {
+            "upi_payment_support": True,
+            "razorpay_integration": True,
+            "payment_retry": True,
+            "payment_timeout": True
+        }
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True) 

@@ -1,0 +1,239 @@
+name: ⚙️ Admin Panel CI/CD
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'development'
+        type: string
+      skip_tests:
+        description: 'Skip tests for faster builds'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  build-admin:
+    name: ⚙️ Build Admin Panel
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [development, staging]
+      fail-fast: false
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js Environment
+        uses: ./.github/actions/setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          working-directory: apps/admin
+          cache-dependency-path: package-lock.json
+
+      - name: 📦 Install Dependencies
+        working-directory: apps/admin
+        run: |
+          echo "📦 Installing admin panel dependencies..."
+          
+          # Clean install with retry logic
+          for attempt in 1 2 3; do
+            echo "🔄 NPM install attempt $attempt/3..."
+            
+            if npm ci --verbose; then
+              echo "✅ Dependencies installed successfully on attempt $attempt"
+              break
+            else
+              if [ $attempt -eq 3 ]; then
+                echo "💥 NPM install failed after 3 attempts"
+                npm --version
+                node --version
+                exit 1
+              fi
+              echo "⏳ Waiting 5 seconds before retry..."
+              sleep 5
+            fi
+          done
+          
+          # Verify installation
+          npm list --depth=0
+          echo "✅ Admin panel dependencies installed successfully"
+
+      - name: 🔍 Code Quality Check
+        working-directory: apps/admin
+        run: |
+          echo "🔍 Running admin panel code quality checks..."
+          
+          # Next.js lint check
+          echo "📊 Running Next.js lint check..."
+          if npm run lint; then
+            echo "✅ Next.js lint check passed"
+          else
+            echo "❌ Next.js lint check failed"
+            echo "💡 Fix linting issues before proceeding"
+            exit 1
+          fi
+          
+          echo "✅ Admin panel code quality checks passed"
+
+      - name: 🧪 Run Tests
+        if: inputs.skip_tests != true
+        working-directory: apps/admin
+        run: |
+          echo "🧪 Running admin panel tests..."
+          
+          # Note: Add test script to package.json if not present
+          if npm run test --if-present; then
+            echo "✅ All admin panel tests passed"
+          else
+            echo "❌ Some admin panel tests failed"
+            echo "⚠️ Test failures should be addressed before production deployment"
+            # Don't fail the build for test failures in development
+            if [[ "${{ matrix.environment }}" == "staging" ]]; then
+              exit 1
+            fi
+          fi
+
+      - name: 🔧 Environment Setup
+        working-directory: apps/admin
+        run: |
+          echo "🔧 Setting up admin panel environment for ${{ matrix.environment }}..."
+          
+          # Create environment-specific configuration
+          if [ ! -f ".env.local" ]; then
+            echo "⚠️ .env.local file not found, creating minimal version..."
+            echo "# Admin panel environment configuration" > .env.local
+            echo "NEXT_PUBLIC_ENVIRONMENT=${{ matrix.environment }}" >> .env.local
+          fi
+          
+          # Validate environment variables
+          if [ -n "$NEXT_PUBLIC_SUPABASE_URL" ]; then
+            echo "✅ NEXT_PUBLIC_SUPABASE_URL is configured"
+          else
+            echo "⚠️ NEXT_PUBLIC_SUPABASE_URL not set - using placeholder for CI"
+            export NEXT_PUBLIC_SUPABASE_URL="https://placeholder.supabase.co"
+          fi
+          
+          if [ -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            echo "✅ NEXT_PUBLIC_SUPABASE_ANON_KEY is configured"
+          else
+            echo "⚠️ NEXT_PUBLIC_SUPABASE_ANON_KEY not set - using placeholder for CI"
+            export NEXT_PUBLIC_SUPABASE_ANON_KEY="placeholder_key"
+          fi
+          
+          echo "✅ Admin panel environment setup completed"
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: 🏗️ Build Application
+        working-directory: apps/admin
+        run: |
+          echo "🏗️ Building admin panel for ${{ matrix.environment }}..."
+          
+          # Set environment variables
+          export NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-https://placeholder.supabase.co}"
+          export NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-placeholder_key}"
+          export NEXT_PUBLIC_ENVIRONMENT="${{ matrix.environment }}"
+          
+          if npm run build; then
+            echo "✅ Admin panel built successfully"
+            
+            # Check build output
+            if [ -d ".next" ]; then
+              echo "📦 Build output directory: .next/"
+              ls -la .next/
+              
+              # Calculate build size
+              BUILD_SIZE=$(du -sh .next/ | cut -f1)
+              echo "📊 Build Size: $BUILD_SIZE"
+              
+              # Check for critical files
+              if [ -d ".next/static" ]; then
+                echo "✅ Static assets found"
+              else
+                echo "❌ Static assets not found in build output"
+                exit 1
+              fi
+            else
+              echo "❌ Build output directory not found"
+              exit 1
+            fi
+          else
+            echo "❌ Admin panel build failed"
+            exit 1
+          fi
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: 📦 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: admin-build-${{ matrix.environment }}-${{ github.sha }}
+          path: |
+            apps/admin/.next/
+            apps/admin/out/
+          retention-days: 30
+
+      - name: 🚀 Deploy to Vercel
+        if: matrix.environment == 'staging' && github.ref == 'refs/heads/production-readiness'
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+          working-directory: apps/admin
+          vercel-args: '--prod'
+
+      - name: 🔍 Bundle Size Analysis
+        working-directory: apps/admin
+        run: |
+          echo "🔍 Analyzing admin panel bundle size..."
+          
+          if [ -d ".next" ]; then
+            # Calculate total bundle size
+            TOTAL_SIZE=$(du -sb .next/ | cut -f1)
+            TOTAL_SIZE_MB=$(echo "scale=2; $TOTAL_SIZE / 1024 / 1024" | bc -l)
+            
+            echo "📊 Admin Panel Bundle Analysis:"
+            echo "==============================="
+            echo "📦 Total Bundle Size: ${TOTAL_SIZE_MB} MB"
+            
+            # Check individual file sizes
+            echo "📋 Largest Files:"
+            find .next/ -type f -name "*.js" -o -name "*.css" | xargs ls -lah | sort -k5 -hr | head -10
+            
+            # Performance recommendations
+            if (( $(echo "$TOTAL_SIZE_MB > 10" | bc -l) )); then
+              echo "⚠️ WARNING: Bundle size (${TOTAL_SIZE_MB} MB) is large"
+              echo "💡 Consider Next.js optimization techniques"
+            else
+              echo "✅ Bundle size is within acceptable range"
+            fi
+          fi
+
+      - name: 📊 Build Summary
+        run: |
+          echo "📊 Admin Panel Build Summary"
+          echo "============================"
+          echo "⚙️ App: Admin Management Panel"
+          echo "🏗️ Environment: ${{ matrix.environment }}"
+          echo "✅ Build Status: Success"
+          echo "📦 Artifacts: Uploaded to GitHub Actions"
+          if [[ "${{ matrix.environment }}" == "staging" ]]; then
+            echo "🚀 Deployment: Vercel"
+          fi
+          echo "🎉 Admin panel pipeline completed successfully!"

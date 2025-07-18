@@ -236,7 +236,7 @@ class _EnhancedAddToCartButtonState extends State<EnhancedAddToCartButton>
                           widget.isInCart ? widget.inCartText : widget.addText,
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: widget.isCompact ? 10.sp : 11.sp,
+                            fontSize: widget.isCompact ? 12.sp : 13.sp, // Increased font size
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5,
                           ),

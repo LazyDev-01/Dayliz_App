@@ -19,7 +19,7 @@ class OrderItemInDBBase(OrderItemBase):
     price: float
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class OrderItem(OrderItemInDBBase):
@@ -61,7 +61,7 @@ class OrderInDBBase(OrderBase):
     delivered_at: Optional[datetime] = None
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Order(OrderInDBBase):

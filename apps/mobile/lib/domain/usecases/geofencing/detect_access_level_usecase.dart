@@ -4,10 +4,32 @@ import '../../../core/usecases/usecase.dart';
 import '../../entities/geofencing/delivery_zone.dart';
 import '../../entities/geofencing/enhanced_zone_detection_result.dart';
 import '../../repositories/geofencing_repository.dart';
-import '../../../core/services/geofencing_service.dart';
 import '../../../data/datasources/geofencing_hardcoded_data.dart';
 
 /// Use case for two-tier location validation (city + delivery zone)
+///
+/// This implements a robust, scalable geofencing system with two validation tiers:
+///
+/// **Tier 1: City Boundaries (Fast Check)**
+/// - Uses hardcoded polygon data for offline validation
+/// - Supports multiple cities automatically
+/// - Fast response time (~1-5ms)
+///
+/// **Tier 2: Delivery Zones (Precise Check)**
+/// - Uses database for dynamic zone management
+/// - Supports zone-specific settings (delivery fees, min orders)
+/// - Enables different service levels within cities
+///
+/// **Access Levels:**
+/// 1. **Full Access**: Inside delivery zone → All features available
+/// 2. **Viewing Only**: Inside city, outside zones → Browse only, no ordering
+/// 3. **No Access**: Outside city → Service not available
+///
+/// **Business Benefits:**
+/// - Zone-based services (grocery delivery) with strict boundaries
+/// - City-wide services (custom orders) with broader coverage
+/// - Scalable for multi-city expansion
+/// - Data collection for demand mapping
 class DetectAccessLevelUseCase implements UseCase<EnhancedZoneDetectionResult, DetectAccessLevelParams> {
   final GeofencingRepository repository;
 
@@ -17,22 +39,11 @@ class DetectAccessLevelUseCase implements UseCase<EnhancedZoneDetectionResult, D
   Future<Either<Failure, EnhancedZoneDetectionResult>> call(DetectAccessLevelParams params) async {
     try {
       // Tier 1: Check city boundaries first (fast local check)
-      final cityBoundary = GeofencingHardcodedData.getTuraCityBoundary();
-      
+      // Try to find which city the coordinates belong to
+      final cityBoundary = GeofencingHardcodedData.detectCityBoundary(params.coordinates);
+
       if (cityBoundary == null) {
-        return Right(EnhancedZoneDetectionResult.error(
-          coordinates: params.coordinates,
-          errorMessage: 'City boundary data not available',
-        ));
-      }
-
-      final isInCity = GeofencingService.isPointInPolygon(
-        params.coordinates, 
-        cityBoundary.boundaryCoordinates,
-      );
-
-      if (!isInCity) {
-        // Outside city - no access
+        // Outside all known cities - no access
         return Right(EnhancedZoneDetectionResult.noAccess(
           coordinates: params.coordinates,
           customMessage: 'We don\'t serve this area yet, but we\'re expanding soon!',
@@ -41,7 +52,7 @@ class DetectAccessLevelUseCase implements UseCase<EnhancedZoneDetectionResult, D
 
       // Tier 2: Check delivery zones (may involve network call)
       final zoneResult = await repository.detectZone(params.coordinates);
-      
+
       return zoneResult.fold(
         (failure) => Right(EnhancedZoneDetectionResult.error(
           coordinates: params.coordinates,

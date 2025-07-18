@@ -8,6 +8,7 @@ import '../../providers/scoped_search_providers.dart';
 import '../../widgets/search/infinite_scroll_product_grid.dart';
 import '../../widgets/product/clean_product_card.dart';
 import '../../widgets/common/floating_cart_button.dart';
+import '../../widgets/common/inline_error_widget.dart';
 
 
 /// Enhanced search screen with advanced search capabilities and context awareness
@@ -199,17 +200,7 @@ class _EnhancedSearchScreenState extends ConsumerState<EnhancedSearchScreen> {
           elevation: 0,
           shadowColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF374151)),
-            onPressed: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                context.go('/home');
-              }
-            },
-            tooltip: 'Back',
-          ),
+          automaticallyImplyLeading: false, // Remove default back button
           title: Container(
             height: 44, // Match home screen dimensions
             decoration: BoxDecoration(
@@ -237,23 +228,25 @@ class _EnhancedSearchScreenState extends ConsumerState<EnhancedSearchScreen> {
                 ),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), // Match home screen padding
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_searchController.text.isNotEmpty)
-                      IconButton(
+                prefixIcon: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF374151)),
+                  onPressed: () {
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    } else {
+                      context.go('/home');
+                    }
+                  },
+                  tooltip: 'Back',
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
                         icon: const Icon(Icons.clear, color: Color(0xFF374151)),
                         onPressed: _clearSearch,
                         tooltip: 'Clear',
-                      ),
-                    // Always show search icon - loading state handled by FutureProvider
-                    IconButton(
-                      icon: const Icon(Icons.search, color: Color(0xFF374151)),
-                      onPressed: () => _performSearch(_searchController.text),
-                      tooltip: 'Search',
-                    ),
-                  ],
-                ),
+                      )
+                    : null,
+                // Removed search icon as requested
               ),
               onSubmitted: _performSearch,
               textInputAction: TextInputAction.search,
@@ -406,29 +399,9 @@ class _EnhancedSearchScreenState extends ConsumerState<EnhancedSearchScreen> {
     }
 
     if (state.hasError && state.products.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'Search failed',
-              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              state.error ?? 'Unknown error',
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _expandToGlobalSearch,
-              child: const Text('Search All Products'),
-            ),
-          ],
-        ),
+      return NetworkErrorWidgets.connectionProblem(
+        onRetry: _expandToGlobalSearch,
+        isCompact: false,
       );
     }
 

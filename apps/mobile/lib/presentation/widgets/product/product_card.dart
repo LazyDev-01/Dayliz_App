@@ -205,7 +205,13 @@ class ProductCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(4),
         ),
       ),
-      child: const Text('ADD'),
+      child: const Text(
+        'ADD',
+        style: TextStyle(
+          fontSize: 13, // Increased font size
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 
