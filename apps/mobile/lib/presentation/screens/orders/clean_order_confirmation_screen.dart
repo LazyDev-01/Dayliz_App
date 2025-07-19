@@ -336,7 +336,7 @@ class _CleanOrderConfirmationScreenState extends ConsumerState<CleanOrderConfirm
     return Column(
       children: [
         ElevatedButton.icon(
-          onPressed: () => context.go('/clean/orders'),
+          onPressed: () => context.go('/home?tab=3'),
           icon: const Icon(Icons.receipt_long),
           label: const Text('View My Orders'),
           style: ElevatedButton.styleFrom(
@@ -345,7 +345,7 @@ class _CleanOrderConfirmationScreenState extends ConsumerState<CleanOrderConfirm
         ),
         const SizedBox(height: 16),
         OutlinedButton.icon(
-          onPressed: () => context.go('/'),
+          onPressed: () => context.go('/home?tab=0'),
           icon: const Icon(Icons.shopping_bag),
           label: const Text('Continue Shopping'),
           style: OutlinedButton.styleFrom(

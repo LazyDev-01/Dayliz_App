@@ -55,7 +55,11 @@ import 'package:dayliz_app/presentation/screens/product/clean_product_details_sc
 import 'package:dayliz_app/presentation/screens/wishlist/clean_wishlist_screen.dart';
 import 'package:dayliz_app/presentation/screens/main/clean_main_screen.dart';
 import 'package:dayliz_app/presentation/widgets/common/common_bottom_nav_bar.dart';
+import 'package:dayliz_app/presentation/screens/cart/modern_cart_screen.dart';
 import 'package:dayliz_app/presentation/screens/orders/clean_order_list_screen.dart';
+import 'package:dayliz_app/presentation/providers/weather_provider.dart';
+
+
 import 'package:dayliz_app/presentation/screens/orders/clean_order_confirmation_screen.dart';
 // Import for clean architecture initialization
 import 'di/dependency_injection.dart' as di;
@@ -72,12 +76,12 @@ import 'presentation/screens/auth/clean_register_screen.dart';
 import 'presentation/screens/auth/clean_forgot_password_screen.dart';
 import 'presentation/screens/auth/clean_update_password_screen.dart';
 
-import 'presentation/screens/cart/modern_cart_screen.dart';
+
 import 'presentation/screens/cart/payment_selection_screen.dart';
 import 'presentation/screens/checkout/clean_checkout_screen.dart';
 import 'presentation/screens/checkout/payment_methods_screen.dart';
 
-import 'presentation/screens/categories/clean_categories_screen.dart';
+
 
 import 'presentation/screens/profile/clean_address_list_screen.dart';
 import 'presentation/screens/profile/clean_address_form_screen.dart';
@@ -322,6 +326,16 @@ void _initializeBackgroundOperations() {
       _verifyCartDependencies();
       _verifyWishlistDependencies();
 
+      // PERFORMANCE FIX: Initialize weather provider to prevent repeated service calls
+      try {
+        final container = ProviderContainer();
+        await container.read(weatherProvider.notifier).initialize();
+        container.dispose();
+        debugPrint('✅ Weather provider initialized');
+      } catch (e) {
+        debugPrint('❌ Weather provider initialization failed: $e');
+      }
+
       // Run database migrations (only if authenticated)
       try {
         final isAuthenticatedUseCase = sl<IsAuthenticatedUseCase>();
@@ -550,16 +564,29 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (isMainAppRoute) {
         try {
-          // Location checking is now handled in splash screen
-          // Only check if location gating was completed in current session
-          final locationState = ref.read(locationGatingProvider);
-          debugPrint('🎯 ROUTER: Location gating check - ${locationState.toString()}');
+          // PERFORMANCE FIX: Only check location gating on initial app entry, not every navigation
+          // Check if this is the first navigation to main app (not a tab switch or back navigation)
+          final isInitialNavigation = state.uri.path == '/home' &&
+                                     state.uri.queryParameters.isEmpty;
 
-          // If location gating is required and not completed, redirect to location access
-          if (locationState.isLocationRequired && !locationState.hasCompletedInSession) {
-            debugPrint('🎯 ROUTER: Location gating required, redirecting to location-access');
-            return '/location-access';
+          if (isInitialNavigation) {
+            final locationState = ref.read(locationGatingProvider);
+            debugPrint('🎯 ROUTER: Initial location gating check - ${locationState.toString()}');
+
+            // ROBUST FIX: Check multiple conditions for location readiness
+            final isLocationReady = locationState.hasCompletedInSession ||
+                                   locationState.status == LocationGatingStatus.completed ||
+                                   locationState.status == LocationGatingStatus.viewingModeReady;
+
+            // Only redirect if location is truly not ready
+            if (locationState.isLocationRequired && !isLocationReady) {
+              debugPrint('🎯 ROUTER: Location setup required, redirecting to location-access');
+              return '/location-access';
+            } else {
+              debugPrint('🎯 ROUTER: Location ready, allowing navigation');
+            }
           }
+          // For tab switches and back navigation, skip location check entirely
         } catch (e) {
           debugPrint('🎯 ROUTER: Location gating provider not ready: $e');
           // If location provider is not ready, allow navigation (fail-safe)
@@ -634,13 +661,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Main screen route (after splash)
       GoRoute(
         path: '/home',
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanMainScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
+        pageBuilder: (context, state) {
+          // Parse tab index from query parameters
+          final tabParam = state.uri.queryParameters['tab'];
+          final tabIndex = int.tryParse(tabParam ?? '0') ?? 0;
+
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: CleanMainScreen(initialIndex: tabIndex),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
       ),
       // Premium Auth Landing Screen (New Entry Point)
       GoRoute(
@@ -912,21 +945,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
-      // Categories route
+      // Legacy routes
       GoRoute(
         path: '/categories',
-        pageBuilder: (context, state) => NoTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanCategoriesScreen(),
-        ),
+        redirect: (context, state) => '/home?tab=1',
       ),
-      // Cart route (Phase 3: Updated to use Modern Cart Screen)
       GoRoute(
         path: '/cart',
-        pageBuilder: (context, state) => NoTransitionPage<void>(
-          key: state.pageKey,
-          child: const ModernCartScreen(),
-        ),
+        redirect: (context, state) => '/clean/cart',
       ),
       // Modern Cart route (new UI design)
       GoRoute(
@@ -1342,13 +1368,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
 
-      // Orders route
+      // Orders route - redirect to standalone orders screen
       GoRoute(
         path: '/orders',
-        pageBuilder: (context, state) => NoTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanOrderListScreen(),
-        ),
+        redirect: (context, state) => '/clean/orders',
       ),
 
       // Search Route - Enhanced Search with Context Support
@@ -1435,26 +1458,43 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // Clean architecture routes that the app actually uses
+      // Clean architecture routes
       GoRoute(
         path: '/clean/categories',
-        pageBuilder: (context, state) => NoTransitionPage<void>(
-          key: state.pageKey,
-          child: const CleanCategoriesScreen(),
-        ),
+        redirect: (context, state) => '/home?tab=1',
       ),
+      // Standalone Cart screen with context-aware navigation
       GoRoute(
         path: '/clean/cart',
-        pageBuilder: (context, state) => NoTransitionPage<void>(
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
           child: const ModernCartScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
         ),
       ),
+      // Standalone Orders screen with context-aware navigation
       GoRoute(
         path: '/clean/orders',
-        pageBuilder: (context, state) => NoTransitionPage<void>(
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
           child: const CleanOrderListScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
         ),
       ),
       GoRoute(

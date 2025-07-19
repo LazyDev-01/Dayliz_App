@@ -315,7 +315,7 @@ class CleanRoutes {
 
   // Demo navigation method for categories
   static void navigateToCategories(BuildContext context) {
-    GoRouter.of(context).push('/clean/categories');
+    GoRouter.of(context).go('/home?tab=1');
   }
 
   // Demo navigation method for subcategory

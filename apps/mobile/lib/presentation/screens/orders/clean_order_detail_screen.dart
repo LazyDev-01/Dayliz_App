@@ -46,10 +46,9 @@ class _CleanOrderDetailScreenState extends ConsumerState<CleanOrderDetailScreen>
       debugPrint('🔙 Can pop - going to previous screen');
       Navigator.of(context).pop();
     } else {
-      debugPrint('🔙 Cannot pop - navigating to categories instead of home');
-      // Instead of going to home (which shows bottom nav), go to categories
-      // This provides a better UX as categories is the main shopping entry point
-      context.go('/clean/categories');
+      debugPrint('🔙 Cannot pop - navigating to home');
+      // Navigate to home screen with proper tab
+      context.go('/home?tab=0');
     }
   }
 

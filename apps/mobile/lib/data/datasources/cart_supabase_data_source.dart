@@ -656,7 +656,9 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
       } else if (data['image_url'] != null && data['image_url'].toString().isNotEmpty) {
         mainImageUrl = data['image_url'].toString();
       } else {
-        mainImageUrl = 'https://via.placeholder.com/150';
+        // NETWORK FIX: Use empty string instead of external placeholder URL
+        // The UI will handle showing a local placeholder icon
+        mainImageUrl = '';
       }
 
       // Handle additional images
@@ -811,7 +813,7 @@ class CartSupabaseDataSource implements CartRemoteDataSource {
         discountPercentage: null,
         rating: null,
         reviewCount: null,
-        mainImageUrl: 'https://via.placeholder.com/150',
+        mainImageUrl: '', // NETWORK FIX: Empty string instead of external URL
         additionalImages: const [],
         inStock: false,
         stockQuantity: 0,

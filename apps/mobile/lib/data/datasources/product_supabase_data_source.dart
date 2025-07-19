@@ -223,7 +223,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
             : null,
         rating: json['ratings_avg'] != null ? (json['ratings_avg'] as num).toDouble() : null,
         reviewCount: json['ratings_count'] != null ? (json['ratings_count'] as num).toInt() : null,
-        mainImageUrl: imageUrl ?? 'https://via.placeholder.com/150',
+        mainImageUrl: imageUrl ?? '', // NETWORK FIX: Empty string instead of external URL
         additionalImages: null, // View doesn't return additional images for performance
         inStock: json['in_stock'] == true || (json['stock_quantity'] != null && (json['stock_quantity'] as num) > 0),
         stockQuantity: json['stock_quantity'] != null ? (json['stock_quantity'] as num).toInt() : null,

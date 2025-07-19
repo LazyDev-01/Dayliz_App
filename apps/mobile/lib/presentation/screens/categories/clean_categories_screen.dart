@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import '../../../domain/entities/category.dart';
 
 import '../../providers/category_providers.dart';
-import '../../widgets/common/navigation_handler.dart';
 import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/inline_error_widget.dart';
 import '../product/clean_product_listing_screen.dart';
@@ -56,11 +55,6 @@ class CleanCategoriesScreen extends ConsumerWidget {
         error: (error, stackTrace) => NetworkErrorWidgets.connectionProblem(
           onRetry: () => ref.refresh(categoriesProvider),
         ),
-      ),
-      bottomNavigationBar: NavigationHandler.createBottomNavBar(
-        context: context,
-        ref: ref,
-        currentIndex: 1, // Categories tab
       ),
     );
   }

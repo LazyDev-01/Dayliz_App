@@ -12,9 +12,9 @@ import '../../providers/cart_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/user_profile_providers.dart';
 import '../../providers/coupon_providers.dart';
+import '../../utils/navigation_utils.dart';
 import '../../widgets/animations/animated_empty_state.dart';
 
-import '../../widgets/common/common_bottom_nav_bar.dart';
 import '../../widgets/common/navigation_handler.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/inline_error_widget.dart';
@@ -62,6 +62,8 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     // Reset the flags when screen is created
     _addressesLoadInitiated = false;
     _cartLoadInitiated = false;
+
+    // Weather provider is initialized globally in main.dart
   }
 
   @override
@@ -92,17 +94,25 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
       });
     }
 
-    return Scaffold(
-      backgroundColor: Colors.grey[100], // Use light grey background
-      appBar: UnifiedAppBars.withBackButton(
-        title: AppStrings.cart,
-        onBackPressed: () => _handleBackNavigation(context),
-        fallbackRoute: '/home',
+    return PopScope(
+      canPop: false, // Handle back button manually
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackNavigation(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[100], // Use light grey background
+        appBar: UnifiedAppBars.withBackButton(
+          title: AppStrings.cart,
+          onBackPressed: () => _handleBackNavigation(context),
+          fallbackRoute: '/home',
+        ),
+        body: _buildBody(context, theme, daylizTheme, cartState, userProfileState),
+        bottomNavigationBar: cartState.items.isNotEmpty && !cartState.isLoading && cartState.errorMessage == null
+            ? _buildBottomSection(context, theme, daylizTheme, cartState)
+            : null, // Don't show bottom section when cart is empty, loading, or has error
       ),
-      body: _buildBody(context, theme, daylizTheme, cartState, userProfileState),
-      bottomNavigationBar: cartState.items.isNotEmpty && !cartState.isLoading && cartState.errorMessage == null
-          ? _buildBottomSection(context, theme, daylizTheme, cartState)
-          : null, // Don't show bottom section when cart is empty, loading, or has error
     );
   }
 
@@ -170,7 +180,7 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
           isBadWeather: isBadWeather,
         );
 
-        return Container(
+    return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1718,20 +1728,10 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     );
   }
 
-  /// Handle back navigation from cart screen
+  /// Handle back navigation from cart screen - Production ready
   void _handleBackNavigation(BuildContext context) {
-    debugPrint('🔙 Handling back navigation from cart');
-
-    // Check if we can pop (there's a previous screen)
-    if (Navigator.of(context).canPop()) {
-      debugPrint('🔙 Can pop - going to previous screen');
-      Navigator.of(context).pop();
-    } else {
-      debugPrint('🔙 Cannot pop - navigating to categories instead of home');
-      // Instead of going to home (which shows bottom nav), go to categories
-      // This provides a better UX as categories is the main shopping entry point
-      context.go('/clean/categories');
-    }
+    // Use the efficient navigation utility
+    NavigationUtils.handleBackNavigation(context, ref);
   }
 
 

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:intl/intl.dart';
 
 import '../../../domain/entities/order.dart' as domain;
 import '../../providers/order_providers.dart';
+import '../../utils/navigation_utils.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../order/order_summary_screen.dart';
 import '../../widgets/common/inline_error_widget.dart';
-import '../../widgets/common/loading_indicator.dart';
+
 import '../../widgets/common/skeleton_loaders.dart';
 
 class CleanOrderListScreen extends ConsumerStatefulWidget {
@@ -29,33 +30,30 @@ class _CleanOrderListScreenState extends ConsumerState<CleanOrderListScreen> {
     });
   }
 
-  /// Handle back navigation from order list screen
+  /// Handle back navigation from order list screen - Production ready
   void _handleBackNavigation(BuildContext context) {
-    debugPrint('🔙 Handling back navigation from order list');
-
-    // Check if we can pop (there's a previous screen)
-    if (Navigator.of(context).canPop()) {
-      debugPrint('🔙 Can pop - going to previous screen');
-      Navigator.of(context).pop();
-    } else {
-      debugPrint('🔙 Cannot pop - navigating to categories instead of home');
-      // Instead of going to home (which shows bottom nav), go to categories
-      // This provides a better UX as categories is the main shopping entry point
-      context.go('/clean/categories');
-    }
+    // Use the efficient navigation utility
+    NavigationUtils.handleBackNavigation(context, ref);
   }
 
   @override
   Widget build(BuildContext context) {
     final ordersAsyncValue = ref.watch(userOrdersProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50], // Light grey background
-      appBar: UnifiedAppBars.withBackButton(
-        title: 'My Orders',
-        onBackPressed: () => _handleBackNavigation(context),
-        fallbackRoute: '/home',
-      ),
+    return PopScope(
+      canPop: false, // Handle back button manually
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBackNavigation(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[50], // Light grey background
+        appBar: UnifiedAppBars.withBackButton(
+          title: 'My Orders',
+          onBackPressed: () => _handleBackNavigation(context),
+          fallbackRoute: '/home',
+        ),
       body: RefreshIndicator(
         onRefresh: () async {
           fetchOrders(ref);
@@ -91,6 +89,7 @@ class _CleanOrderListScreenState extends ConsumerState<CleanOrderListScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 

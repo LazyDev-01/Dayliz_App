@@ -97,24 +97,28 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> {
 
 
 
-  /// Handles navigation based on the selected tab index - FIXED route paths
+  /// Handles navigation based on the selected tab index - Simple approach
   void _handleNavigation(BuildContext context, int index) {
     switch (index) {
-      case 0:
-        // FIXED: Use context.go() to avoid recreating home screen widget
-        context.go('/home');
+      case 0: // Home
+      case 1: // Categories
+        // Use unified navigation for Home & Categories
+        context.go('/home?tab=$index');
         break;
-      case 1:
-        // Use go instead of replace to maintain consistent navigation
-        context.go('/clean/categories');
+
+      case 2: // Cart
+        // Use push navigation - natural back stack
+        context.push('/clean/cart');
         break;
-      case 2:
-        // Use go instead of replace to maintain consistent navigation
-        context.go('/clean/cart');
+
+      case 3: // Orders
+        // Use push navigation - natural back stack
+        context.push('/clean/orders');
         break;
-      case 3:
-        // Use go instead of replace to maintain consistent navigation
-        context.go('/orders');
+
+      default:
+        // Fallback to home
+        context.go('/home?tab=0');
         break;
     }
   }

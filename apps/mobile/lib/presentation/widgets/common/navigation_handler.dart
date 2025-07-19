@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import 'common_bottom_nav_bar.dart';
 
 /// Centralized navigation handler for bottom navigation
 /// Eliminates code duplication across screens and provides consistent navigation behavior
 class NavigationHandler {
-  /// Handle bottom navigation tap with proper route navigation
+  /// Handle bottom navigation tap with simple, robust approach
   ///
-  /// This method provides consistent navigation behavior across all screens
-  /// and eliminates the need for duplicate navigation code in each screen.
+  /// Home & Categories use unified navigation (IndexedStack)
+  /// Cart & Orders use push navigation (natural back stack)
   static void handleBottomNavTap(
     BuildContext context,
     WidgetRef ref,
@@ -21,26 +22,26 @@ class NavigationHandler {
       return;
     }
 
-    // Update the provider state for consistency
-    ref.read(bottomNavIndexProvider.notifier).state = index;
-
-    // Navigate to the appropriate route using context.go() for reliability
     switch (index) {
-      case 0:
-        context.go('/home');
+      case 0: // Home
+      case 1: // Categories
+        // Use unified navigation for Home & Categories
+        context.go('/home?tab=$index');
         break;
-      case 1:
-        context.go('/clean/categories');
+
+      case 2: // Cart
+        // Use push navigation - GoRouter handles back navigation automatically
+        context.push('/clean/cart');
         break;
-      case 2:
-        context.go('/clean/cart');
+
+      case 3: // Orders
+        // Use push navigation - GoRouter handles back navigation automatically
+        context.push('/clean/orders');
         break;
-      case 3:
-        context.go('/orders');
-        break;
+
       default:
-        // Fallback to home for unknown indices
-        context.go('/home');
+        // Fallback to home
+        context.go('/home?tab=0');
         break;
     }
   }
