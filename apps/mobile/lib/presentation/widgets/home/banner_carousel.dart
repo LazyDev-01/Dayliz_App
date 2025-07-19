@@ -143,8 +143,10 @@ class _BannerCarouselState extends State<BannerCarousel>
   }
 
   Widget _buildBannerCard(banner_entity.Banner banner, int index) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4.0),
+    // PERFORMANCE: RepaintBoundary prevents unnecessary repaints of banner cards
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4.0),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -174,6 +176,8 @@ class _BannerCarouselState extends State<BannerCarousel>
                   child: CachedNetworkImage(
                     imageUrl: banner.imageUrl,
                     fit: BoxFit.cover,
+                    memCacheWidth: 800, // PERFORMANCE: Limit memory cache for banners
+                    memCacheHeight: 400,
                     placeholder: (context, url) => _buildImagePlaceholder(),
                     errorWidget: (context, url, error) => _buildErrorWidget(),
                   ),
@@ -248,6 +252,7 @@ class _BannerCarouselState extends State<BannerCarousel>
           ),
         ),
       ),
+    ),
     );
   }
 

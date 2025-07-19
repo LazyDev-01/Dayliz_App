@@ -189,6 +189,8 @@ class CleanCategoriesScreen extends ConsumerWidget {
                         child: CachedNetworkImage(
                           imageUrl: subcategory.imageUrl!,
                           fit: BoxFit.cover,
+                          memCacheWidth: 150, // PERFORMANCE: Limit memory cache for category images
+                          memCacheHeight: 150,
                           placeholder: (context, url) => Container(
                             decoration: BoxDecoration(
                               color: themeColor.withValues(alpha: 0.1),

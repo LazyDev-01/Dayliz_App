@@ -17,6 +17,7 @@ class EmptyState extends StatelessWidget {
   /// The callback when the button is pressed (optional)
   final VoidCallback? onButtonPressed;
 
+  // PERFORMANCE: const constructor already optimized ✅
   const EmptyState({
     Key? key,
     required this.icon,

@@ -49,11 +49,13 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
     final cardHeight = widget.height ?? cardWidth * 1.8; // 1:1.8 aspect ratio (restored)
     final imageSize = cardWidth; // Full width image (restored)
 
-    return Container(
-      width: cardWidth,
-      height: cardHeight,
-      margin: const EdgeInsets.only(bottom: 4),
-      child: Material(
+    // PERFORMANCE: RepaintBoundary prevents unnecessary repaints of product cards
+    return RepaintBoundary(
+      child: Container(
+        width: cardWidth,
+        height: cardHeight,
+        margin: const EdgeInsets.only(bottom: 4),
+        child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
         clipBehavior: Clip.antiAlias,
@@ -108,6 +110,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -132,6 +135,8 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               child: CachedNetworkImage(
                 imageUrl: widget.product.mainImageUrl,
                 fit: BoxFit.cover,
+                memCacheWidth: 300, // PERFORMANCE: Limit memory cache for product cards
+                memCacheHeight: 300,
                 fadeInDuration: const Duration(milliseconds: 300),
                 fadeOutDuration: const Duration(milliseconds: 100),
                 placeholder: (context, url) => Container(

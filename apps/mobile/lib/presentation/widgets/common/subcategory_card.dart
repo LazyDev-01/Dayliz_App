@@ -51,6 +51,8 @@ class SubcategoryCard extends StatelessWidget {
                 width: 80,
                 height: 80,
                 fit: BoxFit.cover,
+                memCacheWidth: 120, // PERFORMANCE: Limit memory cache for subcategory icons
+                memCacheHeight: 120,
                 fadeInDuration: const Duration(milliseconds: 300),
                 placeholder: (context, url) => Shimmer.fromColors(
                   baseColor: Colors.grey[300]!,

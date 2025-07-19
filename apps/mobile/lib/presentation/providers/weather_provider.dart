@@ -120,6 +120,13 @@ class WeatherNotifier extends StateNotifier<WeatherState> {
     _weatherService.clearCache();
     state = const WeatherState();
   }
+
+  @override
+  void dispose() {
+    // PERFORMANCE: Proper disposal of weather service resources
+    _weatherService.clearCache();
+    super.dispose();
+  }
 }
 
 /// Weather provider for the application

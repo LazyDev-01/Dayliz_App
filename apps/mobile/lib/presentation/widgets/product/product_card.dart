@@ -39,10 +39,12 @@ class ProductCard extends ConsumerWidget {
         : null;
     final quantity = cartItem?.quantity ?? 0;
 
-    return Container(
-      width: cardWidth,
-      height: cardHeight,
-      margin: const EdgeInsets.only(bottom: 4),
+    // PERFORMANCE: RepaintBoundary prevents unnecessary repaints of product cards
+    return RepaintBoundary(
+      child: Container(
+        width: cardWidth,
+        height: cardHeight,
+        margin: const EdgeInsets.only(bottom: 4),
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -66,6 +68,7 @@ class ProductCard extends ConsumerWidget {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -89,6 +92,8 @@ class ProductCard extends ConsumerWidget {
               child: CachedNetworkImage(
                 imageUrl: product.mainImageUrl,
                 fit: BoxFit.cover,
+                memCacheWidth: 250, // PERFORMANCE: Limit memory cache for product cards
+                memCacheHeight: 250,
                 placeholder: (context, url) => const Center(
                   child: CircularProgressIndicator(),
                 ),

@@ -444,4 +444,11 @@ class CouponNotifier extends StateNotifier<CouponState> {
       ),
     ];
   }
+
+  @override
+  void dispose() {
+    // PERFORMANCE: Proper disposal of coupon provider resources
+    state = const CouponState();
+    super.dispose();
+  }
 }
