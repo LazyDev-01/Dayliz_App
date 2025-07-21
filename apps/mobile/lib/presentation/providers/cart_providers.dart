@@ -7,6 +7,7 @@ import '../../core/models/coupon.dart';
 import '../../core/services/coupon_service.dart';
 import '../../domain/entities/cart_item.dart';
 import '../../domain/entities/product.dart';
+import '../../domain/repositories/cart_repository.dart';
 import '../../domain/usecases/get_cart_items_usecase.dart';
 import '../../domain/usecases/add_to_cart_usecase.dart';
 import '../../domain/usecases/remove_from_cart_usecase.dart';
@@ -116,90 +117,24 @@ class CartNotifier extends StateNotifier<CartState> {
     required this.getCartItemCountUseCase,
     required this.isInCartUseCase,
   }) : super(CartState()) {
-    // Initialize cart data immediately to ensure UI shows correct state
-    _initializeCartData();
-    debugPrint('🛒 CART NOTIFIER: Initialized with full cart data initialization');
+    // Lazy initialization - only load cart data when first accessed
+    debugPrint('🛒 CART NOTIFIER: Initialized with lazy loading strategy');
   }
 
-  /// Initialize cart data including items and count for proper app startup
-  Future<void> _initializeCartData() async {
-    try {
-      debugPrint('🛒 CART INIT: Starting cart data initialization...');
+  /// Lazy initialization - only called when cart data is first accessed
+  Future<void> _ensureInitialized() async {
+    // Skip if already initialized (has items or has been loaded)
+    if (state.items.isNotEmpty || state.isLoading) return;
 
-      // Load cart items first (this will also give us the count)
-      final result = await getCartItemsUseCase();
-      result.fold(
-        (failure) {
-          debugPrint('🛒 CART INIT: Failed to load cart items - ${failure.message}');
-          // Fallback to just loading count
-          _initializeCartCountOnly();
-        },
-        (items) {
-          debugPrint('🛒 CART INIT: Loaded ${items.length} cart items');
-
-          // Calculate totals
-          final totalPrice = items.fold<double>(
-            0.0,
-            (total, item) => total + (item.product.discountedPrice * item.quantity),
-          );
-          final itemCount = items.fold<int>(
-            0,
-            (total, item) => total + item.quantity,
-          );
-
-          // Update state with loaded data
-          state = state.copyWith(
-            items: items,
-            totalPrice: totalPrice,
-            itemCount: itemCount,
-            isLoading: false,
-          );
-
-          debugPrint('🛒 CART INIT: ✅ Cart initialized with $itemCount items, total: ₹$totalPrice');
-        },
-      );
-    } catch (e) {
-      debugPrint('🛒 CART INIT: Error during initialization - $e');
-      // Fallback to count-only initialization
-      _initializeCartCountOnly();
-    }
+    debugPrint('🛒 CART LAZY INIT: First access detected, initializing cart data...');
+    await getCartItems();
   }
 
-  /// Fallback method to initialize only cart count
-  Future<void> _initializeCartCountOnly() async {
-    try {
-      final result = await getCartItemCountUseCase();
-      result.fold(
-        (failure) {
-          debugPrint('🛒 CART COUNT INIT: Failed to get cart count - ${failure.message}');
-        },
-        (count) {
-          debugPrint('🛒 CART COUNT INIT: Loaded cart count = $count');
-          state = state.copyWith(itemCount: count);
-        },
-      );
-    } catch (e) {
-      debugPrint('🛒 CART COUNT INIT: Error getting cart count - $e');
-    }
-  }
 
-  /// Refresh cart count from database
-  Future<void> _refreshCartCount() async {
-    try {
-      final result = await getCartItemCountUseCase();
-      result.fold(
-        (failure) {
-          debugPrint('🛒 CART COUNT REFRESH: Failed to refresh cart count - ${failure.message}');
-        },
-        (count) {
-          debugPrint('🛒 CART COUNT REFRESH: Refreshed cart count = $count');
-          state = state.copyWith(itemCount: count);
-        },
-      );
-    } catch (e) {
-      debugPrint('🛒 CART COUNT REFRESH: Error refreshing cart count - $e');
-    }
-  }
+
+
+
+
 
 
 
@@ -243,14 +178,20 @@ class CartNotifier extends StateNotifier<CartState> {
     );
   }
 
-  /// Get all items in the cart
+  /// Get all items in the cart with lazy initialization
   Future<void> getCartItems() async {
+    // Prevent multiple simultaneous loads
+    if (state.isLoading) return;
+
     state = state.copyWith(isLoading: true, errorMessage: null);
     await _refreshCartData();
   }
 
   /// Add a product to the cart with optimistic updates
   Future<bool> addToCart({required Product product, required int quantity}) async {
+    // Ensure cart is initialized before operations
+    await _ensureInitialized();
+
     // Store original state for rollback
     final originalItems = List<CartItem>.from(state.items);
     final originalTotalPrice = state.totalPrice;
@@ -299,11 +240,6 @@ class CartNotifier extends StateNotifier<CartState> {
     );
 
     debugPrint('🛒 ADD TO CART: Updated cart count to $newItemCount (optimistic)');
-
-    // Also refresh cart count from database to ensure consistency (async)
-    _refreshCartCount();
-
-
 
     // Perform actual add in background
     final result = await addToCartUseCase(
@@ -532,7 +468,7 @@ class CartNotifier extends StateNotifier<CartState> {
         appliedCoupon: validationResult.appliedCoupon,
         clearCouponError: true,
       );
-      debugPrint('🎫 COUPON: Applied ${couponCode} successfully');
+      debugPrint('🎫 COUPON: Applied $couponCode successfully');
       return true;
     } else {
       // Show error message
@@ -540,7 +476,7 @@ class CartNotifier extends StateNotifier<CartState> {
         couponErrorMessage: validationResult.errorMessage,
         clearCoupon: true,
       );
-      debugPrint('🎫 COUPON: Failed to apply ${couponCode} - ${validationResult.errorMessage}');
+      debugPrint('🎫 COUPON: Failed to apply $couponCode - ${validationResult.errorMessage}');
       return false;
     }
   }
@@ -618,21 +554,80 @@ class CartNotifier extends StateNotifier<CartState> {
     debugPrint('🔄 CART SYNC: Background sync status: $isActive');
   }
 
-  /// Silent background validation for hybrid cart strategy
+  /// Silent background validation for hybrid cart strategy (called by repository)
   Future<void> validateCartItems() async {
     if (state.items.isEmpty) return;
 
-    debugPrint('🔄 CART VALIDATION: Starting silent background validation...');
+    debugPrint('🔄 CART VALIDATION: Repository-triggered silent validation...');
 
     try {
-      // In real implementation, this would check stock/prices against database
-      // For now, just refresh cart data silently
-      await _refreshCartData();
+      // This is now handled by the repository's intelligent sync
+      // Just refresh local state without triggering additional syncs
+      final result = await getCartItemsUseCase();
 
-      debugPrint('🔄 CART VALIDATION: ✅ Silent validation completed');
+      result.fold(
+        (failure) {
+          debugPrint('🔄 CART VALIDATION: ❌ Silent validation failed: ${failure.message}');
+        },
+        (items) {
+          // Update state silently without triggering UI loading states
+          final totalPrice = items.fold<double>(0.0, (total, item) => total + item.totalPrice);
+          final itemCount = items.fold<int>(0, (total, item) => total + item.quantity);
+
+          state = state.copyWith(
+            items: items,
+            totalPrice: totalPrice,
+            itemCount: itemCount,
+          );
+
+          debugPrint('🔄 CART VALIDATION: ✅ Silent validation completed (${items.length} items)');
+        },
+      );
     } catch (e) {
       debugPrint('🔄 CART VALIDATION: ❌ Silent validation failed: $e');
       // Silent failure - no user notification needed for background validation
+    }
+  }
+
+  /// Sync local cart with database (lazy sync strategy)
+  /// This is called when user navigates to cart screen or initiates checkout
+  Future<void> syncCartWithDatabase() async {
+    // Prevent multiple simultaneous syncs
+    if (state.isBackgroundSyncing) {
+      debugPrint('🔄 LAZY SYNC: Sync already in progress, skipping...');
+      return;
+    }
+
+    debugPrint('🔄 LAZY SYNC: Starting cart sync from UI...');
+
+    // Set background sync status
+    state = state.copyWith(isBackgroundSyncing: true);
+
+    try {
+      // Call the repository sync method directly
+      final cartRepository = sl<CartRepository>();
+      final result = await cartRepository.syncCartWithDatabase();
+
+      result.fold(
+        (failure) {
+          debugPrint('🔄 LAZY SYNC: ❌ Sync failed: ${failure.message}');
+          // Don't show error to user - this is background operation
+        },
+        (success) {
+          if (success) {
+            debugPrint('🔄 LAZY SYNC: ✅ Sync completed successfully');
+            // Refresh cart items to get updated data from database
+            getCartItems();
+          } else {
+            debugPrint('🔄 LAZY SYNC: ⚠️ Sync skipped (offline or disabled)');
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('🔄 LAZY SYNC: ❌ Unexpected error: $e');
+    } finally {
+      // Clear background sync status
+      state = state.copyWith(isBackgroundSyncing: false);
     }
   }
 }

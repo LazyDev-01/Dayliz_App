@@ -18,48 +18,42 @@ class CartRepositoryImpl implements CartRepository {
   // Feature flag for hybrid cart strategy - enabled for production readiness
   static const bool _useDatabaseOperations = true; // Hybrid mode: local-first with background sync
 
-  // Background sync management
+  // Local-first background sync management
   Timer? _backgroundSyncTimer;
   bool _isBackgroundSyncActive = false;
-  static const Duration _backgroundSyncInterval = Duration(seconds: 30);
+  DateTime? _lastSyncTime;
+  DateTime? _lastUserActivity;
+
+  // Intelligent sync intervals
+  static const Duration _minSyncInterval = Duration(minutes: 5); // Minimum 5 minutes between syncs
+  static const Duration _maxSyncInterval = Duration(minutes: 15); // Maximum 15 minutes without sync
+  static const Duration _userActivityThreshold = Duration(minutes: 2); // Consider user active if activity within 2 minutes
 
   CartRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
     required this.networkInfo,
   }) {
-    // Start background sync when hybrid mode is enabled
+    // Initialize activity tracking
+    _lastUserActivity = DateTime.now();
+
+    // Start intelligent background sync when hybrid mode is enabled
     if (_useDatabaseOperations) {
-      _startBackgroundSync();
+      _startIntelligentBackgroundSync();
     }
   }
 
   @override
   Future<Either<Failure, List<CartItem>>> getCartItems() async {
     try {
-      // Early launch: Use only local storage for faster market reach
-      if (!_useDatabaseOperations) {
-        debugPrint('🛒 CART REPO: Using local-only mode for early launch');
-        final localCartItems = await localDataSource.getCachedCartItems();
-        return Right(localCartItems);
-      }
+      // Track user activity for intelligent sync
+      _recordUserActivity();
 
-      // Future: Database sync implementation (preserved for post-launch)
-      if (await networkInfo.isConnected) {
-        try {
-          final remoteCartItems = await remoteDataSource.getCartItems();
-          await localDataSource.cacheCartItems(remoteCartItems);
-          return Right(remoteCartItems);
-        } catch (e) {
-          // If remote data source fails, try to get from local
-        }
-      }
-
-      // Return local cart items if offline or remote fails
+      // LOCAL-FIRST: Always return local data immediately (lazy sync strategy)
+      debugPrint('🛒 CART REPO: Fetching from local storage (lazy sync strategy)');
       final localCartItems = await localDataSource.getCachedCartItems();
+
       return Right(localCartItems);
-    } on CartException catch (e) {
-      return Left(ServerFailure(message: e.message));
     } on CartLocalException catch (e) {
       return Left(CacheFailure(message: e.message));
     } catch (e) {
@@ -75,52 +69,17 @@ class CartRepositoryImpl implements CartRepository {
     debugPrint('🛒 CART REPO: Adding ${product.name} (qty: $quantity) to cart');
 
     try {
-      // Early launch: Use only local storage for faster market reach
-      if (!_useDatabaseOperations) {
-        debugPrint('🛒 CART REPO: Using local-only mode - adding to local storage...');
-        final localCartItem = await localDataSource.addToLocalCart(
-          product: product,
-          quantity: quantity,
-        );
-        debugPrint('🛒 CART REPO: ✅ Local add completed');
-        return Right(localCartItem);
-      }
+      // Track user activity for intelligent sync
+      _recordUserActivity();
 
-      // Future: Database sync implementation (preserved for post-launch)
-      final isConnected = await networkInfo.isConnected;
-      debugPrint('🛒 CART REPO: Network connected: $isConnected');
-
-      if (isConnected) {
-        try {
-          debugPrint('🛒 CART REPO: Attempting remote add to cart...');
-          final remoteCartItem = await remoteDataSource.addToCart(
-            product: product,
-            quantity: quantity,
-          );
-
-          debugPrint('🛒 CART REPO: ✅ Remote add successful, updating local cache...');
-          // Update local cache with the database cart item (including correct ID)
-          await _syncLocalCartWithDatabase();
-
-          debugPrint('🛒 CART REPO: ✅ Database sync completed successfully');
-          return Right(remoteCartItem);
-        } catch (e) {
-          debugPrint('🛒 CART REPO: ❌ Remote add failed: $e');
-          debugPrint('🛒 CART REPO: Falling back to local storage...');
-          // If remote data source fails, add to local
-        }
-      } else {
-        debugPrint('🛒 CART REPO: No network connection, using local storage');
-      }
-
-      // Add to local cart if offline or remote fails
-      debugPrint('🛒 CART REPO: Adding to local storage...');
+      // LOCAL-FIRST: Add to local storage immediately (no immediate database sync)
+      debugPrint('🛒 CART REPO: Adding to local storage (lazy sync strategy)');
       final localCartItem = await localDataSource.addToLocalCart(
         product: product,
         quantity: quantity,
       );
+      debugPrint('🛒 CART REPO: ✅ Local add completed instantly - database sync deferred');
 
-      debugPrint('🛒 CART REPO: ✅ Local add completed');
       return Right(localCartItem);
     } on CartException catch (e) {
       debugPrint('🛒 CART REPO: ❌ CartException: ${e.message}');
@@ -141,55 +100,14 @@ class CartRepositoryImpl implements CartRepository {
     debugPrint('🛒 CART REPO: Removing cart item: $cartItemId');
 
     try {
-      // Early launch: Use only local storage for faster market reach
-      if (!_useDatabaseOperations) {
-        debugPrint('🛒 CART REPO: Using local-only mode - removing from local storage...');
-        final success = await localDataSource.removeFromLocalCart(
-          cartItemId: cartItemId,
-        );
-        debugPrint('🛒 CART REPO: ✅ Local remove completed');
-        return Right(success);
-      }
-
-      // Future: Database sync implementation (preserved for post-launch)
-      final isConnected = await networkInfo.isConnected;
-      debugPrint('🛒 CART REPO: Network connected: $isConnected');
-
-      if (isConnected) {
-        try {
-          debugPrint('🛒 CART REPO: Attempting remote remove from cart...');
-          final success = await remoteDataSource.removeFromCart(
-            cartItemId: cartItemId,
-          );
-
-          if (success) {
-            debugPrint('🛒 CART REPO: ✅ Remote remove successful, syncing local cache...');
-            // Sync local cache with database to ensure consistency
-            await _syncLocalCartWithDatabase();
-            debugPrint('🛒 CART REPO: ✅ Database sync completed successfully');
-          }
-
-          return Right(success);
-        } catch (e) {
-          debugPrint('🛒 CART REPO: ❌ Remote remove failed: $e');
-          debugPrint('🛒 CART REPO: Falling back to local storage...');
-          // If remote data source fails, remove from local
-        }
-      } else {
-        debugPrint('🛒 CART REPO: No network connection, using local storage');
-      }
-
-      // Remove from local cart if offline or remote fails
-      debugPrint('🛒 CART REPO: Removing from local storage...');
+      // LOCAL-FIRST: Remove from local storage immediately (no immediate database sync)
+      debugPrint('🛒 CART REPO: Removing from local storage (lazy sync strategy)');
       final success = await localDataSource.removeFromLocalCart(
         cartItemId: cartItemId,
       );
+      debugPrint('🛒 CART REPO: ✅ Local remove completed instantly - database sync deferred');
 
-      debugPrint('🛒 CART REPO: ✅ Local remove completed');
       return Right(success);
-    } on CartException catch (e) {
-      debugPrint('🛒 CART REPO: ❌ CartException: ${e.message}');
-      return Left(ServerFailure(message: e.message));
     } on CartLocalException catch (e) {
       debugPrint('🛒 CART REPO: ❌ CartLocalException: ${e.message}');
       return Left(CacheFailure(message: e.message));
@@ -207,59 +125,18 @@ class CartRepositoryImpl implements CartRepository {
     debugPrint('🛒 CART REPO: Updating cart item: $cartItemId to quantity: $quantity');
 
     try {
-      // Early launch: Use only local storage for faster market reach
-      if (!_useDatabaseOperations) {
-        debugPrint('🛒 CART REPO: Using local-only mode - updating local storage...');
-        final updatedCartItem = await localDataSource.updateLocalQuantity(
-          cartItemId: cartItemId,
-          quantity: quantity,
-        );
-        debugPrint('🛒 CART REPO: ✅ Local update completed');
-        return Right(updatedCartItem);
-      }
+      // Track user activity for intelligent sync
+      _recordUserActivity();
 
-      // Future: Database sync implementation (preserved for post-launch)
-      final isConnected = await networkInfo.isConnected;
-      debugPrint('🛒 CART REPO: Network connected: $isConnected');
-
-      if (isConnected) {
-        try {
-          debugPrint('🛒 CART REPO: Attempting remote quantity update...');
-          final updatedCartItem = await remoteDataSource.updateQuantity(
-            cartItemId: cartItemId,
-            quantity: quantity,
-          );
-
-          debugPrint('🛒 CART REPO: ✅ Remote update successful, syncing local cache...');
-          // Sync local cache with database to ensure consistency
-          await _syncLocalCartWithDatabase();
-
-          debugPrint('🛒 CART REPO: ✅ Database sync completed successfully');
-          return Right(updatedCartItem);
-        } catch (e) {
-          debugPrint('🛒 CART REPO: ❌ Remote update failed: $e');
-          debugPrint('🛒 CART REPO: Falling back to local storage...');
-          // If remote data source fails, update local
-        }
-      } else {
-        debugPrint('🛒 CART REPO: No network connection, using local storage');
-      }
-
-      // Update local cart if offline or remote fails
-      debugPrint('🛒 CART REPO: Updating local storage...');
+      // LOCAL-FIRST: Update local storage immediately (no immediate database sync)
+      debugPrint('🛒 CART REPO: Updating local storage (lazy sync strategy)');
       final updatedCartItem = await localDataSource.updateLocalQuantity(
         cartItemId: cartItemId,
         quantity: quantity,
       );
+      debugPrint('🛒 CART REPO: ✅ Local update completed instantly - database sync deferred');
 
-      debugPrint('🛒 CART REPO: ✅ Local update completed');
       return Right(updatedCartItem);
-    } on CartException catch (e) {
-      debugPrint('🛒 CART REPO: ❌ CartException: ${e.message}');
-      return Left(ServerFailure(message: e.message));
-    } on CartLocalException catch (e) {
-      debugPrint('🛒 CART REPO: ❌ CartLocalException: ${e.message}');
-      return Left(CacheFailure(message: e.message));
     } catch (e) {
       debugPrint('🛒 CART REPO: ❌ Unexpected error: $e');
       return Left(ServerFailure(message: e.toString()));
@@ -271,52 +148,15 @@ class CartRepositoryImpl implements CartRepository {
     debugPrint('🛒 CART REPO: Clearing entire cart');
 
     try {
-      // Early launch: Use only local storage for faster market reach
-      if (!_useDatabaseOperations) {
-        debugPrint('🛒 CART REPO: Using local-only mode - clearing local storage...');
-        final success = await localDataSource.clearLocalCart();
-        debugPrint('🛒 CART REPO: ✅ Local clear completed');
-        return Right(success);
-      }
+      // Track user activity for intelligent sync
+      _recordUserActivity();
 
-      // Future: Database sync implementation (preserved for post-launch)
-      final isConnected = await networkInfo.isConnected;
-      debugPrint('🛒 CART REPO: Network connected: $isConnected');
-
-      if (isConnected) {
-        try {
-          debugPrint('🛒 CART REPO: Attempting remote cart clear...');
-          final success = await remoteDataSource.clearCart();
-
-          if (success) {
-            debugPrint('🛒 CART REPO: ✅ Remote clear successful, syncing local cache...');
-            // Sync local cache with database (should be empty now)
-            await _syncLocalCartWithDatabase();
-            debugPrint('🛒 CART REPO: ✅ Database sync completed successfully');
-          }
-
-          return Right(success);
-        } catch (e) {
-          debugPrint('🛒 CART REPO: ❌ Remote clear failed: $e');
-          debugPrint('🛒 CART REPO: Falling back to local storage...');
-          // If remote data source fails, clear local
-        }
-      } else {
-        debugPrint('🛒 CART REPO: No network connection, using local storage');
-      }
-
-      // Clear local cart if offline or remote fails
-      debugPrint('🛒 CART REPO: Clearing local storage...');
+      // LOCAL-FIRST: Clear local storage immediately (no immediate database sync)
+      debugPrint('🛒 CART REPO: Clearing local storage (lazy sync strategy)');
       final success = await localDataSource.clearLocalCart();
+      debugPrint('🛒 CART REPO: ✅ Local clear completed instantly - database sync deferred');
 
-      debugPrint('🛒 CART REPO: ✅ Local clear completed');
       return Right(success);
-    } on CartException catch (e) {
-      debugPrint('🛒 CART REPO: ❌ CartException: ${e.message}');
-      return Left(ServerFailure(message: e.message));
-    } on CartLocalException catch (e) {
-      debugPrint('🛒 CART REPO: ❌ CartLocalException: ${e.message}');
-      return Left(CacheFailure(message: e.message));
     } catch (e) {
       debugPrint('🛒 CART REPO: ❌ Unexpected error: $e');
       return Left(ServerFailure(message: e.toString()));
@@ -326,28 +166,15 @@ class CartRepositoryImpl implements CartRepository {
   @override
   Future<Either<Failure, double>> getTotalPrice() async {
     try {
-      // Early launch: Use only local storage for faster market reach
-      if (!_useDatabaseOperations) {
-        final totalPrice = await localDataSource.getLocalTotalPrice();
-        return Right(totalPrice);
-      }
+      // Track user activity for intelligent sync
+      _recordUserActivity();
 
-      // Future: Database sync implementation (preserved for post-launch)
-      if (await networkInfo.isConnected) {
-        try {
-          final totalPrice = await remoteDataSource.getTotalPrice();
-          return Right(totalPrice);
-        } catch (e) {
-          // If remote data source fails, get from local
-        }
-      }
-
-      // Get from local cart if offline or remote fails
+      // LOCAL-FIRST: Always get total price from local storage (lazy sync strategy)
+      debugPrint('🛒 CART REPO: Getting total price from local storage (lazy sync strategy)');
       final totalPrice = await localDataSource.getLocalTotalPrice();
+      debugPrint('🛒 CART REPO: ✅ Local total price: ₹$totalPrice');
 
       return Right(totalPrice);
-    } on CartException catch (e) {
-      return Left(ServerFailure(message: e.message));
     } on CartLocalException catch (e) {
       return Left(CacheFailure(message: e.message));
     } catch (e) {
@@ -358,28 +185,15 @@ class CartRepositoryImpl implements CartRepository {
   @override
   Future<Either<Failure, int>> getItemCount() async {
     try {
-      // Early launch: Use only local storage for faster market reach
-      if (!_useDatabaseOperations) {
-        final itemCount = await localDataSource.getLocalItemCount();
-        return Right(itemCount);
-      }
+      // Track user activity for intelligent sync
+      _recordUserActivity();
 
-      // Future: Database sync implementation (preserved for post-launch)
-      if (await networkInfo.isConnected) {
-        try {
-          final itemCount = await remoteDataSource.getItemCount();
-          return Right(itemCount);
-        } catch (e) {
-          // If remote data source fails, get from local
-        }
-      }
-
-      // Get from local cart if offline or remote fails
+      // LOCAL-FIRST: Always get count from local storage (lazy sync strategy)
+      debugPrint('🛒 CART REPO: Getting item count from local storage (lazy sync strategy)');
       final itemCount = await localDataSource.getLocalItemCount();
+      debugPrint('🛒 CART REPO: ✅ Local item count: $itemCount');
 
       return Right(itemCount);
-    } on CartException catch (e) {
-      return Left(ServerFailure(message: e.message));
     } on CartLocalException catch (e) {
       return Left(CacheFailure(message: e.message));
     } catch (e) {
@@ -427,95 +241,138 @@ class CartRepositoryImpl implements CartRepository {
     }
   }
 
-  /// Start background sync for hybrid cart strategy
-  void _startBackgroundSync() {
+  /// Record user activity for intelligent sync timing
+  void _recordUserActivity() {
+    _lastUserActivity = DateTime.now();
+  }
+
+  /// Lazy database sync - sync local cart with database when needed
+  /// This is the main sync method called when user navigates to cart or checkout
+  @override
+  Future<Either<Failure, bool>> syncCartWithDatabase() async {
+    if (!_useDatabaseOperations) {
+      debugPrint('🔄 LAZY SYNC: Database operations disabled, skipping sync');
+      return const Right(true);
+    }
+
+    try {
+      final isConnected = await networkInfo.isConnected;
+      if (!isConnected) {
+        debugPrint('🔄 LAZY SYNC: No network connection, skipping sync');
+        return const Right(false);
+      }
+
+      debugPrint('🔄 LAZY SYNC: Starting cart synchronization with database...');
+
+      // Get current local cart items
+      final localCartItems = await localDataSource.getCachedCartItems();
+      debugPrint('🔄 LAZY SYNC: Found ${localCartItems.length} local cart items');
+
+      // Get current database cart items
+      final remoteCartItems = await remoteDataSource.getCartItems();
+      debugPrint('🔄 LAZY SYNC: Found ${remoteCartItems.length} database cart items');
+
+      // Clear database cart first (clean slate approach)
+      await remoteDataSource.clearCart();
+      debugPrint('🔄 LAZY SYNC: Database cart cleared');
+
+      // Sync all local items to database
+      for (final localItem in localCartItems) {
+        await remoteDataSource.addToCart(
+          product: localItem.product,
+          quantity: localItem.quantity,
+        );
+      }
+
+      debugPrint('🔄 LAZY SYNC: ✅ Successfully synced ${localCartItems.length} items to database');
+      _lastSyncTime = DateTime.now();
+
+      return const Right(true);
+    } catch (e) {
+      debugPrint('🔄 LAZY SYNC: ❌ Sync failed: $e');
+      return Left(ServerFailure(message: 'Failed to sync cart: $e'));
+    }
+  }
+
+  /// Check if user has been active recently
+  bool _isUserActive() {
+    if (_lastUserActivity == null) return false;
+    return DateTime.now().difference(_lastUserActivity!) < _userActivityThreshold;
+  }
+
+  /// Check if sync is needed based on time and activity
+  bool _shouldSync() {
+    if (_lastSyncTime == null) return true; // First sync
+
+    final timeSinceLastSync = DateTime.now().difference(_lastSyncTime!);
+
+    // Force sync if max interval exceeded
+    if (timeSinceLastSync > _maxSyncInterval) return true;
+
+    // Sync if user is active and minimum interval passed
+    if (_isUserActive() && timeSinceLastSync > _minSyncInterval) return true;
+
+    return false;
+  }
+
+
+
+  /// Start intelligent background sync with activity-based timing
+  void _startIntelligentBackgroundSync() {
     if (!_useDatabaseOperations) return;
 
-    debugPrint('🔄 CART SYNC: Starting background sync (interval: ${_backgroundSyncInterval.inSeconds}s)');
+    debugPrint('🔄 CART SYNC: Starting intelligent background sync');
+    debugPrint('🔄 CART SYNC: Min interval: ${_minSyncInterval.inMinutes}min, Max interval: ${_maxSyncInterval.inMinutes}min');
     _isBackgroundSyncActive = true;
 
-    _backgroundSyncTimer = Timer.periodic(_backgroundSyncInterval, (timer) {
-      _performBackgroundSync();
+    // Check every minute if sync is needed (much less aggressive)
+    _backgroundSyncTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _performIntelligentBackgroundSync();
     });
   }
 
-  /// Stop background sync
+  /// Stop background sync with proper cleanup
   void _stopBackgroundSync() {
-    debugPrint('🔄 CART SYNC: Stopping background sync');
+    debugPrint('🔄 CART SYNC: Stopping intelligent background sync');
     _backgroundSyncTimer?.cancel();
     _backgroundSyncTimer = null;
     _isBackgroundSyncActive = false;
   }
 
-  /// Perform background sync validation
-  Future<void> _performBackgroundSync() async {
+  /// Perform intelligent background sync only when needed
+  Future<void> _performIntelligentBackgroundSync() async {
     if (!_useDatabaseOperations || !_isBackgroundSyncActive) return;
+
+    // Only sync if conditions are met
+    if (!_shouldSync()) {
+      return; // Skip this sync cycle
+    }
 
     try {
       final isConnected = await networkInfo.isConnected;
       if (!isConnected) {
-        debugPrint('🔄 CART SYNC: Skipping background sync - no network connection');
+        debugPrint('🔄 CART SYNC: Skipping sync - no network connection');
         return;
       }
 
-      debugPrint('🔄 CART SYNC: Performing background validation...');
+      debugPrint('🔄 CART SYNC: Performing intelligent background sync...');
 
-      // Sync local cart with database to ensure consistency
-      await _syncLocalCartWithDatabase();
+      // Use the new lazy sync method
+      await syncCartWithDatabase();
 
-      debugPrint('🔄 CART SYNC: ✅ Background sync completed');
+      // Update last sync time
+      _lastSyncTime = DateTime.now();
+
+      debugPrint('🔄 CART SYNC: ✅ Intelligent sync completed');
     } catch (e) {
-      debugPrint('🔄 CART SYNC: ❌ Background sync failed: $e');
+      debugPrint('🔄 CART SYNC: ❌ Intelligent sync failed: $e');
       // Don't throw error - this is background operation
     }
   }
 
-  /// Trigger immediate sync for critical operations
-  Future<void> _triggerImmediateSync() async {
-    if (!_useDatabaseOperations) return;
-
-    try {
-      final isConnected = await networkInfo.isConnected;
-      if (isConnected) {
-        debugPrint('🚀 CART SYNC: Triggering immediate sync...');
-        await _syncLocalCartWithDatabase();
-        debugPrint('🚀 CART SYNC: ✅ Immediate sync completed');
-      } else {
-        debugPrint('🚀 CART SYNC: Skipping immediate sync - no network connection');
-      }
-    } catch (e) {
-      debugPrint('🚀 CART SYNC: ❌ Immediate sync failed: $e');
-      // Don't throw error - sync failure shouldn't break cart operations
-    }
-  }
-
-  /// Dispose resources
+  /// Dispose resources and cleanup
   void dispose() {
+    debugPrint('🔄 LAZY SYNC: Disposing repository resources...');
     _stopBackgroundSync();
-  }
-
-  /// Sync local cart with database to ensure IDs match
-  /// Enhanced for hybrid cart strategy with real-time validation
-  Future<void> _syncLocalCartWithDatabase() async {
-    // Skip sync if hybrid mode is disabled
-    if (!_useDatabaseOperations) {
-      debugPrint('🛒 CART REPO: Skipping database sync - hybrid mode disabled');
-      return;
-    }
-
-    try {
-      debugPrint('🛒 CART REPO: Syncing local cart with database...');
-
-      // Get cart items from database (with correct UUIDs)
-      final remoteCartItems = await remoteDataSource.getCartItems();
-
-      // Update local cache with database items (this ensures IDs match)
-      await localDataSource.cacheCartItems(remoteCartItems);
-
-      debugPrint('🛒 CART REPO: ✅ Local cart synced with database (${remoteCartItems.length} items)');
-    } catch (e) {
-      debugPrint('🛒 CART REPO: ❌ Failed to sync local cart with database: $e');
-      // Don't throw error - this is a sync operation, not critical
-    }
   }
 }

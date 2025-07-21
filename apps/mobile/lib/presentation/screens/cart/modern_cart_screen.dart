@@ -50,6 +50,13 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     _couponController.dispose();
     super.dispose();
   }
+
+  /// Trigger lazy database sync when cart screen is loaded
+  /// This syncs local cart changes with the database
+  void _triggerLazyCartSync() {
+    debugPrint('🔄 LAZY SYNC: Triggering cart sync on cart screen load');
+    ref.read(cartNotifierProvider.notifier).syncCartWithDatabase();
+  }
   bool _addressesLoadInitiated = false;
   bool _cartLoadInitiated = false;
 
@@ -64,6 +71,11 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     _cartLoadInitiated = false;
 
     // Weather provider is initialized globally in main.dart
+
+    // Trigger lazy database sync when cart screen is loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _triggerLazyCartSync();
+    });
   }
 
   @override
@@ -1272,6 +1284,10 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
       return;
     }
 
+    // Trigger final cart sync before checkout
+    debugPrint('🔄 LAZY SYNC: Triggering final cart sync before checkout');
+    ref.read(cartNotifierProvider.notifier).syncCartWithDatabase();
+
     // Navigate to payment selection screen
     // This implements the new flow: Cart -> Place Order -> Payment Selection -> Pay and Order
     context.push('/payment-selection');
@@ -1288,6 +1304,12 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
       cartItemId: cartItem.id,
       quantity: cartItem.quantity + 1,
     );
+
+    // Trigger lazy sync after quantity update
+    if (success) {
+      debugPrint('🔄 LAZY SYNC: Triggering sync after quantity increase');
+      ref.read(cartNotifierProvider.notifier).syncCartWithDatabase();
+    }
 
     // Remove from updating items set
     if (mounted) {
@@ -1319,6 +1341,12 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
         cartItemId: cartItem.id,
       );
 
+      // Trigger lazy sync after item removal
+      if (success) {
+        debugPrint('🔄 LAZY SYNC: Triggering sync after item removal');
+        ref.read(cartNotifierProvider.notifier).syncCartWithDatabase();
+      }
+
       if (mounted) {
         setState(() {
           _updatingItems.remove(cartItem.id);
@@ -1339,6 +1367,12 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
         cartItemId: cartItem.id,
         quantity: cartItem.quantity - 1,
       );
+
+      // Trigger lazy sync after quantity update
+      if (success) {
+        debugPrint('🔄 LAZY SYNC: Triggering sync after quantity decrease');
+        ref.read(cartNotifierProvider.notifier).syncCartWithDatabase();
+      }
 
       if (mounted) {
         setState(() {

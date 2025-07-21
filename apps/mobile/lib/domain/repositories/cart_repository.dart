@@ -46,4 +46,9 @@ abstract class CartRepository {
   Future<Either<Failure, bool>> isInCart({
     required String productId,
   });
-} 
+
+  /// Sync local cart with database (lazy sync strategy)
+  /// Returns a [Either] with a [Failure] or a [bool] indicating sync success
+  /// This should be called when user navigates to cart or initiates checkout
+  Future<Either<Failure, bool>> syncCartWithDatabase();
+}

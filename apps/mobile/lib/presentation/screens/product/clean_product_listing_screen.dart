@@ -119,49 +119,32 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
 
   /// Get the appropriate products state based on screen configuration
   PaginatedProductsState _getProductsState() {
-    debugPrint('📱 PRODUCT_LISTING: ========== PROVIDER SELECTION DEBUG ==========');
-    debugPrint('📱 PRODUCT_LISTING: isVirtual: ${widget.isVirtual}');
-    debugPrint('📱 PRODUCT_LISTING: subcategoryIds: ${widget.subcategoryIds}');
-    debugPrint('📱 PRODUCT_LISTING: subcategoryId: ${widget.subcategoryId}');
-    debugPrint('📱 PRODUCT_LISTING: categoryId: ${widget.categoryId}');
-    debugPrint('📱 PRODUCT_LISTING: title: ${widget.title}');
-
     // Handle virtual categories (multiple subcategories)
     if (widget.isVirtual && widget.subcategoryIds != null && widget.subcategoryIds!.isNotEmpty) {
-      debugPrint('📱 PRODUCT_LISTING: Using multiple subcategories provider');
-      debugPrint('📱 PRODUCT_LISTING: Subcategory IDs: ${widget.subcategoryIds}');
       return ref.watch(paginatedProductsByMultipleSubcategoriesProvider(widget.subcategoryIds!));
     }
 
     // Handle single subcategory
     if (widget.subcategoryId != null) {
-      debugPrint('📱 PRODUCT_LISTING: Using single subcategory provider');
-      debugPrint('📱 PRODUCT_LISTING: Subcategory ID: ${widget.subcategoryId}');
       return ref.watch(paginatedProductsBySubcategoryProvider(widget.subcategoryId!));
     }
 
     // Handle category
     if (widget.categoryId != null) {
-      debugPrint('📱 PRODUCT_LISTING: Using category provider');
-      debugPrint('📱 PRODUCT_LISTING: Category ID: ${widget.categoryId}');
       return ref.watch(paginatedProductsByCategoryProvider(widget.categoryId!));
     }
 
     // Handle search
     if (widget.searchQuery != null) {
-      debugPrint('📱 PRODUCT_LISTING: Using search provider');
-      debugPrint('📱 PRODUCT_LISTING: Search query: ${widget.searchQuery}');
       return ref.watch(paginatedSearchProductsProvider(widget.searchQuery!));
     }
 
     // Default to all products
-    debugPrint('📱 PRODUCT_LISTING: Using all products provider (default)');
     return ref.watch(paginatedAllProductsProvider);
   }
 
   /// Get filtered products state (converts FilteredProductsState to PaginatedProductsState)
   PaginatedProductsState _getFilteredProductsState() {
-    debugPrint('📱 PRODUCT_LISTING: Using filtered products provider');
     final filteredState = ref.watch(filteredProductsProvider);
 
     // Convert FilteredProductsState to PaginatedProductsState for compatibility
