@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import '../../core/errors/failures.dart';
@@ -14,14 +15,24 @@ class CartRepositoryImpl implements CartRepository {
   final CartLocalDataSource localDataSource;
   final NetworkInfo networkInfo;
 
-  // Feature flag to disable database operations for early launch
-  static const bool _useDatabaseOperations = false; // Set to true to re-enable database sync
+  // Feature flag for hybrid cart strategy - enabled for production readiness
+  static const bool _useDatabaseOperations = true; // Hybrid mode: local-first with background sync
+
+  // Background sync management
+  Timer? _backgroundSyncTimer;
+  bool _isBackgroundSyncActive = false;
+  static const Duration _backgroundSyncInterval = Duration(seconds: 30);
 
   CartRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
     required this.networkInfo,
-  });
+  }) {
+    // Start background sync when hybrid mode is enabled
+    if (_useDatabaseOperations) {
+      _startBackgroundSync();
+    }
+  }
 
   @override
   Future<Either<Failure, List<CartItem>>> getCartItems() async {
@@ -416,13 +427,79 @@ class CartRepositoryImpl implements CartRepository {
     }
   }
 
+  /// Start background sync for hybrid cart strategy
+  void _startBackgroundSync() {
+    if (!_useDatabaseOperations) return;
+
+    debugPrint('🔄 CART SYNC: Starting background sync (interval: ${_backgroundSyncInterval.inSeconds}s)');
+    _isBackgroundSyncActive = true;
+
+    _backgroundSyncTimer = Timer.periodic(_backgroundSyncInterval, (timer) {
+      _performBackgroundSync();
+    });
+  }
+
+  /// Stop background sync
+  void _stopBackgroundSync() {
+    debugPrint('🔄 CART SYNC: Stopping background sync');
+    _backgroundSyncTimer?.cancel();
+    _backgroundSyncTimer = null;
+    _isBackgroundSyncActive = false;
+  }
+
+  /// Perform background sync validation
+  Future<void> _performBackgroundSync() async {
+    if (!_useDatabaseOperations || !_isBackgroundSyncActive) return;
+
+    try {
+      final isConnected = await networkInfo.isConnected;
+      if (!isConnected) {
+        debugPrint('🔄 CART SYNC: Skipping background sync - no network connection');
+        return;
+      }
+
+      debugPrint('🔄 CART SYNC: Performing background validation...');
+
+      // Sync local cart with database to ensure consistency
+      await _syncLocalCartWithDatabase();
+
+      debugPrint('🔄 CART SYNC: ✅ Background sync completed');
+    } catch (e) {
+      debugPrint('🔄 CART SYNC: ❌ Background sync failed: $e');
+      // Don't throw error - this is background operation
+    }
+  }
+
+  /// Trigger immediate sync for critical operations
+  Future<void> _triggerImmediateSync() async {
+    if (!_useDatabaseOperations) return;
+
+    try {
+      final isConnected = await networkInfo.isConnected;
+      if (isConnected) {
+        debugPrint('🚀 CART SYNC: Triggering immediate sync...');
+        await _syncLocalCartWithDatabase();
+        debugPrint('🚀 CART SYNC: ✅ Immediate sync completed');
+      } else {
+        debugPrint('🚀 CART SYNC: Skipping immediate sync - no network connection');
+      }
+    } catch (e) {
+      debugPrint('🚀 CART SYNC: ❌ Immediate sync failed: $e');
+      // Don't throw error - sync failure shouldn't break cart operations
+    }
+  }
+
+  /// Dispose resources
+  void dispose() {
+    _stopBackgroundSync();
+  }
+
   /// Sync local cart with database to ensure IDs match
-  /// NOTE: This method is preserved for future database sync implementation
-  /// Currently disabled for early launch (local-only mode)
+  /// Enhanced for hybrid cart strategy with real-time validation
   Future<void> _syncLocalCartWithDatabase() async {
-    // Skip sync in local-only mode
+    // Skip sync if hybrid mode is disabled
     if (!_useDatabaseOperations) {
-      debugPrint('🛒 CART REPO: Skipping database sync - local-only mode enabled');
+      debugPrint('🛒 CART REPO: Skipping database sync - hybrid mode disabled');
       return;
     }
 

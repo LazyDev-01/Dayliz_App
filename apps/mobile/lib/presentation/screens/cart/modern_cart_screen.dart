@@ -11,7 +11,7 @@ import '../../../theme/app_theme.dart';
 import '../../providers/cart_providers.dart';
 import '../../providers/auth_providers.dart';
 import '../../providers/user_profile_providers.dart';
-import '../../providers/coupon_providers.dart';
+
 import '../../utils/navigation_utils.dart';
 import '../../widgets/animations/animated_empty_state.dart';
 
@@ -1045,21 +1045,21 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
         final roundedGrandTotal = grandTotal.round().toDouble(); // Round to whole number
 
         return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-            spreadRadius: 0,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+                spreadRadius: 0,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
           // Address Section
           if (defaultAddress != null) ...[
             Row(
@@ -1247,9 +1247,9 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
               ),
             ],
           ),
-        ],
-      ),
-    );
+            ],
+          ),
+        );
       },
     );
   }
@@ -1809,6 +1809,8 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
       ),
     );
   }
+
+
 }
 
 /// Custom painter for dotted line divider

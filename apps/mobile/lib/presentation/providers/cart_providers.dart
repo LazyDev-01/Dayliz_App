@@ -45,8 +45,15 @@ class CartState {
   final AppliedCoupon? appliedCoupon;
   final String? couponErrorMessage;
 
+  // Hybrid cart strategy: Track items being validated
+  final Set<String> validatingItemIds;
+  final bool isBackgroundSyncing;
+
   /// Total quantity of items (sum of all quantities)
   int get totalQuantity => items.fold(0, (total, item) => total + item.quantity);
+
+  /// Check if a specific item is being validated
+  bool isItemValidating(String itemId) => validatingItemIds.contains(itemId);
 
   CartState({
     this.isLoading = false,
@@ -56,6 +63,8 @@ class CartState {
     this.itemCount = 0,
     this.appliedCoupon,
     this.couponErrorMessage,
+    this.validatingItemIds = const {},
+    this.isBackgroundSyncing = false,
   });
 
   CartState copyWith({
@@ -66,6 +75,8 @@ class CartState {
     int? itemCount,
     AppliedCoupon? appliedCoupon,
     String? couponErrorMessage,
+    Set<String>? validatingItemIds,
+    bool? isBackgroundSyncing,
     bool clearError = false,
     bool clearCouponError = false,
     bool clearCoupon = false,
@@ -78,6 +89,8 @@ class CartState {
       itemCount: itemCount ?? this.itemCount,
       appliedCoupon: clearCoupon ? null : (appliedCoupon ?? this.appliedCoupon),
       couponErrorMessage: clearCouponError ? null : (couponErrorMessage ?? this.couponErrorMessage),
+      validatingItemIds: validatingItemIds ?? this.validatingItemIds,
+      isBackgroundSyncing: isBackgroundSyncing ?? this.isBackgroundSyncing,
     );
   }
 }
@@ -580,6 +593,48 @@ class CartNotifier extends StateNotifier<CartState> {
       },
     );
   }
+
+  /// Start validating specific cart items (for skeleton loading)
+  void startItemValidation(List<String> itemIds) {
+    final updatedValidatingIds = Set<String>.from(state.validatingItemIds)
+      ..addAll(itemIds);
+
+    state = state.copyWith(validatingItemIds: updatedValidatingIds);
+    debugPrint('🔄 CART VALIDATION: Started validating items: $itemIds');
+  }
+
+  /// Stop validating specific cart items
+  void stopItemValidation(List<String> itemIds) {
+    final updatedValidatingIds = Set<String>.from(state.validatingItemIds)
+      ..removeAll(itemIds);
+
+    state = state.copyWith(validatingItemIds: updatedValidatingIds);
+    debugPrint('🔄 CART VALIDATION: Stopped validating items: $itemIds');
+  }
+
+  /// Set background sync status
+  void setBackgroundSyncStatus(bool isActive) {
+    state = state.copyWith(isBackgroundSyncing: isActive);
+    debugPrint('🔄 CART SYNC: Background sync status: $isActive');
+  }
+
+  /// Silent background validation for hybrid cart strategy
+  Future<void> validateCartItems() async {
+    if (state.items.isEmpty) return;
+
+    debugPrint('🔄 CART VALIDATION: Starting silent background validation...');
+
+    try {
+      // In real implementation, this would check stock/prices against database
+      // For now, just refresh cart data silently
+      await _refreshCartData();
+
+      debugPrint('🔄 CART VALIDATION: ✅ Silent validation completed');
+    } catch (e) {
+      debugPrint('🔄 CART VALIDATION: ❌ Silent validation failed: $e');
+      // Silent failure - no user notification needed for background validation
+    }
+  }
 }
 
 /// Helper to map failures to user-friendly messages
@@ -643,6 +698,21 @@ final cartErrorProvider = Provider<String?>((ref) {
 /// Cart total price provider
 final cartTotalPriceProvider = Provider<double>((ref) {
   return ref.watch(cartNotifierProvider).totalPrice;
+});
+
+/// Cart background sync status provider
+final cartBackgroundSyncProvider = Provider<bool>((ref) {
+  return ref.watch(cartNotifierProvider).isBackgroundSyncing;
+});
+
+/// Cart item validation status provider
+final cartValidatingItemsProvider = Provider<Set<String>>((ref) {
+  return ref.watch(cartNotifierProvider).validatingItemIds;
+});
+
+/// Check if specific item is being validated
+final isItemValidatingProvider = Provider.family<bool, String>((ref, itemId) {
+  return ref.watch(cartNotifierProvider).isItemValidating(itemId);
 });
 
 
