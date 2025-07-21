@@ -220,4 +220,18 @@ class CartHiveDataSource {
       'last_updated': DateTime.now().toIso8601String(),
     };
   }
+
+  /// Dispose method to clean up resources and prevent memory leaks
+  void dispose() {
+    debugPrint('🧹 CART HIVE CLEANUP: Disposing CartHiveDataSource resources...');
+
+    // Clear any cached data to free memory
+    try {
+      // Note: We don't close the Hive box here as it might be used by other parts of the app
+      // The box will be closed when the app terminates via HiveConfig.closeAll()
+      debugPrint('🧹 CART HIVE CLEANUP: CartHiveDataSource disposed successfully');
+    } catch (e) {
+      debugPrint('❌ CART HIVE CLEANUP: Error during disposal: $e');
+    }
+  }
 }

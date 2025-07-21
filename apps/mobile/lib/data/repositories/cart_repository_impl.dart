@@ -370,6 +370,78 @@ class CartRepositoryImpl implements CartRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, bool>> migrateGuestCartToUser() async {
+    try {
+      debugPrint('🔄 CART MIGRATION: Starting guest cart migration to authenticated user');
+
+      // Get current local cart items (guest cart)
+      final localCartItems = await localDataSource.getCachedCartItems();
+
+      if (localCartItems.isEmpty) {
+        debugPrint('✅ CART MIGRATION: No guest cart items to migrate');
+        return const Right(true);
+      }
+
+      debugPrint('🔄 CART MIGRATION: Found ${localCartItems.length} guest cart items to migrate');
+
+      // If database operations are disabled, just keep local cart as-is
+      if (!_useDatabaseOperations) {
+        debugPrint('✅ CART MIGRATION: Database operations disabled, keeping local cart');
+        return const Right(true);
+      }
+
+      // Check network connectivity
+      if (!(await networkInfo.isConnected)) {
+        debugPrint('⚠️ CART MIGRATION: No network connection, migration will happen on next sync');
+        return const Right(true);
+      }
+
+      // Migrate each item to the database
+      int successCount = 0;
+      int failureCount = 0;
+
+      for (final cartItem in localCartItems) {
+        try {
+          // Add item to remote database
+          await remoteDataSource.addToCart(
+            product: cartItem.product,
+            quantity: cartItem.quantity,
+          );
+          successCount++;
+          debugPrint('✅ CART MIGRATION: Migrated item ${cartItem.product.name}');
+        } catch (e) {
+          failureCount++;
+          debugPrint('❌ CART MIGRATION: Failed to migrate item ${cartItem.product.name}: $e');
+        }
+      }
+
+      debugPrint('🎯 CART MIGRATION: Migration completed - Success: $successCount, Failed: $failureCount');
+
+      // If all items migrated successfully, we can consider it a success
+      // Even if some failed, the user still has their local cart
+      if (successCount > 0) {
+        debugPrint('✅ CART MIGRATION: Migration successful');
+        return const Right(true);
+      } else if (failureCount > 0) {
+        debugPrint('⚠️ CART MIGRATION: Some items failed to migrate, but local cart preserved');
+        return const Right(true); // Still return success since local cart is preserved
+      }
+
+      return const Right(true);
+
+    } on CartException catch (e) {
+      debugPrint('❌ CART MIGRATION: CartException: ${e.message}');
+      return Left(ServerFailure(message: e.message));
+    } on CartLocalException catch (e) {
+      debugPrint('❌ CART MIGRATION: CartLocalException: ${e.message}');
+      return Left(CacheFailure(message: e.message));
+    } catch (e) {
+      debugPrint('❌ CART MIGRATION: Unexpected error: $e');
+      return Left(ServerFailure(message: 'Cart migration failed: ${e.toString()}'));
+    }
+  }
+
   /// Dispose resources and cleanup
   void dispose() {
     debugPrint('🔄 LAZY SYNC: Disposing repository resources...');

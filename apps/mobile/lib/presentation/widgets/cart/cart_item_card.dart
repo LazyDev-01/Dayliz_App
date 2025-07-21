@@ -21,24 +21,29 @@ class CartItemCard extends StatelessWidget {
     final quantity = cartItem.quantity;
     final totalPrice = cartItem.totalPrice;
 
-    return Dismissible(
-      key: Key(cartItem.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(
-          color: Colors.red[400],
-          borderRadius: BorderRadius.circular(12),
+    return Semantics(
+      label: 'Cart item: ${product.name}, quantity $quantity, total price ₹${totalPrice.toStringAsFixed(2)}',
+      child: Dismissible(
+        key: Key(cartItem.id),
+        direction: DismissDirection.endToStart,
+        background: Semantics(
+          label: 'Swipe to remove ${product.name} from cart',
+          child: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            decoration: BoxDecoration(
+              color: Colors.red[400],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.delete_outline,
+              color: Colors.white,
+              size: 26,
+            ),
+          ),
         ),
-        child: const Icon(
-          Icons.delete_outline,
-          color: Colors.white,
-          size: 26,
-        ),
-      ),
-      onDismissed: (_) => onRemove(),
-      child: Card(
+        onDismissed: (_) => onRemove(),
+        child: Card(
         elevation: 1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -143,37 +148,51 @@ class CartItemCard extends StatelessWidget {
               ),
 
               // Quantity Controls
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        _buildQuantityButton(
-                          icon: Icons.remove,
-                          onPressed: () => onQuantityChanged(quantity - 1),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Text(
-                            '$quantity',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
+              Semantics(
+                label: 'Quantity controls for ${product.name}',
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Semantics(
+                            label: 'Decrease quantity',
+                            button: true,
+                            child: _buildQuantityButton(
+                              icon: Icons.remove,
+                              onPressed: () => onQuantityChanged(quantity - 1),
                             ),
                           ),
-                        ),
-                        _buildQuantityButton(
-                          icon: Icons.add,
-                          onPressed: () => onQuantityChanged(quantity + 1),
-                        ),
-                      ],
+                          Semantics(
+                            label: 'Current quantity: $quantity',
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: Text(
+                                '$quantity',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Semantics(
+                            label: 'Increase quantity',
+                            button: true,
+                            child: _buildQuantityButton(
+                              icon: Icons.add,
+                              onPressed: () => onQuantityChanged(quantity + 1),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

@@ -215,6 +215,19 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 
   @override
+  void dispose() {
+    debugPrint('🧹 APP CLEANUP: Disposing main app resources...');
+
+    // Clean up Hive storage
+    HiveConfig.closeAll().catchError((e) {
+      debugPrint('❌ APP CLEANUP: Error closing Hive: $e');
+    });
+
+    debugPrint('🧹 APP CLEANUP: Main app disposed successfully');
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);

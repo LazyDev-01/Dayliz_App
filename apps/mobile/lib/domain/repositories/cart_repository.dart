@@ -51,4 +51,9 @@ abstract class CartRepository {
   /// Returns a [Either] with a [Failure] or a [bool] indicating sync success
   /// This should be called when user navigates to cart or initiates checkout
   Future<Either<Failure, bool>> syncCartWithDatabase();
+
+  /// Migrate guest cart to authenticated user cart
+  /// This is called when user logs in or signs up
+  /// Returns a [Either] with a [Failure] or a [bool] indicating success
+  Future<Either<Failure, bool>> migrateGuestCartToUser();
 }

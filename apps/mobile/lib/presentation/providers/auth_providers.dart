@@ -12,6 +12,7 @@ import '../../domain/usecases/register_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
 import '../../domain/usecases/is_authenticated_usecase.dart';
+import '../../domain/usecases/migrate_guest_cart_usecase.dart';
 import '../../domain/usecases/forgot_password_usecase.dart';
 import '../../domain/usecases/sign_in_with_google_usecase.dart' as google_signin;
 import '../../domain/usecases/reset_password_usecase.dart';
@@ -67,6 +68,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final google_signin.SignInWithGoogleUseCase signInWithGoogleUseCase;
   final ResetPasswordUseCase resetPasswordUseCase;
   final ChangePasswordUseCase changePasswordUseCase;
+  final MigrateGuestCartUseCase migrateGuestCartUseCase;
   final CheckEmailExistsUseCase checkEmailExistsUseCase;
 
   AuthNotifier({
@@ -79,6 +81,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required this.signInWithGoogleUseCase,
     required this.resetPasswordUseCase,
     required this.changePasswordUseCase,
+    required this.migrateGuestCartUseCase,
     required this.checkEmailExistsUseCase,
   }) : super(const AuthState()) {
     // CRITICAL FIX: Initialize authentication state on startup
@@ -97,6 +100,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       signInWithGoogleUseCase: sl<google_signin.SignInWithGoogleUseCase>(),
       resetPasswordUseCase: sl<ResetPasswordUseCase>(),
       changePasswordUseCase: sl<ChangePasswordUseCase>(),
+      migrateGuestCartUseCase: sl<MigrateGuestCartUseCase>(),
       checkEmailExistsUseCase: sl<CheckEmailExistsUseCase>(),
     );
   }
@@ -156,6 +160,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Migrate guest cart to authenticated user cart
+  /// This is called after successful login/signup to preserve cart items
+  Future<void> _migrateGuestCart() async {
+    try {
+      debugPrint('🔄 [AuthNotifier] Starting guest cart migration...');
+      final result = await migrateGuestCartUseCase();
+
+      result.fold(
+        (failure) {
+          debugPrint('⚠️ [AuthNotifier] Cart migration failed: ${failure.message}');
+          // Don't show error to user - cart migration failure shouldn't block login
+        },
+        (success) {
+          if (success) {
+            debugPrint('✅ [AuthNotifier] Guest cart migration completed successfully');
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('❌ [AuthNotifier] Cart migration error: $e');
+      // Silent failure - don't block user authentication
+    }
+  }
+
   Future<void> login(String email, String password, {bool rememberMe = true}) async {
     debugPrint('🔄 [AuthNotifier] Starting login for email: $email');
     state = state.copyWith(isLoading: true, clearError: true);
@@ -171,7 +199,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
             isLoading: false,
           );
         },
-        (user) {
+        (user) async {
           debugPrint('✅ [AuthNotifier] Login successful for user: ${user.id}');
           state = state.copyWith(
             isAuthenticated: true,
@@ -179,6 +207,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
             isLoading: false,
             clearError: true,
           );
+
+          // Migrate guest cart to authenticated user cart
+          await _migrateGuestCart();
         },
       );
     } catch (e) {
@@ -232,13 +263,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
             );
           }
         },
-        (user) {
+        (user) async {
           state = state.copyWith(
             isAuthenticated: true,
             user: user,
             isLoading: false,
             clearError: true,
           );
+
+          // Migrate guest cart to authenticated user cart
+          await _migrateGuestCart();
         },
       );
     } catch (e) {
@@ -419,12 +453,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
             );
           }
         },
-        (user) => state = state.copyWith(
-          isLoading: false,
-          isAuthenticated: true,
-          user: user,
-          clearError: true,
-        ),
+        (user) async {
+          state = state.copyWith(
+            isLoading: false,
+            isAuthenticated: true,
+            user: user,
+            clearError: true,
+          );
+
+          // Migrate guest cart to authenticated user cart
+          await _migrateGuestCart();
+        },
       );
     } catch (e) {
       // CRITICAL FIX: Handle user cancellation silently even in catch block

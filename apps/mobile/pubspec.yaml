@@ -46,7 +46,6 @@ dependencies:
   flutter_hooks: ^0.20.5      # Better state management and lifecycle handling
 
   # Network
-  http: ^1.1.0                # HTTP client
   dio: ^5.3.2                 # Alternative HTTP client with more features
   internet_connection_checker: ^1.0.0+1 # Network connectivity
   cached_network_image: ^3.2.3 # Image caching
@@ -54,9 +53,7 @@ dependencies:
 
   # Local storage
   shared_preferences: ^2.2.1  # Simple key-value storage
-  hive: ^2.2.3                # NoSQL database
-  hive_flutter: ^1.1.0        # Hive Flutter integration for high-performance local storage
-  sqflite: ^2.3.0             # SQLite database
+  hive_flutter: ^1.1.0        # High-performance local storage
 
   # Supabase (restored)
   supabase_flutter: ^2.0.1
@@ -67,13 +64,11 @@ dependencies:
   shimmer: ^3.0.0             # Loading effects
   lottie: ^2.6.0              # Lottie animations
   google_fonts: ^5.1.0        # Google fonts
-  flutter_animate: ^4.2.0     # Animation library
   smooth_page_indicator: ^1.1.0 # Page indicator
   carousel_slider: ^4.2.1     # Carousel slider - fixed version to avoid conflict
   expandable: ^5.0.1          # Expandable widgets
   pull_to_refresh: ^2.0.0     # Pull to refresh
   infinite_scroll_pagination: ^4.0.0 # Pagination
-  skeletons: ^0.0.3           # Skeleton loading
   visibility_detector: ^0.4.0+2
   timeline_tile: ^2.0.0       # Timeline visualization for order tracking
   confetti: ^0.7.0            # Confetti animation for celebrations
@@ -94,7 +89,6 @@ dependencies:
   # UI/UX Enhancement Packages
   flutter_screenutil: ^5.9.3  # Responsive design for all screen sizes
   auto_size_text: ^3.0.0      # Responsive typography that adapts to screen
-  rive: ^0.13.1               # Interactive vector animations (premium feel)
   flutter_keyboard_visibility: ^6.0.0 # Better keyboard handling
 
   # Location dependencies - Updated to stable versions compatible with Flutter 3.29.2

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_it/get_it.dart';
@@ -106,6 +107,9 @@ class CartNotifier extends StateNotifier<CartState> {
   final GetCartTotalPriceUseCase getCartTotalPriceUseCase;
   final GetCartItemCountUseCase getCartItemCountUseCase;
   final IsInCartUseCase isInCartUseCase;
+
+  // Timer for background operations that needs proper cleanup
+  Timer? _backgroundTimer;
 
   CartNotifier({
     required this.getCartItemsUseCase,
@@ -589,6 +593,27 @@ class CartNotifier extends StateNotifier<CartState> {
     }
   }
 
+  /// Start background operations (like periodic sync)
+  void startBackgroundOperations() {
+    // Cancel any existing timer
+    _backgroundTimer?.cancel();
+
+    // Start a periodic timer for background operations (every 5 minutes)
+    _backgroundTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
+      debugPrint('🔄 BACKGROUND: Periodic cart validation triggered');
+      validateCartItems();
+    });
+
+    debugPrint('🔄 BACKGROUND: Background operations started');
+  }
+
+  /// Stop background operations
+  void stopBackgroundOperations() {
+    _backgroundTimer?.cancel();
+    _backgroundTimer = null;
+    debugPrint('🔄 BACKGROUND: Background operations stopped');
+  }
+
   /// Sync local cart with database (lazy sync strategy)
   /// This is called when user navigates to cart screen or initiates checkout
   Future<void> syncCartWithDatabase() async {
@@ -629,6 +654,26 @@ class CartNotifier extends StateNotifier<CartState> {
       // Clear background sync status
       state = state.copyWith(isBackgroundSyncing: false);
     }
+  }
+
+  /// Dispose method to clean up resources and prevent memory leaks
+  @override
+  void dispose() {
+    debugPrint('🧹 CART CLEANUP: Disposing CartNotifier resources...');
+
+    // Cancel any background timers to prevent memory leaks
+    _backgroundTimer?.cancel();
+    _backgroundTimer = null;
+
+    // Clear any pending operations
+    state = state.copyWith(
+      isLoading: false,
+      isBackgroundSyncing: false,
+      validatingItemIds: <String>{},
+    );
+
+    debugPrint('🧹 CART CLEANUP: CartNotifier disposed successfully');
+    super.dispose();
   }
 }
 

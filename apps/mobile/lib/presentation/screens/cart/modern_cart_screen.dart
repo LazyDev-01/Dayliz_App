@@ -150,32 +150,38 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
 
     // Show empty cart state with Lottie animation
     if (cartState.items.isEmpty) {
-      return DaylizEmptyStates.emptyCart(
-        onStartShopping: () {
-          // Navigate to main home screen when cart is empty
-          context.goToMainHomeWithProvider(ref);
-        },
-        customTitle: 'Your cart is empty',
-        customSubtitle: 'Add some delicious products to get started',
+      return Semantics(
+        label: 'Empty cart screen',
+        child: DaylizEmptyStates.emptyCart(
+          onStartShopping: () {
+            // Navigate to main home screen when cart is empty
+            context.goToMainHomeWithProvider(ref);
+          },
+          customTitle: 'Your cart is empty',
+          customSubtitle: 'Add some delicious products to get started',
+        ),
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildDeliveryTimeSection(theme, daylizTheme, cartState),
-          const SizedBox(height: 2),
-          _buildCartItems(theme, daylizTheme, cartState),
-          const SizedBox(height: 35),
-          _buildCouponSection(theme, daylizTheme),
-          const SizedBox(height: 35),
-          _buildPriceBreakdown(theme, daylizTheme, cartState),
-          const SizedBox(height: 35),
-          _buildCancellationPolicy(theme, daylizTheme),
-          const SizedBox(height: 20),
-        ],
+    return Semantics(
+      label: 'Cart contents with ${cartState.items.length} items',
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDeliveryTimeSection(theme, daylizTheme, cartState),
+            const SizedBox(height: 2),
+            _buildCartItems(theme, daylizTheme, cartState),
+            const SizedBox(height: 35),
+            _buildCouponSection(theme, daylizTheme),
+            const SizedBox(height: 35),
+            _buildPriceBreakdown(theme, daylizTheme, cartState),
+            const SizedBox(height: 35),
+            _buildCancellationPolicy(theme, daylizTheme),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
@@ -256,33 +262,36 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
 
   /// Builds the cart items section
   Widget _buildCartItems(ThemeData theme, DaylizThemeExtension? daylizTheme, CartState cartState) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(0),
-          topRight: Radius.circular(0),
-          bottomLeft: Radius.circular(12),
-          bottomRight: Radius.circular(12),
+    return Semantics(
+      label: 'Cart items list with ${cartState.items.length} products',
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(0),
+            topRight: Radius.circular(0),
+            bottomLeft: Radius.circular(12),
+            bottomRight: Radius.circular(12),
+          ),
         ),
-      ),
-      child: Column(
-        children: cartState.items.asMap().entries.map((entry) {
-          final index = entry.key;
-          final cartItem = entry.value;
+        child: Column(
+          children: cartState.items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final cartItem = entry.value;
 
-          return Column(
-            children: [
-              if (index > 0) const SizedBox(height: 16),
-              _buildCartItem(
-                cartItem: cartItem,
-                theme: theme,
-                daylizTheme: daylizTheme,
-              ),
-            ],
-          );
-        }).toList(),
+            return Column(
+              children: [
+                if (index > 0) const SizedBox(height: 16),
+                _buildCartItem(
+                  cartItem: cartItem,
+                  theme: theme,
+                  daylizTheme: daylizTheme,
+                ),
+              ],
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -310,31 +319,36 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     final originalPriceText = '₹${originalPrice.toStringAsFixed(0)}';
     final discountedPriceText = '₹${currentPrice.toStringAsFixed(0)}';
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Product Image
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.grey[100],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.image, color: Colors.grey),
-                );
-              },
+    return Semantics(
+      label: '${product.name}, quantity ${cartItem.quantity}, price $discountedPriceText',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Product Image
+          Semantics(
+            label: 'Product image for ${product.name}',
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey[100],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.image, color: Colors.grey),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
-        ),
         const SizedBox(width: 12),
 
         // Product Details and Controls
@@ -415,6 +429,7 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
           ),
         ),
       ],
+    ),
     );
   }
 
@@ -422,45 +437,61 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
   Widget _buildQuantityControls(CartItem cartItem, ThemeData theme) {
     final isUpdating = _updatingItems.contains(cartItem.id);
 
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.success),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildQuantityButton(
-            icon: Icons.remove,
-            onTap: isUpdating ? null : () => _decreaseQuantity(cartItem),
-            isLoading: isUpdating,
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-            child: isUpdating
-                ? const SizedBox(
-                    width: 13,
-                    height: 13,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
-                    ),
-                  )
-                : Text(
-                    cartItem.quantity.toString(),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.success,
-                    ),
-                  ),
-          ),
-          _buildQuantityButton(
-            icon: Icons.add,
-            onTap: isUpdating ? null : () => _increaseQuantity(cartItem),
-            isLoading: isUpdating,
-          ),
-        ],
+    return Semantics(
+      label: 'Quantity controls for ${cartItem.product.name}',
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.success),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Semantics(
+              label: 'Decrease quantity',
+              button: true,
+              enabled: !isUpdating,
+              child: _buildQuantityButton(
+                icon: Icons.remove,
+                onTap: isUpdating ? null : () => _decreaseQuantity(cartItem),
+                isLoading: isUpdating,
+              ),
+            ),
+            Semantics(
+              label: 'Current quantity: ${cartItem.quantity}',
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                child: isUpdating
+                    ? const SizedBox(
+                        width: 13,
+                        height: 13,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
+                        ),
+                      )
+                    : Text(
+                        cartItem.quantity.toString(),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.success,
+                        ),
+                      ),
+              ),
+            ),
+            Semantics(
+              label: 'Increase quantity',
+              button: true,
+              enabled: !isUpdating,
+              child: _buildQuantityButton(
+                icon: Icons.add,
+                onTap: isUpdating ? null : () => _increaseQuantity(cartItem),
+                isLoading: isUpdating,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1236,21 +1267,25 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
                   color: AppColors.success,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      // Navigate to payment selection after proceed
-                      _handlePlaceOrder(context);
-                    },
-                    child: const Center(
-                      child: Text(
-                        'Proceed to pay',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                child: Semantics(
+                  label: 'Proceed to payment, total amount ₹${roundedGrandTotal.toStringAsFixed(0)}',
+                  button: true,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        // Navigate to payment selection after proceed
+                        _handlePlaceOrder(context);
+                      },
+                      child: const Center(
+                        child: Text(
+                          'Proceed to pay',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),

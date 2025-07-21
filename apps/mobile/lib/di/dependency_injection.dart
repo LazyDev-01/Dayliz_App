@@ -34,6 +34,7 @@ import '../domain/usecases/clear_cart_usecase.dart';
 import '../domain/usecases/get_cart_total_price_usecase.dart';
 import '../domain/usecases/get_cart_item_count_usecase.dart';
 import '../domain/usecases/is_in_cart_usecase.dart';
+import '../domain/usecases/migrate_guest_cart_usecase.dart';
 // Category imports
 import '../domain/repositories/category_repository.dart';
 import '../data/repositories/category_repository_impl.dart';
@@ -318,6 +319,9 @@ Future<void> initCleanArchitecture() async {
   }
   if (!sl.isRegistered<IsInCartUseCase>()) {
     sl.registerLazySingleton(() => IsInCartUseCase(sl()));
+  }
+  if (!sl.isRegistered<MigrateGuestCartUseCase>()) {
+    sl.registerLazySingleton(() => MigrateGuestCartUseCase(sl()));
   }
 
   //-------------------------------------------------------------------------
@@ -743,6 +747,10 @@ Future<void> initAuthentication() async {
 
     if (!sl.isRegistered<IsInCartUseCase>()) {
       sl.registerLazySingleton(() => IsInCartUseCase(sl()));
+    }
+
+    if (!sl.isRegistered<MigrateGuestCartUseCase>()) {
+      sl.registerLazySingleton(() => MigrateGuestCartUseCase(sl()));
     }
 
     debugPrint('Authentication and cart components initialized successfully');
