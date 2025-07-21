@@ -63,7 +63,7 @@ dependencies:
   flutter_svg: ^2.0.7         # SVG rendering
   shimmer: ^3.0.0             # Loading effects
   lottie: ^2.6.0              # Lottie animations
-  google_fonts: ^5.1.0        # Google fonts
+  google_fonts: ^6.2.1        # Google fonts
   smooth_page_indicator: ^1.1.0 # Page indicator
   carousel_slider: ^4.2.1     # Carousel slider - fixed version to avoid conflict
   expandable: ^5.0.1          # Expandable widgets
