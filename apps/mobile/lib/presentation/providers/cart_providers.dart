@@ -21,20 +21,15 @@ import '../../domain/usecases/is_in_cart_usecase.dart';
 // Get the service locator instance
 final sl = GetIt.instance;
 
-// Debug function to check if cart dependencies are registered
-// This is called when the cart provider is initialized
+// Verify cart dependencies are registered
 bool _checkCartDependencies() {
   try {
-    final isRegistered = sl.isRegistered<GetCartItemsUseCase>();
-    debugPrint('GetCartItemsUseCase registered: $isRegistered');
-    return isRegistered;
+    return sl.isRegistered<GetCartItemsUseCase>();
   } catch (e) {
-    debugPrint('Error checking cart dependencies: $e');
     return false;
   }
 }
 
-// Call the check function immediately to verify dependencies
 final bool _cartDependenciesRegistered = _checkCartDependencies();
 
 /// Cart state class to manage cart-related state
@@ -767,13 +762,11 @@ final isProductInCartProvider = FutureProvider.autoDispose.family<bool, String>(
   final cartItems = ref.watch(cartItemsProvider);
   for (var item in cartItems) {
     if (item.product.id == productId) {
-      debugPrint('isProductInCartProvider: Found product $productId in cart items');
       return true;
     }
   }
 
   // If not found in current items, check with the repository
   final isInCart = await ref.read(cartNotifierProvider.notifier).isInCart(productId: productId);
-  debugPrint('isProductInCartProvider: Repository check for $productId returned $isInCart');
   return isInCart;
 });

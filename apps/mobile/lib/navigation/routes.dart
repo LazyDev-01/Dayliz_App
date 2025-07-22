@@ -8,7 +8,7 @@ import '../presentation/screens/auth/clean_forgot_password_screen.dart';
 import '../presentation/screens/auth/clean_register_screen.dart';
 import '../presentation/screens/cart/modern_cart_screen.dart';
 import '../presentation/screens/checkout/clean_checkout_screen.dart';
-import '../debug/screens/debug_menu_screen.dart';
+// Debug imports removed for production
 import '../presentation/screens/checkout/payment_methods_screen.dart';
 
 import '../presentation/screens/categories/clean_categories_screen.dart';
@@ -21,12 +21,11 @@ import '../presentation/screens/orders/clean_order_list_screen.dart';
 import '../presentation/screens/orders/clean_order_detail_screen.dart';
 import '../presentation/screens/search/enhanced_search_screen.dart';
 import '../presentation/screens/wishlist/clean_wishlist_screen.dart';
-import '../presentation/screens/debug/supabase_connection_test_screen.dart';
-import '../presentation/screens/debug/supabase_auth_test_screen.dart';
+// Debug imports removed for production
 import '../presentation/screens/legal/privacy_policy_screen.dart';
 import '../presentation/screens/legal/terms_of_service_screen.dart';
-import '../presentation/screens/legal/consent_preferences_screen.dart';
-import '../presentation/screens/debug/search_demo_screen.dart';
+// Unused imports removed for production
+// Debug imports removed for production
 import 'package:go_router/go_router.dart';
 
 /// Handles navigation routes for the clean architecture implementation
@@ -205,12 +204,7 @@ class CleanRoutes {
           settings: settings,
         );
 
-      case 'debug':
-        // Debug menu screen
-        return MaterialPageRoute(
-          builder: (_) => const DebugMenuScreen(),
-          settings: settings,
-        );
+      // Debug routes removed for production
 
       case 'privacy-policy':
         // Privacy Policy screen
@@ -236,26 +230,7 @@ class CleanRoutes {
         }
         return _errorRoute(settings);
 
-      case 'debug/supabase-test':
-        // Supabase connection test screen
-        return MaterialPageRoute(
-          builder: (_) => const SupabaseConnectionTestScreen(),
-          settings: settings,
-        );
-
-      case 'debug/supabase-auth-test':
-        // Supabase auth test screen
-        return MaterialPageRoute(
-          builder: (_) => const SupabaseAuthTestScreen(),
-          settings: settings,
-        );
-
-      case 'debug/search-demo':
-        // Search system demo screen
-        return MaterialPageRoute(
-          builder: (_) => const SearchDemoScreen(),
-          settings: settings,
-        );
+      // Debug routes removed for production
 
       case 'search':
         // Enhanced search screen (now the default search)
@@ -278,9 +253,7 @@ class CleanRoutes {
           settings: settings,
         );
 
-      case 'test/product-card':
-        // Product card test screen - REMOVED (file not found)
-        return _errorRoute(settings);
+      // Test routes removed for production
 
       default:
         // Check if the path is like 'address/edit/{id}'
@@ -370,15 +343,7 @@ class CleanRoutes {
     GoRouter.of(context).push('/preferences');
   }
 
-  // Navigation method for product card test
-  static void navigateToProductCardTest(BuildContext context) {
-    GoRouter.of(context).push('/clean/test/product-card');
-  }
-
-  // Navigation method for debug menu
-  static void navigateToDebugMenu(BuildContext context) {
-    GoRouter.of(context).push('/clean/debug');
-  }
+  // Debug navigation methods removed for production
 
   // Navigation method for search (global)
   static void navigateToSearch(BuildContext context, {String? initialQuery}) {

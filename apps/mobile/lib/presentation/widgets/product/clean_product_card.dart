@@ -10,7 +10,7 @@ import '../../../domain/entities/product.dart';
 import '../../../domain/entities/cart_item.dart';
 import '../../providers/cart_providers.dart';
 import '../auth/auth_guard.dart';
-import 'enhanced_add_to_cart_button.dart';
+import '../cart/smooth_quantity_controls.dart';
 
 
 
@@ -297,22 +297,50 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
     );
   }
 
-  /// Builds the ADD button with enhanced interactions
+  /// Builds the ADD button matching SmoothQuantityControls dimensions exactly
   Widget _buildAddButton(BuildContext context, bool isInCart, int quantity) {
-    return EnhancedAddToCartButton(
-      onPressed: widget.product.inStock ? () => _addToCart(context) : () {},
-      isLoading: false, // You can add loading state if needed
-      isInCart: isInCart,
-      quantity: quantity,
-      addText: 'ADD',
-      inCartText: 'ADDED',
-      showQuantityControls: false, // We handle quantity separately
-      buttonSize: const Size(70, 34), // Reduced width to 70px to fix 6-pixel overflow
-      isCompact: true,
+    // Calculate exact dimensions to match SmoothQuantityControls
+    const buttonSize = 26.0;  // Same as SmoothQuantityControls button size
+    const quantityDisplayWidth = 35.0;  // Same as SmoothQuantityControls
+    const totalWidth = buttonSize * 2 + quantityDisplayWidth;  // 87px
+
+    return Container(
+      width: totalWidth,  // 87px - matches SmoothQuantityControls exactly
+      decoration: BoxDecoration(
+        color: widget.product.inStock ? Theme.of(context).primaryColor : Colors.grey[300],
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: widget.product.inStock ? Theme.of(context).primaryColor : Colors.grey[400]!,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.product.inStock ? () {
+            // Add haptic feedback to match SmoothQuantityControls
+            HapticFeedback.lightImpact();
+            _addToCart(context);
+          } : null,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7), // Same as SmoothQuantityControls
+            alignment: Alignment.center,
+            child: Text(
+              'ADD',
+              style: TextStyle(
+                color: widget.product.inStock ? Colors.white : Colors.grey[600],
+                fontSize: 13.0,  // Same as SmoothQuantityControls
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  /// Builds the quantity selector for items already in cart
+  /// Builds the quantity selector using SmoothQuantityControls (cart screen dimensions)
   Widget _buildQuantitySelector(BuildContext context, int quantity, CartItem cartItem) {
     // If product is not in cart, show the add button instead
     if (quantity <= 0) {
@@ -327,82 +355,16 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       },
       // This ensures the gesture detector doesn't interfere with other gestures
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: 34, // Reduced to match add button height
-        width: 70, // Reduced to match add button width and fix overflow
-        decoration: BoxDecoration(
-          border: Border.all(color: Theme.of(context).primaryColor),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Decrease button
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  // Haptic feedback
-                  HapticFeedback.lightImpact();
-
-                  // Calculate new quantity
-                  final newQuantity = quantity - 1;
-                  _updateQuantity(context, quantity, newQuantity);
-                },
-                child: Container(
-                  width: 20, // Reduced to fit within 70px container
-                  height: 34, // Reduced to match container height
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.remove,
-                    size: 16,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-            ),
-
-            // Quantity display
-            Container(
-              width: 27, // Extra 1px safety buffer (20+27+20=67, leaves 3px buffer)
-              alignment: Alignment.center,
-              child: Text(
-                '$quantity',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14, // Restored original size
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-
-            // Increase button
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  // Haptic feedback
-                  HapticFeedback.lightImpact();
-
-                  // Calculate new quantity
-                  final newQuantity = quantity + 1;
-                  _updateQuantity(context, quantity, newQuantity);
-                },
-                child: Container(
-                  width: 20, // Reduced to fit within 70px container
-                  height: 34, // Reduced to match container height
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.add,
-                    size: 16,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+      child: SmoothQuantityControls(
+        cartItem: cartItem,
+        isUpdating: false, // Product cards don't show individual loading states
+        onQuantityChanged: (cartItem, newQuantity) {
+          _updateQuantity(context, cartItem.quantity, newQuantity);
+        },
+        // Use cart screen dimensions for consistency
+        buttonSize: 26.0,  // Same as cart screen (26×26px buttons)
+        fontSize: 13.0,    // Same as cart screen
+        // Total container will be 87px width (26+35+26) × 40px height
       ),
     );
   }
@@ -415,7 +377,7 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       ref: ref,
       action: 'add_to_cart',
       onAuthRequired: () {
-        debugPrint('🔒 CART PROTECTION: Guest user tried to add ${widget.product.name} to cart');
+        // Guest user tried to add to cart - auth prompt shown
       },
     );
 
@@ -425,7 +387,6 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
     }
 
     // User is authenticated, proceed with adding to cart
-    debugPrint('🔓 CART PROTECTION: Authenticated user adding ${widget.product.name} to cart');
 
     // Provider handles optimistic updates automatically - no local state needed
 
@@ -523,16 +484,10 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       }
 
       // Success feedback disabled for early launch
-      if (context.mounted) {
-        debugPrint('${widget.product.name} added to cart');
-      }
     } catch (e) {
       // Error adding to cart
 
       // Error feedback disabled for early launch
-      if (context.mounted) {
-        debugPrint('Failed to add ${widget.product.name} to cart: ${e.toString()}');
-      }
     }
   }
 
@@ -568,9 +523,6 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
               // Provider handles state updates automatically
 
               // Success feedback disabled for early launch
-              if (context.mounted) {
-                debugPrint('${widget.product.name} removed from cart');
-              }
 
               return;
             }
@@ -612,9 +564,6 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
             // Provider handles state updates automatically
 
             // Success feedback disabled for early launch
-            if (context.mounted) {
-              debugPrint('${widget.product.name} removed from cart');
-            }
           }
         }
       } else {
@@ -692,9 +641,6 @@ class _CleanProductCardState extends ConsumerState<CleanProductCard> {
       // Error updating quantity
 
       // Error feedback disabled for early launch
-      if (context.mounted) {
-        debugPrint('Failed to update quantity: ${e.toString()}');
-      }
     }
   }
 

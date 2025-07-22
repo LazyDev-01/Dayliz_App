@@ -107,8 +107,6 @@ class _LocationAccessScreenState extends ConsumerState<LocationAccessScreen>
             final isGPSEnabled = await locationService.isLocationServiceEnabled();
 
             if (isGPSEnabled) {
-              debugPrint('🎯 LocationAccess: GPS detected as enabled after $checkCount checks, starting auto-detection...');
-
               // GPS is now enabled, start location detection automatically
               ref.read(locationGatingProvider.notifier).requestLocationPermissionWithDialog();
               return; // Stop monitoring
@@ -119,7 +117,6 @@ class _LocationAccessScreenState extends ConsumerState<LocationAccessScreen>
           }
           // Stop monitoring if we're no longer in a GPS-waiting state
         } catch (e) {
-          debugPrint('❌ LocationAccess: Error monitoring GPS status - $e');
           // Continue monitoring even on error, but with longer interval
           scheduleNextCheck();
         }
@@ -142,7 +139,6 @@ class _LocationAccessScreenState extends ConsumerState<LocationAccessScreen>
 
     if (state == AppLifecycleState.resumed) {
       // App came back to foreground, check GPS status
-      debugPrint('🎯 LocationAccess: App resumed, checking GPS status...');
       _checkGPSStatusOnResume();
     }
   }
@@ -158,12 +154,11 @@ class _LocationAccessScreenState extends ConsumerState<LocationAccessScreen>
         final isGPSEnabled = await locationService.isLocationServiceEnabled();
 
         if (isGPSEnabled) {
-          debugPrint('🎯 LocationAccess: GPS enabled after app resume, starting detection...');
           ref.read(locationGatingProvider.notifier).requestLocationPermissionWithDialog();
         }
       }
     } catch (e) {
-      debugPrint('❌ LocationAccess: Error checking GPS on resume - $e');
+      // Error checking GPS on resume - continue silently
     }
   }
 
@@ -182,32 +177,25 @@ class _LocationAccessScreenState extends ConsumerState<LocationAccessScreen>
     // Listen for state changes and handle navigation
     ref.listen<LocationGatingState>(locationGatingProvider, (previous, current) {
       if (previous?.status != current.status) {
-        debugPrint('🔄 LocationAccess: State changed from ${previous?.status} to ${current.status}');
-
         // Handle navigation when this screen is active (not when LocationSelection is on top)
         if (current.status == LocationGatingStatus.completed && current.canProceedToApp) {
-          debugPrint('✅ LocationAccess: Navigation to home - full access');
           Future.microtask(() {
             if (mounted) {
               context.go('/home');
             }
           });
         } else if (current.status == LocationGatingStatus.viewingModeReady && current.canProceedToApp) {
-          debugPrint('👁️ LocationAccess: Navigation to home - viewing mode');
           Future.microtask(() {
             if (mounted) {
               context.go('/home');
             }
           });
         } else if (current.status == LocationGatingStatus.serviceNotAvailable) {
-          debugPrint('🚫 LocationAccess: Navigation to service not available');
           Future.microtask(() {
             if (mounted) {
               context.go('/service-not-available');
             }
           });
-        } else if (current.status == LocationGatingStatus.failed) {
-          debugPrint('❌ LocationAccess: Location detection failed: ${current.errorMessage}');
         }
       }
     });

@@ -270,7 +270,7 @@ class LocationGatingNotifier extends StateNotifier<LocationGatingState> {
       final detectAccessLevelUseCase = sl<DetectAccessLevelUseCase>();
       final coordinates = LatLng(locationData.latitude, locationData.longitude);
 
-      debugPrint('🔍 LocationGating: Two-tier validation for coordinates: $coordinates');
+
 
       final result = await detectAccessLevelUseCase(DetectAccessLevelParams(coordinates: coordinates));
 
@@ -316,7 +316,6 @@ class LocationGatingNotifier extends StateNotifier<LocationGatingState> {
               break;
 
             case AccessLevel.noAccess:
-              debugPrint('🚫 LocationGating: No access - outside city boundaries');
               state = state.copyWith(
                 status: LocationGatingStatus.serviceNotAvailable,
                 isLoading: false,
@@ -330,7 +329,6 @@ class LocationGatingNotifier extends StateNotifier<LocationGatingState> {
         },
       );
     } catch (e) {
-      debugPrint('❌ LocationGating: Two-tier validation error: $e');
       state = state.copyWith(
         status: LocationGatingStatus.failed,
         isLoading: false,
