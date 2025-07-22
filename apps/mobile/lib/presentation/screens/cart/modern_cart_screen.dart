@@ -20,6 +20,7 @@ import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/inline_error_widget.dart';
 import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/skeleton_loading.dart';
+import '../../widgets/cart/smooth_quantity_controls.dart';
 import '../../../domain/entities/address.dart';
 import '../../../domain/entities/cart_item.dart';
 import '../../../domain/entities/product.dart';
@@ -433,113 +434,26 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     );
   }
 
-  /// Builds quantity control buttons with individual loading states
+  /// Builds quantity control buttons with smooth animations and no shaking
   Widget _buildQuantityControls(CartItem cartItem, ThemeData theme) {
     final isUpdating = _updatingItems.contains(cartItem.id);
 
-    return Semantics(
-      label: 'Quantity controls for ${cartItem.product.name}',
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.success),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Semantics(
-              label: 'Decrease quantity',
-              button: true,
-              enabled: !isUpdating,
-              child: _buildQuantityButton(
-                icon: Icons.remove,
-                onTap: isUpdating ? null : () => _decreaseQuantity(cartItem),
-                isLoading: isUpdating,
-              ),
-            ),
-            Semantics(
-              label: 'Current quantity: ${cartItem.quantity}',
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-                child: isUpdating
-                    ? const SizedBox(
-                        width: 13,
-                        height: 13,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
-                        ),
-                      )
-                    : Text(
-                        cartItem.quantity.toString(),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.success,
-                        ),
-                      ),
-              ),
-            ),
-            Semantics(
-              label: 'Increase quantity',
-              button: true,
-              enabled: !isUpdating,
-              child: _buildQuantityButton(
-                icon: Icons.add,
-                onTap: isUpdating ? null : () => _increaseQuantity(cartItem),
-                isLoading: isUpdating,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return SmoothQuantityControls(
+      cartItem: cartItem,
+      isUpdating: isUpdating,
+      onQuantityChanged: (cartItem, newQuantity) {
+        if (newQuantity <= 0) {
+          _decreaseQuantity(cartItem);
+        } else if (newQuantity > cartItem.quantity) {
+          _increaseQuantity(cartItem);
+        } else if (newQuantity < cartItem.quantity) {
+          _decreaseQuantity(cartItem);
+        }
+      },
     );
   }
 
-  /// Builds individual quantity button with loading support
-  Widget _buildQuantityButton({
-    required IconData icon,
-    required VoidCallback? onTap,
-    bool isLoading = false,
-  }) {
-    final isAdd = icon == Icons.add;
-    final isDisabled = onTap == null || isLoading;
 
-    return Semantics(
-      label: isAdd ? 'Increase quantity' : 'Decrease quantity',
-      button: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: isDisabled ? null : onTap,
-          borderRadius: BorderRadius.circular(4),
-          splashColor: AppColors.success.withValues(alpha: 0.2),
-          highlightColor: AppColors.success.withValues(alpha: 0.1),
-          child: Container(
-            width: 26, // Fixed width for consistency
-            height: 26, // Fixed height for consistency
-            alignment: Alignment.center,
-            child: isLoading
-                ? const SizedBox(
-                    width: 10,
-                    height: 10,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
-                    ),
-                  )
-                : Icon(
-                    icon,
-                    size: 13,
-                    color: isDisabled
-                        ? AppColors.success.withValues(alpha: 0.5)
-                        : AppColors.success,
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
 
   /// Builds the modern coupon section
   Widget _buildCouponSection(ThemeData theme, DaylizThemeExtension? daylizTheme) {
@@ -1328,12 +1242,14 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     context.push('/payment-selection');
   }
 
-  /// Increase quantity of cart item with individual loading state
+  /// Increase quantity of cart item with optimized state management
   Future<void> _increaseQuantity(CartItem cartItem) async {
-    // Add to updating items set
-    setState(() {
-      _updatingItems.add(cartItem.id);
-    });
+    // Add to updating items set (this will be handled by SmoothQuantityControls)
+    if (mounted) {
+      setState(() {
+        _updatingItems.add(cartItem.id);
+      });
+    }
 
     final success = await ref.read(cartNotifierProvider.notifier).updateQuantity(
       cartItemId: cartItem.id,
@@ -1363,12 +1279,14 @@ class _ModernCartScreenState extends ConsumerState<ModernCartScreen> {
     }
   }
 
-  /// Decrease quantity of cart item with individual loading state
+  /// Decrease quantity of cart item with optimized state management
   Future<void> _decreaseQuantity(CartItem cartItem) async {
-    // Add to updating items set
-    setState(() {
-      _updatingItems.add(cartItem.id);
-    });
+    // Add to updating items set (this will be handled by SmoothQuantityControls)
+    if (mounted) {
+      setState(() {
+        _updatingItems.add(cartItem.id);
+      });
+    }
 
     if (cartItem.quantity <= 1) {
       // Remove item from cart if quantity would be 0
