@@ -2,9 +2,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
+import '../config/network_config.dart';
+
 /// Service for network connectivity detection and error classification
 class NetworkService {
-  static const Duration _timeoutDuration = Duration(seconds: 10);
+  // Use centralized timeout configuration
+  static Duration get _timeoutDuration => NetworkConfig.dataTimeout;
 
   /// Check if device has internet connectivity
   static Future<bool> hasInternetConnection() async {

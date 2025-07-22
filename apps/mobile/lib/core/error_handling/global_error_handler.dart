@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../errors/failures.dart';
+import '../services/error_logging_service.dart';
 import 'unified_error_system.dart';
 
 /// Global Error Handler for the entire Dayliz App
@@ -105,20 +106,20 @@ class GlobalErrorHandler {
     String? context,
     Map<String, dynamic>? additionalData,
   }) {
-    // TODO: Implement analytics logging
-    // This could be Firebase Crashlytics, Sentry, or custom analytics
-    
-    final errorData = {
-      'error': error.toString(),
-      'stackTrace': stackTrace?.toString(),
-      'context': context,
-      'timestamp': DateTime.now().toIso8601String(),
-      'platform': defaultTargetPlatform.name,
-      ...?additionalData,
-    };
-    
+    // Use the comprehensive error logging service
+    ErrorLoggingService.instance.logNetworkError(
+      error: error,
+      operation: context ?? 'unknown',
+      additionalData: {
+        'stackTrace': stackTrace?.toString(),
+        'platform': defaultTargetPlatform.name,
+        ...?additionalData,
+      },
+      isFatal: false,
+    );
+
     developer.log(
-      '📊 Error logged to analytics: $errorData',
+      '📊 Error logged to analytics: ${error.toString()}',
       name: 'GlobalErrorHandler',
     );
   }

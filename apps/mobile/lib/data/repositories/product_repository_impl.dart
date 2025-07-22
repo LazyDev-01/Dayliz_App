@@ -3,6 +3,8 @@ import '../../core/errors/failures.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/models/pagination_models.dart';
 import '../../core/network/network_info.dart';
+import '../../core/repositories/base_repository.dart';
+import '../../core/config/network_config.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/repositories/product_repository.dart';
 import '../datasources/product_local_data_source.dart';
@@ -10,8 +12,8 @@ import '../datasources/product_remote_data_source.dart';
 import '../datasources/product_supabase_data_source.dart';
 import '../models/product_model.dart';
 
-/// Implementation of the product repository
-class ProductRepositoryImpl implements ProductRepository {
+/// Implementation of the product repository with standardized error handling
+class ProductRepositoryImpl extends BaseRepository implements ProductRepository {
   final ProductRemoteDataSource remoteDataSource;
   final ProductLocalDataSource localDataSource;
   final NetworkInfo networkInfo;
@@ -35,12 +37,13 @@ class ProductRepositoryImpl implements ProductRepository {
     double? minPrice,
     double? maxPrice,
   }) async {
-    if (await networkInfo.isConnected) {
-      try {
-        // Check if remote data source supports pagination
+    // Use base repository's error handling with cache fallback
+    return executeWithCache<PaginatedResponse<Product>>(
+      // Network operation
+      () async {
         if (remoteDataSource is ProductSupabaseDataSource) {
           final supabaseDataSource = remoteDataSource as ProductSupabaseDataSource;
-          final paginatedResponse = await supabaseDataSource.getProductsPaginated(
+          return await supabaseDataSource.getProductsPaginated(
             pagination: pagination,
             categoryId: categoryId,
             subcategoryId: subcategoryId,
@@ -50,11 +53,6 @@ class ProductRepositoryImpl implements ProductRepository {
             minPrice: minPrice,
             maxPrice: maxPrice,
           );
-
-          // Cache the products for offline access
-          _cacheProducts(paginatedResponse.data);
-
-          return Right(paginatedResponse);
         } else {
           // Fallback to legacy method and wrap in pagination response
           final products = await remoteDataSource.getProducts(
@@ -75,18 +73,41 @@ class ProductRepositoryImpl implements ProductRepository {
             totalItems: products.length, // This is an estimate
           );
 
-          _cacheProducts(products);
-          return Right(PaginatedResponse(data: products, meta: meta));
+          return PaginatedResponse(data: products, meta: meta);
         }
-      } on ServerException catch (e) {
-        // Return server error instead of cached products to avoid confusion
-        return Left(ServerFailure(message: e.message));
-      }
-    } else {
-      // When offline, show connection error instead of cached products
-      // This prevents showing wrong products for subcategories
-      return const Left(NetworkFailure(message: 'No internet connection'));
-    }
+      },
+      // Cache operation (try to get cached data)
+      () async {
+        try {
+          final cachedProducts = await localDataSource.getCachedProducts();
+          if (cachedProducts.isNotEmpty) {
+            final meta = PaginationMeta.fromParams(
+              params: pagination ?? const PaginationParams.defaultProducts(),
+              totalItems: cachedProducts.length,
+            );
+            return PaginatedResponse(data: cachedProducts, meta: meta);
+          }
+        } catch (e) {
+          // Cache read failed
+        }
+        return null;
+      },
+      // Cache store operation
+      (data) async {
+        // Convert Product entities to ProductModel for caching
+        final productModels = data.data.map((product) {
+          if (product is ProductModel) {
+            return product;
+          } else {
+            // Convert Product entity to ProductModel if needed
+            return ProductModel.fromProduct(product);
+          }
+        }).toList();
+        await _cacheProducts(productModels);
+      },
+      operationType: NetworkOperation.data,
+      operationName: 'get products paginated',
+    );
   }
 
   /// Cache products for offline access

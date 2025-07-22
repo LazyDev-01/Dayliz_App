@@ -18,6 +18,7 @@ import 'package:dayliz_app/core/services/conditional_firebase_service.dart';
 import 'package:dayliz_app/core/utils/image_preloader.dart';
 import 'package:dayliz_app/core/storage/hive_config.dart';
 import 'package:dayliz_app/core/error_handling/global_error_handler.dart';
+import 'package:dayliz_app/core/services/error_logging_service.dart';
 // Clean architecture imports
 import 'package:dayliz_app/presentation/providers/auth_providers.dart' as clean_auth;
 import 'package:dayliz_app/presentation/providers/theme_providers.dart';
@@ -116,6 +117,10 @@ Future<void> main() async {
   // Initialize global error handling system
   GlobalErrorHandler.initialize();
   debugPrint('🛡️ Global error handling initialized');
+
+  // Initialize error logging service
+  await ErrorLoggingService.instance.initialize();
+  debugPrint('📊 Error logging service initialized');
 
   // STEP 1: IMMEDIATE CONNECTIVITY CHECK (HIGHEST PRIORITY)
   debugPrint('🌐 Checking internet connectivity...');

@@ -1,16 +1,17 @@
 import 'dart:io';
 import 'dart:async';
 
+import '../config/network_config.dart';
+
 /// Fast and reliable connectivity checker
 /// Uses multiple HTTP requests to verify actual internet connectivity
 class ConnectivityChecker {
-  static const Duration _fastTimeout = Duration(seconds: 1); // Fast 1 second timeout
-  static const Duration _normalTimeout = Duration(seconds: 2); // Normal 2 second timeout
-  static const List<String> _testUrls = [
-    'https://www.google.com',
-    'https://httpbin.org/status/200', // Simple HTTP endpoint
-    'https://www.cloudflare.com',
-  ];
+  // Use centralized timeout configuration
+  static Duration get _fastTimeout => NetworkConfig.connectivityUrlTimeout;
+  static Duration get _normalTimeout => NetworkConfig.connectivityTimeout;
+
+  // Use centralized URL configuration
+  static List<String> get _testUrls => NetworkConfig.connectivityTestUrls;
 
   /// Quick internet connectivity check with parallel testing
   /// Returns true if internet is available, false otherwise

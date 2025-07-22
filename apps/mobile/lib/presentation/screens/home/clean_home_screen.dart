@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../widgets/common/unified_app_bar.dart';
 import '../../widgets/common/inline_error_widget.dart';
-
-import '../../../core/services/connectivity_checker.dart';
+import '../../providers/network_providers.dart';
 import '../../widgets/common/skeleton_loaders.dart';
 import '../../widgets/common/skeleton_loading.dart';
 import '../../providers/home_providers.dart';
@@ -89,25 +88,22 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
       return _buildHomeScreenSkeleton();
     }
 
-    // Simple network check like categories screen - check connectivity directly
-    return FutureBuilder<bool>(
-      future: ConnectivityChecker.hasConnection(fastMode: true), // Use fast mode for better performance
-      builder: (context, snapshot) {
-        final hasConnection = snapshot.data ?? true;
+    // Use the new connectivity provider to prevent flickering
+    final isConnected = ref.watch(isConnectedProvider);
 
-        // If no internet connection, show error (like categories screen)
-        if (!hasConnection) {
-          return NetworkErrorWidgets.connectionProblem(
-            onRetry: () {
-              // Optimistic retry: Skip connectivity check and directly load data
-              // This provides immediate feedback and faster response
-              _performOptimisticRetry(ref);
-            },
-          );
-        }
+    // If no internet connection, show error
+    if (!isConnected) {
+      return NetworkErrorWidgets.connectionProblem(
+        onRetry: () {
+          // Refresh connectivity state and retry loading data
+          ref.read(connectivityProvider.notifier).refresh();
+          _performOptimisticRetry(ref);
+        },
+      );
+    }
 
-        // If internet is available, show content regardless of individual section errors
-        return RefreshIndicator(
+    // If internet is available, show content regardless of individual section errors
+    return RefreshIndicator(
           onRefresh: _handleRefresh,
           color: Theme.of(context).primaryColor,
           backgroundColor: Colors.white,
@@ -137,8 +133,6 @@ class _CleanHomeScreenState extends ConsumerState<CleanHomeScreen> {
             ],
           ),
         );
-      },
-    );
   }
 
   /// Optimistic retry: Skip connectivity check and directly load data
