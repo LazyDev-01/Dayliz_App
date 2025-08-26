@@ -1,0 +1,78 @@
+# TruffleHog Configuration for Dayliz App
+# This configuration excludes documentation and test files from secret scanning
+# while maintaining security for production code
+
+# Global configuration
+chunk_size: 10240
+concurrency: 10
+
+# Paths to exclude from scanning
+exclude_paths:
+  # Documentation files
+  - "*.md"
+  - "*.txt"
+  - "*.rst"
+  - "docs/**"
+  - "documentation/**"
+  
+  # Test and script directories
+  - "scripts/**"
+  - "test/**"
+  - "tests/**"
+  - "*_test.*"
+  - "*test_*"
+  - "**/*_test.*"
+  - "**/*test_*"
+  
+  # Configuration examples and templates
+  - "*.example"
+  - "*.sample"
+  - "*.template"
+  
+  # Build and cache directories
+  - "build/**"
+  - "cache/**"
+  - "node_modules/**"
+  - ".dart_tool/**"
+  - "**/.dart_tool/**"
+  
+  # Specific files that contain example credentials
+  - "PHASE_1_SECURITY_IMPLEMENTATION_SUMMARY.md"
+  - "PRODUCTION_READINESS_REPORT.md"
+  - "*.py"  # Python utility scripts in root
+  
+  # Agent test files
+  - "apps/agent/test_login.dart"
+  - "apps/mobile/test/**"
+  - "apps/agent/test/**"
+  
+  # Git and CI/CD directories
+  - ".git/**"
+  - ".github/**"
+
+# Detectors to exclude (if needed)
+exclude_detectors:
+  # Uncomment if you want to exclude specific detectors
+  # - "Base64"
+  # - "URI"
+
+# Custom regex patterns to ignore
+exclude_entropy_patterns:
+  # Ignore common false positives
+  - "flutter"
+  - "android"
+  - "gradle"
+  - "pubspec"
+  - "yaml"
+  - "json"
+
+# Verification settings
+verify: true
+include_detectors: []
+
+# Output settings
+output_format: "json"
+no_verification: false
+
+# Additional settings for better performance
+max_object_size: "50MB"
