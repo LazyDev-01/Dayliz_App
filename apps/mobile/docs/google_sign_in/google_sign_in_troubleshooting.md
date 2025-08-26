@@ -67,7 +67,7 @@ Follow these steps to systematically verify your configuration:
 Make sure your `.env` file contains:
 
 ```
-SUPABASE_URL=https://zdezerezpbeuebnompyj.supabase.co
+SUPABASE_URL=https://your-project-id.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 GOOGLE_CLIENT_ID=897976702780-qdgua0j0nj5jm98kl6nuvu2s0b7gg24i.apps.googleusercontent.com
 GOOGLE_REDIRECT_URI=com.dayliz.dayliz_app://login
