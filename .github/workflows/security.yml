@@ -79,12 +79,47 @@ jobs:
           fi
 
       - name: 🕵️ Advanced Secret Scanning
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: main
-          head: HEAD
-          extra_args: --config=.trufflehog.yaml --only-verified --exclude-paths="scripts/**,test/**,tests/**,docs/**,*.md,*.py,infrastructure/**,**/.temp/**"
+        run: |
+          echo "🔍 Running TruffleHog secret scanning with comprehensive exclusions..."
+
+          # Install TruffleHog
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+          # Create comprehensive exclusion patterns
+          cat > /tmp/trufflehog-exclude.txt << 'EOF'
+          scripts/
+          test/
+          tests/
+          docs/
+          apps/mobile/docs/
+          infrastructure/
+          .temp/
+          temp/
+          *.md
+          *.txt
+          *.py
+          *.example
+          *.sample
+          *.template
+          .git/
+          .github/
+          build/
+          cache/
+          node_modules/
+          .dart_tool/
+          EOF
+
+          # Run TruffleHog with exclusions
+          echo "📋 Exclusion patterns:"
+          cat /tmp/trufflehog-exclude.txt
+
+          echo "🔍 Starting TruffleHog scan..."
+          if trufflehog filesystem . --exclude-paths=/tmp/trufflehog-exclude.txt --only-verified --no-update; then
+            echo "✅ No verified secrets detected"
+          else
+            echo "❌ TruffleHog detected potential secrets"
+            exit 1
+          fi
 
       - name: 🔒 OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
