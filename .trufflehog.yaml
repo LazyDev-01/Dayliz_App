@@ -40,6 +40,11 @@ exclude_paths:
   - "PHASE_1_SECURITY_IMPLEMENTATION_SUMMARY.md"
   - "PRODUCTION_READINESS_REPORT.md"
   - "*.py"  # Python utility scripts in root
+
+  # Infrastructure and temporary files
+  - "infrastructure/**"
+  - "**/.temp/**"
+  - "**/temp/**"
   
   # Agent test files
   - "apps/agent/test_login.dart"

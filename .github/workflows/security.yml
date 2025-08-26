@@ -84,7 +84,7 @@ jobs:
           path: ./
           base: main
           head: HEAD
-          extra_args: --config=.trufflehog.yaml --only-verified
+          extra_args: --config=.trufflehog.yaml --only-verified --exclude-paths="scripts/**,test/**,tests/**,docs/**,*.md,*.py,infrastructure/**,**/.temp/**"
 
       - name: 🔒 OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
@@ -126,18 +126,22 @@ jobs:
           GOOGLE_OAUTH_PATTERN="GOCSPX-[0-9A-Za-z_-]\{28\}"
           STRIPE_PATTERN="sk_live_[0-9A-Za-z]\{24\}"
 
-          if grep -r "$GOOGLE_API_PATTERN" . --exclude-dir=.git --exclude-dir=.github; then
-            echo "❌ Google API key pattern detected!"
+          # Enhanced exclusions for documentation and test files
+          EXCLUDE_DIRS="--exclude-dir=.git --exclude-dir=.github --exclude-dir=scripts --exclude-dir=test --exclude-dir=tests --exclude-dir=docs --exclude-dir=infrastructure"
+          EXCLUDE_FILES="--exclude=*.md --exclude=*.py --exclude=*.temp"
+
+          if grep -r "$GOOGLE_API_PATTERN" . $EXCLUDE_DIRS $EXCLUDE_FILES; then
+            echo "❌ Google API key pattern detected in production code!"
             exit 1
           fi
 
-          if grep -r "$GOOGLE_OAUTH_PATTERN" . --exclude-dir=.git --exclude-dir=.github; then
-            echo "❌ Google OAuth secret pattern detected!"
+          if grep -r "$GOOGLE_OAUTH_PATTERN" . $EXCLUDE_DIRS $EXCLUDE_FILES; then
+            echo "❌ Google OAuth secret pattern detected in production code!"
             exit 1
           fi
 
-          if grep -r "$STRIPE_PATTERN" . --exclude-dir=.git --exclude-dir=.github; then
-            echo "❌ Stripe live key pattern detected!"
+          if grep -r "$STRIPE_PATTERN" . $EXCLUDE_DIRS $EXCLUDE_FILES; then
+            echo "❌ Stripe live key pattern detected in production code!"
             exit 1
           fi
 

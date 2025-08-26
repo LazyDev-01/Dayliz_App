@@ -7,7 +7,7 @@ import uuid
 import os
 
 # Supabase configuration
-SUPABASE_URL = "https://zdezerezpbeuebnompyj.supabase.co"
+SUPABASE_URL = "https://your-project.supabase.co"  # Replace with your Supabase URL
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")  # Service key for admin operations
 
 def download_and_convert_image(image_url: str, product_id: str) -> str:
