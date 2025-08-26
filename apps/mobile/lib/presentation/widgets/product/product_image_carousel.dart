@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:dayliz_app/services/image_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProductImageCarousel extends StatefulWidget {
   final String mainImageUrl;
@@ -70,12 +70,45 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
         
         return Hero(
           tag: heroTag,
-          child: imageService.getOptimizedImage(
-            imageUrl: imageUrl,
-            width: widget.width,
-            height: widget.height,
-            fit: BoxFit.cover,
-            quality: widget.quality,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: CachedNetworkImage(
+              imageUrl: imageUrl,
+              width: widget.width,
+              height: widget.height,
+              fit: BoxFit.cover,
+              memCacheWidth: widget.width.toInt(),
+              memCacheHeight: widget.height.toInt(),
+              fadeInDuration: const Duration(milliseconds: 300),
+              fadeOutDuration: const Duration(milliseconds: 100),
+              placeholder: (context, url) => Container(
+                width: widget.width,
+                height: widget.height,
+                color: Colors.grey[200],
+                child: const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ),
+              errorWidget: (context, url, error) => Container(
+                width: widget.width,
+                height: widget.height,
+                color: Colors.grey[200],
+                child: const Center(
+                  child: Icon(
+                    Icons.image_not_supported,
+                    color: Colors.grey,
+                    size: 32,
+                  ),
+                ),
+              ),
+            ),
           ),
         );
       },
@@ -98,9 +131,9 @@ class _ProductImageCarouselState extends State<ProductImageCarousel> {
             height: _currentImageIndex == index ? 12 : 8,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _currentImageIndex == index 
-                ? Theme.of(context).primaryColor 
-                : Colors.grey.withOpacity(0.5),
+              color: _currentImageIndex == index
+                ? Theme.of(context).primaryColor
+                : Colors.grey.withValues(alpha: 0.5),
             ),
           ),
         ),

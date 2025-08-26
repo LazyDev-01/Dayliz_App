@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/address_formatter.dart';
 import '../../../domain/entities/address.dart';
@@ -9,6 +8,7 @@ import '../../providers/auth_providers.dart';
 import '../common/inline_error_widget.dart';
 import '../common/loading_indicator.dart';
 import '../common/empty_state.dart';
+import 'address_form_bottom_sheet.dart';
 
 class CleanAddressSelectionWidget extends ConsumerWidget {
   final bool allowSelection;
@@ -176,11 +176,11 @@ class CleanAddressSelectionWidget extends ConsumerWidget {
   }
 
   void _navigateToAddAddress(BuildContext context) {
-    context.push('/address/add');
+    AddressFormBottomSheet.show(context);
   }
 
   void _navigateToEditAddress(BuildContext context, Address address) {
-    context.push('/address/edit/${address.id}');
+    AddressFormBottomSheet.show(context, address: address);
   }
 
   Future<void> _confirmDeleteAddress(BuildContext context, WidgetRef ref, Address address) async {

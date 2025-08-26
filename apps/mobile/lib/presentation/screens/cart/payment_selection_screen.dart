@@ -1,12 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 
 import '../../../core/constants/app_colors.dart';
 import '../../../theme/app_theme.dart';
+import '../../../core/services/order_service.dart';
+import '../../../core/services/connectivity_checker.dart';
+
+import '../../../data/models/upi_payment_model.dart';
 import '../../providers/cart_providers.dart';
 import '../../providers/user_profile_providers.dart';
 import '../../providers/auth_providers.dart';
-import '../checkout/order_processing_screen.dart';
+import '../../providers/supabase_providers.dart';
+
+import '../payment/payment_processing_screen.dart';
+
+// HTTP client provider
+final httpClientProvider = Provider<http.Client>((ref) => http.Client());
 
 /// Payment Selection Screen for Cart Checkout Flow
 /// This screen allows users to select their preferred payment method
@@ -21,6 +33,8 @@ class PaymentSelectionScreen extends ConsumerStatefulWidget {
 class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen> {
   // State for selected payment method
   String? _selectedPaymentMethod; // No default selection
+  bool _isCreatingOrder = false; // Loading state for order creation
+  bool _isNavigating = false; // Prevent double navigation
 
   @override
   Widget build(BuildContext context) {
@@ -112,32 +126,35 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
       ),
       child: Column(
         children: [
-          // GooglePay (First)
+          // GooglePay (First) - Coming Soon
           _buildUpiOption(
             id: 'googlepay',
             name: 'GooglePay',
             iconAsset: 'assets/icons/googlepay.png',
             color: const Color(0xFF4285F4),
             isFirst: true,
+            isComingSoon: true,
           ),
           _buildDivider(),
 
-          // Paytm (Second)
+          // Paytm (Second) - Coming Soon
           _buildUpiOption(
             id: 'paytm',
             name: 'Paytm',
             iconAsset: 'assets/icons/paytm.png',
             color: const Color(0xFF00BAF2),
+            isComingSoon: true,
           ),
           _buildDivider(),
 
-          // PhonePe (Third)
+          // PhonePe (Third) - Coming Soon
           _buildUpiOption(
             id: 'phonepe',
             name: 'PhonePe',
             iconAsset: 'assets/icons/phonepe.png',
             color: const Color(0xFF5F259F),
             isLast: true,
+            isComingSoon: true,
           ),
         ],
       ),
@@ -179,11 +196,12 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
     required Color color,
     bool isFirst = false,
     bool isLast = false,
+    bool isComingSoon = false,
   }) {
-    final isSelected = _selectedPaymentMethod == id;
+    final isSelected = _selectedPaymentMethod == id && !isComingSoon;
 
     return InkWell(
-      onTap: () => _selectPaymentMethod(id),
+      onTap: isComingSoon ? null : () => _selectPaymentMethod(id),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
@@ -220,38 +238,63 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
             ),
             const SizedBox(width: 16),
 
-            // Name
+            // Name with Coming Soon
             Expanded(
-              child: Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
+              child: Row(
+                children: [
+                  Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: isComingSoon ? Colors.grey[500] : Colors.black87,
+                    ),
+                  ),
+                  if (isComingSoon) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Coming Soon',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
 
-            // Circular checkbox
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? Colors.green : Colors.grey[400]!,
-                  width: 2,
+            // Circular checkbox (hidden for coming soon methods)
+            if (!isComingSoon)
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? Colors.green : Colors.grey[400]!,
+                    width: 2,
+                  ),
+                  color: isSelected ? Colors.green : Colors.transparent,
                 ),
-                color: isSelected ? Colors.green : Colors.transparent,
-              ),
-              child: isSelected
-                  ? const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 16,
-                    )
-                  : null,
-            ),
+                child: isSelected
+                    ? const Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: 16,
+                      )
+                    : null,
+              )
+            else
+              const SizedBox(width: 24), // Maintain spacing
           ],
         ),
       ),
@@ -384,16 +427,29 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
-              onTap: _selectedPaymentMethod != null ? () => _handleProceed(context) : null,
-              child: const Center(
-                child: Text(
-                  'Proceed to Pay',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              onTap: (_selectedPaymentMethod != null && !_isCreatingOrder)
+                  ? () => _handleProceed(context)
+                  : null,
+              child: Center(
+                child: _isCreatingOrder
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        _selectedPaymentMethod == 'cod'
+                            ? 'Place Order (COD)'
+                            : 'Proceed to Pay',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -412,19 +468,93 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
   }
 
   /// Handles proceed to pay action
-  void _handleProceed(BuildContext context) {
-    // Create a simple payment method object for the selected method
-    final selectedMethod = {
-      'id': _selectedPaymentMethod,
-      'title': _selectedPaymentMethod == 'cod' ? 'Cash on Delivery' : 'UPI Payment',
-    };
+  Future<void> _handleProceed(BuildContext context) async {
+    if (_isCreatingOrder || _isNavigating) return; // Prevent multiple taps and navigation
 
-    // Navigate to order processing screen with order data
-    _navigateToOrderProcessing(context, selectedMethod);
+    // Store context references for safe usage
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    // Check if trying to use UPI (which is coming soon)
+    if (_selectedPaymentMethod != 'cod') {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('UPI payments are coming soon! Please use Cash on Delivery for now.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isCreatingOrder = true;
+    });
+
+    try {
+      // Check network connectivity first
+      final hasConnection = await ConnectivityChecker.hasConnection(fastMode: true);
+      if (!hasConnection) {
+        if (!mounted) return;
+
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: const Text('No internet connection. Please check your network and try again.'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _handleProceed(context),
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Create order first
+      final orderId = await _createOrder();
+
+      if (!mounted) return;
+
+      // Set navigation lock
+      setState(() {
+        _isNavigating = true;
+      });
+
+      // For COD, validate and navigate directly to order summary
+      await _handleCODOrderCompletion(context, orderId);
+
+    } catch (e) {
+      if (!mounted) return;
+
+      // Classify error type for appropriate user message
+      final errorMessage = _getUserFriendlyErrorMessage(e);
+
+      // Show user-friendly error message
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: () => _createOrderAndNavigate(context),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCreatingOrder = false;
+          _isNavigating = false;
+        });
+      }
+    }
   }
 
-  /// Navigate to order processing with complete order data
-  void _navigateToOrderProcessing(BuildContext context, Map<String, dynamic> paymentMethod) {
+  /// Creates order and returns order ID
+  Future<String> _createOrder() async {
     // Get cart data from provider
     final cartState = ref.read(cartNotifierProvider);
 
@@ -433,70 +563,257 @@ class _PaymentSelectionScreenState extends ConsumerState<PaymentSelectionScreen>
     final user = authState.user;
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to place an order')),
-      );
-      return;
+      throw Exception('User not authenticated');
     }
 
     // Get selected address
     final selectedAddress = ref.read(defaultAddressProvider);
 
     if (selectedAddress == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a delivery address')),
-      );
-      return;
+      throw Exception('Please select a delivery address');
     }
 
-    // Prepare order data with actual user and address data
-    final orderData = {
-      'userId': user.id,
-      'items': cartState.items.map((item) => {
-        'productId': item.product.id,
-        'productName': item.product.name,
-        'quantity': item.quantity,
-        'price': item.product.price,
-        'total': item.product.price * item.quantity,
-        'image': item.product.mainImageUrl,
-      }).toList(),
-      'subtotal': cartState.totalPrice,
-      'tax': cartState.totalPrice * 0.18, // 18% tax
-      'shipping': 0.0, // Free shipping for early launch
-      'total': cartState.totalPrice + (cartState.totalPrice * 0.18),
-      'paymentMethod': _selectedPaymentMethod,
-      'shippingAddress': {
-        'id': selectedAddress.id, // Include address ID for proper order creation
-        'addressLine1': selectedAddress.addressLine1,
-        'addressLine2': selectedAddress.addressLine2,
-        'city': selectedAddress.city,
-        'state': selectedAddress.state,
-        'postalCode': selectedAddress.postalCode,
-        'country': selectedAddress.country,
-        'latitude': selectedAddress.latitude,
-        'longitude': selectedAddress.longitude,
-        'landmark': selectedAddress.landmark,
-      },
-      'status': 'pending',
-      'createdAt': DateTime.now(),
-      'estimatedDelivery': DateTime.now().add(const Duration(hours: 2)),
-    };
-
-    // Navigate to order processing screen
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => OrderProcessingScreen(
-          orderData: orderData,
-          onSuccess: () {
-            // Clear cart after successful order
-            ref.read(cartNotifierProvider.notifier).clearCart();
-          },
-          onError: () {
-            // Handle error if needed
-            debugPrint('Order processing failed');
-          },
-        ),
-      ),
+    // Calculate totals
+    final subtotal = cartState.items.fold<double>(
+      0.0,
+      (sum, item) => sum + (item.product.price * item.quantity),
     );
+
+    final deliveryFee = subtotal >= 999 ? 0.0 : 25.0;
+    final total = subtotal + deliveryFee;
+
+    // Create order using OrderService
+    final orderService = OrderService(supabaseClient: Supabase.instance.client);
+
+    final items = cartState.items.map((item) => {
+      'product_id': item.product.id,
+      'quantity': item.quantity,
+      'price': item.product.price,
+      'product_name': item.product.name,
+    }).toList();
+
+    final order = await orderService.createOrder(
+      userId: user.id,
+      items: items,
+      subtotal: subtotal,
+      tax: 0.0, // No tax for now
+      shipping: deliveryFee,
+      total: total,
+      deliveryAddressId: selectedAddress.id,
+      paymentMethod: _selectedPaymentMethod == 'cod' ? 'Cash on Delivery' : 'UPI Payment',
+      notes: null,
+      couponCode: null,
+    );
+
+    return order.id;
   }
+
+  /// Handle COD order completion with validation
+  Future<void> _handleCODOrderCompletion(BuildContext context, String orderId) async {
+    // Store context reference for safe usage
+    final router = GoRouter.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      // Validate order was created successfully
+      final orderService = OrderService(supabaseClient: Supabase.instance.client);
+      await orderService.getOrderById(orderId);
+
+      // Order should exist since we just created it
+      debugPrint('COD Order validation: Order $orderId retrieved successfully');
+
+      // For COD, update order status to processing (confirmed and ready for preparation)
+      await orderService.updateOrderStatus(orderId, 'processing');
+
+      // Order data is not needed since GoRouter will handle navigation
+      // The order confirmation screen will fetch order details using the orderId
+
+      if (!mounted) return;
+
+      // Navigate directly to order summary screen using GoRouter
+      router.push('/clean/order-summary/$orderId');
+
+      // Clear cart after successful COD order
+      ref.read(cartNotifierProvider.notifier).clearCart();
+
+    } catch (e) {
+      if (!mounted) return;
+
+      // Show error message for COD validation failure
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Failed to confirm COD order: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: () => _handleCODOrderCompletion(context, orderId),
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Navigate to payment processing screen for UPI payments
+  Future<void> _navigateToPaymentProcessing(BuildContext context, String orderId) async {
+    // Store context references for safe usage
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    try {
+      // Get cart data for payment processing
+      final cartState = ref.read(cartNotifierProvider);
+      final user = ref.read(currentUserProvider);
+      final userProfile = ref.read(userProfileProvider);
+      final supabaseClient = ref.read(supabaseClientProvider);
+
+      if (user == null) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Authentication required for payment'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Get auth token from Supabase session
+      final session = supabaseClient.auth.currentSession;
+      final authToken = session?.accessToken;
+
+      if (authToken == null) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Authentication token not available. Please login again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Calculate total for payment
+      final subtotal = cartState.items.fold<double>(
+        0.0,
+        (sum, item) => sum + (item.product.price * item.quantity),
+      );
+      final deliveryFee = subtotal >= 999 ? 0.0 : 25.0;
+      final total = subtotal + deliveryFee;
+
+      // Create mock Razorpay order for payment processing
+      // Since order is already created in Supabase, we just need payment details
+      final razorpayOrder = RazorpayOrderResponse(
+        orderId: 'rzp_test_mock_${DateTime.now().millisecondsSinceEpoch}',
+        currency: 'INR',
+        amount: (total * 100).toInt(), // Convert to paisa
+        key: 'rzp_test_mock_payment_gateway',
+        internalOrderId: orderId,
+        upiIntentUrl: null, // Will use Razorpay checkout
+        timeoutAt: DateTime.now().add(const Duration(minutes: 15)),
+      );
+
+      // Create order data for payment processing
+      final orderData = {
+        'items': cartState.items.map((item) => {
+          'productId': item.product.id,
+          'quantity': item.quantity,
+          'price': item.product.price,
+          'name': item.product.name,
+        }).toList(),
+        'total': total,
+        'subtotal': subtotal,
+        'deliveryFee': deliveryFee,
+      };
+
+      // Navigate to payment processing screen (check mounted before using context)
+      if (!mounted) return;
+
+      navigator.push(
+        MaterialPageRoute(
+          builder: (context) => PaymentProcessingScreen(
+            orderId: orderId, // Use the orderId from Supabase order creation
+            razorpayOrder: razorpayOrder,
+            orderData: orderData,
+          ),
+        ),
+      );
+
+      // Clear cart after successful order creation
+      ref.read(cartNotifierProvider.notifier).clearCart();
+
+    } catch (e) {
+      if (!mounted) return;
+
+      // Classify error type for appropriate user message
+      final errorMessage = _getUserFriendlyErrorMessage(e);
+
+      // Show user-friendly error message
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: () => _navigateToPaymentProcessing(context, orderId),
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Get user-friendly error message based on error type
+  String _getUserFriendlyErrorMessage(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+
+    // Network connectivity errors
+    if (errorString.contains('socketexception') ||
+        errorString.contains('failed host lookup') ||
+        errorString.contains('network is unreachable') ||
+        errorString.contains('no address associated with hostname')) {
+      return 'No internet connection. Please check your network and try again.';
+    }
+
+    // Timeout errors
+    if (errorString.contains('timeout') ||
+        errorString.contains('timed out')) {
+      return 'Request timed out. Please check your connection and try again.';
+    }
+
+    // Authentication errors
+    if (errorString.contains('authentication') ||
+        errorString.contains('unauthorized') ||
+        errorString.contains('token')) {
+      return 'Authentication failed. Please login again.';
+    }
+
+    // Server errors
+    if (errorString.contains('server') ||
+        errorString.contains('internal error') ||
+        errorString.contains('500')) {
+      return 'Server temporarily unavailable. Please try again later.';
+    }
+
+    // Supabase specific errors
+    if (errorString.contains('supabase') ||
+        errorString.contains('postgrest')) {
+      return 'Service temporarily unavailable. Please try again.';
+    }
+
+    // Payment specific errors
+    if (errorString.contains('payment') ||
+        errorString.contains('razorpay')) {
+      return 'Payment service unavailable. Please try again or use Cash on Delivery.';
+    }
+
+    // Generic fallback
+    return 'Something went wrong. Please try again.';
+  }
+
+  /// Wrapper method for retry functionality
+  void _createOrderAndNavigate(BuildContext context) {
+    _handleProceed(context);
+  }
+
+
 }

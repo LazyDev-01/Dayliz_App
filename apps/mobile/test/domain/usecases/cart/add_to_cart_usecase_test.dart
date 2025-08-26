@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:dayliz_app/core/errors/failures.dart';
@@ -8,8 +9,8 @@ import 'package:dayliz_app/domain/entities/product.dart';
 import 'package:dayliz_app/domain/repositories/cart_repository.dart';
 import 'package:dayliz_app/domain/usecases/add_to_cart_usecase.dart';
 
-// Manual mock class
-class MockCartRepository extends Mock implements CartRepository {}
+@GenerateMocks([CartRepository])
+import 'add_to_cart_usecase_test.mocks.dart';
 
 void main() {
   late AddToCartUseCase usecase;
@@ -47,8 +48,8 @@ void main() {
   test('should add product to cart from the repository', () async {
     // arrange
     when(mockCartRepository.addToCart(
-      product: anyNamed('product'),
-      quantity: anyNamed('quantity'),
+      product: tProduct,
+      quantity: tQuantity,
     )).thenAnswer((_) async => Right(tCartItem));
 
     // act
@@ -69,8 +70,8 @@ void main() {
   test('should return failure when repository call fails', () async {
     // arrange
     when(mockCartRepository.addToCart(
-      product: anyNamed('product'),
-      quantity: anyNamed('quantity'),
+      product: tProduct,
+      quantity: tQuantity,
     )).thenAnswer((_) async => const Left(ServerFailure(message: 'Server error')));
 
     // act
@@ -91,8 +92,8 @@ void main() {
   test('should return failure when product is out of stock', () async {
     // arrange
     when(mockCartRepository.addToCart(
-      product: anyNamed('product'),
-      quantity: anyNamed('quantity'),
+      product: tProduct,
+      quantity: tQuantity,
     )).thenAnswer((_) async => const Left(ServerFailure(message: 'Product out of stock')));
 
     // act
@@ -114,8 +115,8 @@ void main() {
     // arrange
     const invalidQuantity = 0;
     when(mockCartRepository.addToCart(
-      product: anyNamed('product'),
-      quantity: anyNamed('quantity'),
+      product: tProduct,
+      quantity: invalidQuantity,
     )).thenAnswer((_) async => const Left(ServerFailure(message: 'Invalid quantity')));
 
     // act
@@ -136,8 +137,8 @@ void main() {
   test('should return network failure when device is offline', () async {
     // arrange
     when(mockCartRepository.addToCart(
-      product: anyNamed('product'),
-      quantity: anyNamed('quantity'),
+      product: tProduct,
+      quantity: tQuantity,
     )).thenAnswer((_) async => const Left(NetworkFailure(message: 'No internet connection')));
 
     // act
@@ -159,8 +160,8 @@ void main() {
     // arrange
     const defaultQuantity = 1;
     when(mockCartRepository.addToCart(
-      product: anyNamed('product'),
-      quantity: anyNamed('quantity'),
+      product: tProduct,
+      quantity: defaultQuantity,
     )).thenAnswer((_) async => Right(tCartItem));
 
     // act

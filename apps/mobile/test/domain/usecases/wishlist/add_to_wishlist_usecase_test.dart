@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:dayliz_app/core/errors/failures.dart';
@@ -7,8 +8,8 @@ import 'package:dayliz_app/domain/entities/wishlist_item.dart';
 import 'package:dayliz_app/domain/repositories/wishlist_repository.dart';
 import 'package:dayliz_app/domain/usecases/add_to_wishlist_usecase.dart';
 
-// Manual mock class
-class MockWishlistRepository extends Mock implements WishlistRepository {}
+@GenerateMocks([WishlistRepository])
+import 'add_to_wishlist_usecase_test.mocks.dart';
 
 void main() {
   late AddToWishlistUseCase usecase;
@@ -28,7 +29,7 @@ void main() {
 
   test('should add product to wishlist from the repository', () async {
     // arrange
-    when(mockWishlistRepository.addToWishlist(any))
+    when(mockWishlistRepository.addToWishlist(tProductId))
         .thenAnswer((_) async => Right(tWishlistItem));
 
     // act
@@ -42,7 +43,7 @@ void main() {
 
   test('should return failure when repository call fails', () async {
     // arrange
-    when(mockWishlistRepository.addToWishlist(any))
+    when(mockWishlistRepository.addToWishlist(tProductId))
         .thenAnswer((_) async => const Left(ServerFailure(message: 'Server error')));
 
     // act
@@ -57,7 +58,7 @@ void main() {
   test('should return failure when product id is empty', () async {
     // arrange
     const emptyProductId = '';
-    when(mockWishlistRepository.addToWishlist(any))
+    when(mockWishlistRepository.addToWishlist(emptyProductId))
         .thenAnswer((_) async => const Left(ServerFailure(message: 'Invalid product ID')));
 
     // act
@@ -71,7 +72,7 @@ void main() {
 
   test('should return network failure when device is offline', () async {
     // arrange
-    when(mockWishlistRepository.addToWishlist(any))
+    when(mockWishlistRepository.addToWishlist(tProductId))
         .thenAnswer((_) async => const Left(NetworkFailure(message: 'No internet connection')));
 
     // act
@@ -85,7 +86,7 @@ void main() {
 
   test('should return cache failure when local storage fails', () async {
     // arrange
-    when(mockWishlistRepository.addToWishlist(any))
+    when(mockWishlistRepository.addToWishlist(tProductId))
         .thenAnswer((_) async => const Left(CacheFailure(message: 'Local storage error')));
 
     // act
@@ -99,7 +100,7 @@ void main() {
 
   test('should handle duplicate product addition gracefully', () async {
     // arrange
-    when(mockWishlistRepository.addToWishlist(any))
+    when(mockWishlistRepository.addToWishlist(tProductId))
         .thenAnswer((_) async => Right(tWishlistItem));
 
     // act

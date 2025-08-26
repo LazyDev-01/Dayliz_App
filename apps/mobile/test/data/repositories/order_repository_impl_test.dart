@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:dayliz_app/core/errors/exceptions.dart';
@@ -7,25 +8,25 @@ import 'package:dayliz_app/core/errors/failures.dart';
 import 'package:dayliz_app/core/network/network_info.dart';
 import 'package:dayliz_app/data/datasources/order_data_source.dart';
 import 'package:dayliz_app/data/repositories/order_repository_impl.dart';
-import 'package:dayliz_app/domain/entities/order.dart' as domain;
-import 'package:dayliz_app/domain/entities/address.dart';
-import 'package:dayliz_app/domain/entities/order_item.dart';
-import 'package:dayliz_app/domain/entities/payment_method.dart';
+import 'package:dayliz_app/data/models/order_model.dart';
+import 'package:dayliz_app/data/models/address_model.dart';
+import 'package:dayliz_app/data/models/order_item_model.dart';
+import 'package:dayliz_app/data/models/payment_method_model.dart';
 
-// Manual mock classes
-class MockOrderRemoteDataSource extends Mock implements OrderDataSource {}
-class MockOrderLocalDataSource extends Mock implements OrderDataSource {}
-class MockNetworkInfo extends Mock implements NetworkInfo {}
+import 'order_repository_impl_test.mocks.dart';
+
+// Generate mocks
+@GenerateMocks([OrderDataSource, NetworkInfo])
 
 void main() {
   late OrderRepositoryImpl repository;
-  late MockOrderRemoteDataSource mockRemoteDataSource;
-  late MockOrderLocalDataSource mockLocalDataSource;
+  late MockOrderDataSource mockRemoteDataSource;
+  late MockOrderDataSource mockLocalDataSource;
   late MockNetworkInfo mockNetworkInfo;
 
   setUp(() {
-    mockRemoteDataSource = MockOrderRemoteDataSource();
-    mockLocalDataSource = MockOrderLocalDataSource();
+    mockRemoteDataSource = MockOrderDataSource();
+    mockLocalDataSource = MockOrderDataSource();
     mockNetworkInfo = MockNetworkInfo();
     repository = OrderRepositoryImpl(
       remoteDataSource: mockRemoteDataSource,
@@ -39,7 +40,7 @@ void main() {
   const tStatus = 'pending';
   const tReason = 'Changed mind';
 
-  final tAddress = Address(
+  const tAddressModel = AddressModel(
     id: 'address-id',
     userId: tUserId,
     addressLine1: 'Test Address',
@@ -50,40 +51,44 @@ void main() {
     addressType: 'Home',
   );
 
-  const tPaymentMethod = PaymentMethod(
+  const tPaymentMethodModel = PaymentMethodModel(
     id: 'payment-id',
+    userId: tUserId,
     type: 'credit_card',
-    cardNumber: '**** **** **** 1234',
-    expiryDate: '12/25',
-    cardHolderName: 'Test User',
+    name: 'Test Card',
     isDefault: true,
+    details: {
+      'cardNumber': '**** **** **** 1234',
+      'expiryDate': '12/25',
+      'cardHolderName': 'Test User',
+    },
   );
 
-  final tOrderItem = OrderItem(
+  const tOrderItemModel = OrderItemModel(
     id: 'item-id',
     productId: 'product-id',
     productName: 'Test Product',
     quantity: 2,
-    price: 99.99,
-    total: 199.98,
+    unitPrice: 99.99,
+    totalPrice: 199.98,
     imageUrl: 'https://example.com/image.jpg',
   );
 
-  final tOrder = domain.Order(
+  final tOrderModel = OrderModel(
     id: tOrderId,
     userId: tUserId,
-    items: [tOrderItem],
+    items: [tOrderItemModel],
     subtotal: 199.98,
     tax: 20.00,
     shipping: 10.00,
     total: 229.98,
     status: tStatus,
     createdAt: DateTime.now(),
-    shippingAddress: tAddress,
-    paymentMethod: tPaymentMethod,
+    shippingAddress: tAddressModel,
+    paymentMethod: tPaymentMethodModel,
   );
 
-  final tOrders = [tOrder];
+  final tOrderModels = [tOrderModel];
   const tOrderStatistics = {'processing': 2, 'out_for_delivery': 1, 'delivered': 5};
   const tTrackingInfo = {'status': 'out_for_delivery', 'location': 'Test City'};
 
@@ -91,7 +96,7 @@ void main() {
     test('should check if the device is online', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.getOrders()).thenAnswer((_) async => tOrders);
+      when(mockRemoteDataSource.getOrders()).thenAnswer((_) async => tOrderModels);
 
       // act
       await repository.getOrders();
@@ -107,19 +112,19 @@ void main() {
 
       test('should return remote data when the call to remote data source is successful', () async {
         // arrange
-        when(mockRemoteDataSource.getOrders()).thenAnswer((_) async => tOrders);
+        when(mockRemoteDataSource.getOrders()).thenAnswer((_) async => tOrderModels);
 
         // act
         final result = await repository.getOrders();
 
         // assert
         verify(mockRemoteDataSource.getOrders());
-        expect(result, equals(Right(tOrders)));
+        expect(result, equals(Right(tOrderModels)));
       });
 
       test('should cache the data locally when the call to remote data source is successful', () async {
         // arrange
-        when(mockRemoteDataSource.getOrders()).thenAnswer((_) async => tOrders);
+        when(mockRemoteDataSource.getOrders()).thenAnswer((_) async => tOrderModels);
 
         // act
         await repository.getOrders();
@@ -131,8 +136,8 @@ void main() {
 
       test('should return local data when the call to remote data source fails', () async {
         // arrange
-        when(mockRemoteDataSource.getOrders()).thenThrow(const ServerException(message: 'Server error'));
-        when(mockLocalDataSource.getOrders()).thenAnswer((_) async => tOrders);
+        when(mockRemoteDataSource.getOrders()).thenThrow(ServerException(message: 'Server error'));
+        when(mockLocalDataSource.getOrders()).thenAnswer((_) async => tOrderModels);
 
         // act
         final result = await repository.getOrders();
@@ -140,7 +145,7 @@ void main() {
         // assert
         verify(mockRemoteDataSource.getOrders());
         verify(mockLocalDataSource.getOrders());
-        expect(result, equals(Right(tOrders)));
+        expect(result, equals(Right(tOrderModels)));
       });
     });
 
@@ -151,7 +156,7 @@ void main() {
 
       test('should return last locally cached data when cached data is present', () async {
         // arrange
-        when(mockLocalDataSource.getOrders()).thenAnswer((_) async => tOrders);
+        when(mockLocalDataSource.getOrders()).thenAnswer((_) async => tOrderModels);
 
         // act
         final result = await repository.getOrders();
@@ -159,13 +164,13 @@ void main() {
         // assert
         verifyZeroInteractions(mockRemoteDataSource);
         verify(mockLocalDataSource.getOrders());
-        expect(result, equals(Right(tOrders)));
+        expect(result, equals(Right(tOrderModels)));
       });
 
       test('should return CacheFailure when there is no cached data present', () async {
         // arrange
         when(mockLocalDataSource.getOrders())
-            .thenThrow(const CacheException(message: 'No cached data'));
+            .thenThrow(CacheException(message: 'No cached data'));
 
         // act
         final result = await repository.getOrders();
@@ -182,21 +187,21 @@ void main() {
     test('should return order when the call to remote data source is successful', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.getOrderById(any)).thenAnswer((_) async => tOrder);
+      when(mockRemoteDataSource.getOrderById(tOrderId)).thenAnswer((_) async => tOrderModel);
 
       // act
       final result = await repository.getOrderById(tOrderId);
 
       // assert
       verify(mockRemoteDataSource.getOrderById(tOrderId));
-      expect(result, equals(Right(tOrder)));
+      expect(result, equals(Right(tOrderModel)));
     });
 
     test('should return failure when the call to remote data source is unsuccessful', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.getOrderById(any))
-          .thenThrow(const ServerException(message: 'Order not found'));
+      when(mockRemoteDataSource.getOrderById(tOrderId))
+          .thenThrow(ServerException(message: 'Order not found'));
 
       // act
       final result = await repository.getOrderById(tOrderId);
@@ -209,15 +214,15 @@ void main() {
     test('should return cached order when device is offline', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      when(mockLocalDataSource.getOrderById(any)).thenAnswer((_) async => tOrder);
+      when(mockLocalDataSource.getOrderById(any)).thenAnswer((_) async => tOrderModel);
 
       // act
       final result = await repository.getOrderById(tOrderId);
 
       // assert
       verifyZeroInteractions(mockRemoteDataSource);
-      verify(mockLocalDataSource.getOrderById(tOrderId));
-      expect(result, equals(Right(tOrder)));
+      verify(mockLocalDataSource.getOrderById(any));
+      expect(result, equals(Right(tOrderModel)));
     });
   });
 
@@ -225,27 +230,27 @@ void main() {
     test('should return created order when the call to remote data source is successful', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.createOrder(any)).thenAnswer((_) async => tOrder);
+      when(mockRemoteDataSource.createOrder(tOrderModel)).thenAnswer((_) async => tOrderModel);
 
       // act
-      final result = await repository.createOrder(tOrder);
+      final result = await repository.createOrder(tOrderModel);
 
       // assert
-      verify(mockRemoteDataSource.createOrder(tOrder));
-      expect(result, equals(Right(tOrder)));
+      verify(mockRemoteDataSource.createOrder(tOrderModel));
+      expect(result, equals(Right(tOrderModel)));
     });
 
     test('should return failure when the call to remote data source is unsuccessful', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.createOrder(any))
-          .thenThrow(const ServerException(message: 'Failed to create order'));
+      when(mockRemoteDataSource.createOrder(tOrderModel))
+          .thenThrow(ServerException(message: 'Failed to create order'));
 
       // act
-      final result = await repository.createOrder(tOrder);
+      final result = await repository.createOrder(tOrderModel);
 
       // assert
-      verify(mockRemoteDataSource.createOrder(tOrder));
+      verify(mockRemoteDataSource.createOrder(tOrderModel));
       expect(result, equals(const Left(ServerFailure(message: 'Failed to create order'))));
     });
 
@@ -254,7 +259,7 @@ void main() {
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => false);
 
       // act
-      final result = await repository.createOrder(tOrder);
+      final result = await repository.createOrder(tOrderModel);
 
       // assert
       verifyZeroInteractions(mockRemoteDataSource);
@@ -266,7 +271,7 @@ void main() {
     test('should return true when the call to remote data source is successful', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.cancelOrder(any, reason: anyNamed('reason')))
+      when(mockRemoteDataSource.cancelOrder(tOrderId, reason: tReason))
           .thenAnswer((_) async => true);
 
       // act
@@ -280,8 +285,8 @@ void main() {
     test('should return failure when the call to remote data source is unsuccessful', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.cancelOrder(any, reason: anyNamed('reason')))
-          .thenThrow(const ServerException(message: 'Failed to cancel order'));
+      when(mockRemoteDataSource.cancelOrder(tOrderId, reason: tReason))
+          .thenThrow(ServerException(message: 'Failed to cancel order'));
 
       // act
       final result = await repository.cancelOrder(tOrderId, reason: tReason);
@@ -308,7 +313,7 @@ void main() {
     test('should return tracking info when the call to remote data source is successful', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.trackOrder(any)).thenAnswer((_) async => tTrackingInfo);
+      when(mockRemoteDataSource.trackOrder(tOrderId)).thenAnswer((_) async => tTrackingInfo);
 
       // act
       final result = await repository.trackOrder(tOrderId);
@@ -321,8 +326,8 @@ void main() {
     test('should return failure when the call to remote data source is unsuccessful', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.trackOrder(any))
-          .thenThrow(const ServerException(message: 'Tracking not available'));
+      when(mockRemoteDataSource.trackOrder(tOrderId))
+          .thenThrow(ServerException(message: 'Tracking not available'));
 
       // act
       final result = await repository.trackOrder(tOrderId);
@@ -366,28 +371,28 @@ void main() {
     test('should return orders by status when the call to remote data source is successful', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.getOrdersByStatus(any)).thenAnswer((_) async => tOrders);
+      when(mockRemoteDataSource.getOrdersByStatus(tStatus)).thenAnswer((_) async => tOrderModels);
 
       // act
       final result = await repository.getOrdersByStatus(tStatus);
 
       // assert
       verify(mockRemoteDataSource.getOrdersByStatus(tStatus));
-      expect(result, equals(Right(tOrders)));
+      expect(result, equals(Right(tOrderModels)));
     });
 
     test('should return cached orders by status when device is offline', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      when(mockLocalDataSource.getOrdersByStatus(any)).thenAnswer((_) async => tOrders);
+      when(mockLocalDataSource.getOrders()).thenAnswer((_) async => tOrderModels);
 
       // act
       final result = await repository.getOrdersByStatus(tStatus);
 
       // assert
       verifyZeroInteractions(mockRemoteDataSource);
-      verify(mockLocalDataSource.getOrdersByStatus(tStatus));
-      expect(result, equals(Right(tOrders)));
+      verify(mockLocalDataSource.getOrders());
+      expect(result, equals(Right(tOrderModels)));
     });
   });
 }

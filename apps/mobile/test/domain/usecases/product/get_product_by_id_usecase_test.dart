@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:dayliz_app/core/errors/failures.dart';
@@ -7,8 +8,8 @@ import 'package:dayliz_app/domain/entities/product.dart';
 import 'package:dayliz_app/domain/repositories/product_repository.dart';
 import 'package:dayliz_app/domain/usecases/get_product_by_id_usecase.dart';
 
-// Manual mock class
-class MockProductRepository extends Mock implements ProductRepository {}
+@GenerateMocks([ProductRepository])
+import 'get_product_by_id_usecase_test.mocks.dart';
 
 void main() {
   late GetProductByIdUseCase usecase;
@@ -38,11 +39,11 @@ void main() {
 
   test('should get product by id from the repository', () async {
     // arrange
-    when(mockProductRepository.getProductById(any))
+    when(mockProductRepository.getProductById(tProductId))
         .thenAnswer((_) async => const Right(tProduct));
 
     // act
-    final result = await usecase(const GetProductByIdParams(productId: tProductId));
+    final result = await usecase(const GetProductByIdParams(id: tProductId));
 
     // assert
     expect(result, const Right(tProduct));
@@ -52,11 +53,11 @@ void main() {
 
   test('should return failure when repository call fails', () async {
     // arrange
-    when(mockProductRepository.getProductById(any))
+    when(mockProductRepository.getProductById(tProductId))
         .thenAnswer((_) async => const Left(ServerFailure(message: 'Product not found')));
 
     // act
-    final result = await usecase(const GetProductByIdParams(productId: tProductId));
+    final result = await usecase(const GetProductByIdParams(id: tProductId));
 
     // assert
     expect(result, const Left(ServerFailure(message: 'Product not found')));
@@ -67,11 +68,11 @@ void main() {
   test('should return failure when product id is empty', () async {
     // arrange
     const emptyProductId = '';
-    when(mockProductRepository.getProductById(any))
+    when(mockProductRepository.getProductById(emptyProductId))
         .thenAnswer((_) async => const Left(ServerFailure(message: 'Invalid product ID')));
 
     // act
-    final result = await usecase(const GetProductByIdParams(productId: emptyProductId));
+    final result = await usecase(const GetProductByIdParams(id: emptyProductId));
 
     // assert
     expect(result, const Left(ServerFailure(message: 'Invalid product ID')));
@@ -81,11 +82,11 @@ void main() {
 
   test('should return network failure when device is offline', () async {
     // arrange
-    when(mockProductRepository.getProductById(any))
+    when(mockProductRepository.getProductById(tProductId))
         .thenAnswer((_) async => const Left(NetworkFailure(message: 'No internet connection')));
 
     // act
-    final result = await usecase(const GetProductByIdParams(productId: tProductId));
+    final result = await usecase(const GetProductByIdParams(id: tProductId));
 
     // assert
     expect(result, const Left(NetworkFailure(message: 'No internet connection')));
@@ -95,11 +96,11 @@ void main() {
 
   test('should return cache failure when no cached data available', () async {
     // arrange
-    when(mockProductRepository.getProductById(any))
+    when(mockProductRepository.getProductById(tProductId))
         .thenAnswer((_) async => const Left(CacheFailure(message: 'No cached product data')));
 
     // act
-    final result = await usecase(const GetProductByIdParams(productId: tProductId));
+    final result = await usecase(const GetProductByIdParams(id: tProductId));
 
     // assert
     expect(result, const Left(CacheFailure(message: 'No cached product data')));

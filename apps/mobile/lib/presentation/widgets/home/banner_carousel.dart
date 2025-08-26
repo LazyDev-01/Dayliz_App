@@ -15,7 +15,7 @@ class BannerCarousel extends StatefulWidget {
   const BannerCarousel({
     super.key,
     required this.banners,
-    this.height = 200,
+    this.height = 140, // Modern app standard height (reduced from 200)
     this.autoScrollDuration = const Duration(seconds: 5),
     this.animationDuration = const Duration(milliseconds: 400),
     this.enableAutoScroll = true,
@@ -360,27 +360,28 @@ class _BannerCarouselState extends State<BannerCarousel>
   Widget _buildErrorWidget() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: Colors.grey[50],
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.broken_image,
-              size: 48,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Image not available',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
-            ),
-          ],
+            ],
+          ),
+          child: Icon(
+            Icons.image_not_supported_rounded,
+            color: Colors.grey[400],
+            size: 20,
+          ),
         ),
       ),
     );

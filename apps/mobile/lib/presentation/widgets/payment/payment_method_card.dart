@@ -19,6 +19,8 @@ class PaymentMethodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isComingSoon = paymentMethod.details['isComingSoon'] == true;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -35,7 +37,7 @@ class PaymentMethodCard extends StatelessWidget {
       child: Column(
         children: [
           InkWell(
-            onTap: onTap,
+            onTap: isComingSoon ? null : onTap,
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -54,10 +56,10 @@ class PaymentMethodCard extends StatelessWidget {
                           children: [
                             Text(
                               paymentMethod.nickName ?? _getDefaultTitle(),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.black87,
+                                color: isComingSoon ? Colors.grey[500] : Colors.black87,
                               ),
                             ),
                             if (paymentMethod.isDefault) ...[
@@ -81,6 +83,27 @@ class PaymentMethodCard extends StatelessWidget {
                                 ),
                               ),
                             ],
+                            if (isComingSoon) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  'Coming Soon',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 2),
@@ -88,33 +111,36 @@ class PaymentMethodCard extends StatelessWidget {
                           _getCardDetails(),
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey[600],
+                            color: isComingSoon ? Colors.grey[400] : Colors.grey[600],
                           ),
                         ),
                       ],
                     ),
                   ),
                   
-                  // Circular checkbox
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isSelected ? Colors.green : Colors.grey[400]!,
-                        width: 2,
+                  // Circular checkbox (hidden for coming soon methods)
+                  if (!isComingSoon)
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? Colors.green : Colors.grey[400]!,
+                          width: 2,
+                        ),
+                        color: isSelected ? Colors.green : Colors.transparent,
                       ),
-                      color: isSelected ? Colors.green : Colors.transparent,
-                    ),
-                    child: isSelected
-                        ? const Icon(
-                            Icons.check,
-                            color: Colors.white,
-                            size: 16,
-                          )
-                        : null,
-                  ),
+                      child: isSelected
+                          ? const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 16,
+                            )
+                          : null,
+                    )
+                  else
+                    const SizedBox(width: 24), // Maintain spacing
                 ],
               ),
             ),

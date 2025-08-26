@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:dayliz_app/models/product.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dayliz_app/services/image_service.dart';
+
+import '../../../domain/entities/product.dart';
+import '../../../core/constants/app_colors.dart';
 
 class ProductHorizontalList extends StatelessWidget {
   final List<Product> products;
@@ -70,17 +72,38 @@ class ProductHorizontalList extends StatelessWidget {
           tag: heroTag,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: imageService.getOptimizedImage(
-              imageUrl: product.imageUrl,
+            child: CachedNetworkImage(
+              imageUrl: product.mainImageUrl,
               width: itemWidth,
               height: itemWidth,
               fit: BoxFit.cover,
-              quality: 70,
+              memCacheWidth: 300,
+              memCacheHeight: 300,
+              placeholder: (context, url) => Container(
+                width: itemWidth,
+                height: itemWidth,
+                color: Colors.grey[200],
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              errorWidget: (context, url, error) => Container(
+                width: itemWidth,
+                height: itemWidth,
+                color: Colors.grey[200],
+                child: const Icon(
+                  Icons.image_not_supported_outlined,
+                  color: Colors.grey,
+                ),
+              ),
             ),
           ),
         ),
         // Discount tag if applicable
-        if (product.hasDiscount)
+        if (product.discountPercentage != null && product.discountPercentage! > 0)
           Positioned(
             top: 8,
             left: 8,
@@ -123,9 +146,9 @@ class ProductHorizontalList extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (product.hasDiscount)
+            if (product.discountPercentage != null && product.discountPercentage! > 0)
               Text(
-                '₹${product.price.toStringAsFixed(2)}',
+                '₹${product.originalPrice.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontSize: 12,
                   decoration: TextDecoration.lineThrough,
@@ -149,7 +172,7 @@ class ProductHorizontalList extends StatelessWidget {
               const Icon(Icons.star, color: Colors.amber, size: 14),
               const SizedBox(width: 2),
               Text(
-                product.rating.toStringAsFixed(1),
+                product.rating?.toStringAsFixed(1) ?? '0.0',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,

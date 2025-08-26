@@ -15,7 +15,6 @@ class EditAddressUseCase implements UseCase<Address, EditAddressParams> {
   Future<Either<Failure, Address>> call(EditAddressParams params) async {
     return await repository.updateAddress(
       params.userId,
-      params.addressId,
       params.updatedAddress,
     );
   }

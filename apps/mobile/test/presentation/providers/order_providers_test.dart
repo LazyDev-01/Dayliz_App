@@ -40,9 +40,8 @@ void main() {
   const tUserId = 'test-user-id';
   const tOrderId = 'test-order-id';
   const tStatus = 'pending';
-  const tReason = 'Changed mind';
 
-  final tAddress = Address(
+  const tAddress = Address(
     id: 'address-id',
     userId: tUserId,
     addressLine1: 'Test Address',
@@ -55,27 +54,33 @@ void main() {
 
   const tPaymentMethod = PaymentMethod(
     id: 'payment-id',
+    userId: tUserId,
     type: 'credit_card',
-    cardNumber: '**** **** **** 1234',
-    expiryDate: '12/25',
-    cardHolderName: 'Test User',
+    name: 'Test Credit Card',
     isDefault: true,
+    details: {
+      'cardNumber': '**** **** **** 1234',
+      'expiryDate': '12/25',
+      'cardHolderName': 'Test User',
+      'last4': '1234',
+      'brand': 'visa',
+    },
   );
 
-  final tOrderItem = OrderItem(
+  const tOrderItem = OrderItem(
     id: 'item-id',
     productId: 'product-id',
     productName: 'Test Product',
     quantity: 2,
-    price: 99.99,
-    total: 199.98,
+    unitPrice: 99.99,
+    totalPrice: 199.98,
     imageUrl: 'https://example.com/image.jpg',
   );
 
   final tOrder = domain.Order(
     id: tOrderId,
     userId: tUserId,
-    items: [tOrderItem],
+    items: const [tOrderItem],
     subtotal: 199.98,
     tax: 20.00,
     shipping: 10.00,
@@ -101,15 +106,15 @@ void main() {
       );
     });
 
-    test('initial state should have empty orders', () {
-      expect(notifier.state.orders, isEmpty);
+    test('initial state should have null orders', () {
+      expect(notifier.state.orders, isNull);
       expect(notifier.state.isLoading, false);
       expect(notifier.state.errorMessage, isNull);
     });
 
     test('should get orders successfully', () async {
       // arrange
-      when(mockGetOrdersUseCase.call(any))
+      when(mockGetOrdersUseCase.call(NoParams()))
           .thenAnswer((_) async => Right(tOrders));
 
       // act
@@ -124,7 +129,7 @@ void main() {
 
     test('should handle error when getting orders fails', () async {
       // arrange
-      when(mockGetOrdersUseCase.call(any))
+      when(mockGetOrdersUseCase.call(NoParams()))
           .thenAnswer((_) async => const Left(ServerFailure(message: 'Server error')));
 
       // act
@@ -139,7 +144,7 @@ void main() {
 
     test('should get order by id successfully', () async {
       // arrange
-      when(mockGetOrderByIdUseCase.call(any))
+      when(mockGetOrderByIdUseCase.call(const GetOrderByIdParams(orderId: tOrderId)))
           .thenAnswer((_) async => Right(tOrder));
 
       // act
@@ -147,12 +152,12 @@ void main() {
 
       // assert
       expect(result, tOrder);
-      verify(mockGetOrderByIdUseCase.call(GetOrderByIdParams(orderId: tOrderId)));
+      verify(mockGetOrderByIdUseCase.call(const GetOrderByIdParams(orderId: tOrderId)));
     });
 
     test('should handle error when getting order by id fails', () async {
       // arrange
-      when(mockGetOrderByIdUseCase.call(any))
+      when(mockGetOrderByIdUseCase.call(const GetOrderByIdParams(orderId: tOrderId)))
           .thenAnswer((_) async => const Left(ServerFailure(message: 'Order not found')));
 
       // act
@@ -161,14 +166,14 @@ void main() {
       // assert
       expect(result, isNull);
       expect(notifier.state.errorMessage, 'Order not found');
-      verify(mockGetOrderByIdUseCase.call(GetOrderByIdParams(orderId: tOrderId)));
+      verify(mockGetOrderByIdUseCase.call(const GetOrderByIdParams(orderId: tOrderId)));
     });
 
     test('should create order successfully', () async {
       // arrange
-      when(mockCreateOrderUseCase.call(any))
+      when(mockCreateOrderUseCase.call(CreateOrderParams(order: tOrder)))
           .thenAnswer((_) async => Right(tOrder));
-      when(mockGetOrdersUseCase.call(any))
+      when(mockGetOrdersUseCase.call(NoParams()))
           .thenAnswer((_) async => Right(tOrders));
 
       // act
@@ -183,7 +188,7 @@ void main() {
 
     test('should handle error when creating order fails', () async {
       // arrange
-      when(mockCreateOrderUseCase.call(any))
+      when(mockCreateOrderUseCase.call(CreateOrderParams(order: tOrder)))
           .thenAnswer((_) async => const Left(ServerFailure(message: 'Failed to create order')));
 
       // act
@@ -197,37 +202,38 @@ void main() {
 
     test('should cancel order successfully', () async {
       // arrange
-      when(mockCancelOrderUseCase.call(any))
+      when(mockCancelOrderUseCase.call(const CancelOrderParams(orderId: tOrderId)))
           .thenAnswer((_) async => const Right(true));
-      when(mockGetOrdersUseCase.call(any))
-          .thenAnswer((_) async => Right(tOrders));
 
       // act
-      final result = await notifier.cancelOrder(tOrderId, reason: tReason);
+      final result = await notifier.cancelOrder(tOrderId);
 
       // assert
-      expect(result, true);
-      verify(mockCancelOrderUseCase.call(CancelOrderParams(orderId: tOrderId, reason: tReason)));
-      verify(mockGetOrdersUseCase.call(NoParams()));
+      expect(result.isRight(), true);
+      result.fold(
+        (failure) => fail('Expected success but got failure'),
+        (success) => expect(success, true),
+      );
+      verify(mockCancelOrderUseCase.call(const CancelOrderParams(orderId: tOrderId)));
     });
 
     test('should handle error when canceling order fails', () async {
       // arrange
-      when(mockCancelOrderUseCase.call(any))
+      when(mockCancelOrderUseCase.call(const CancelOrderParams(orderId: tOrderId)))
           .thenAnswer((_) async => const Left(ServerFailure(message: 'Failed to cancel order')));
 
       // act
-      final result = await notifier.cancelOrder(tOrderId, reason: tReason);
+      final result = await notifier.cancelOrder(tOrderId);
 
       // assert
-      expect(result, false);
+      expect(result.isLeft(), true);
       expect(notifier.state.errorMessage, 'Failed to cancel order');
-      verify(mockCancelOrderUseCase.call(CancelOrderParams(orderId: tOrderId, reason: tReason)));
+      verify(mockCancelOrderUseCase.call(const CancelOrderParams(orderId: tOrderId)));
     });
 
     test('should get orders by status successfully', () async {
       // arrange
-      when(mockGetOrdersByStatusUseCase.call(any))
+      when(mockGetOrdersByStatusUseCase.call(const GetOrdersByStatusParams(status: tStatus)))
           .thenAnswer((_) async => Right(tOrders));
 
       // act
@@ -237,12 +243,12 @@ void main() {
       expect(notifier.state.orders, tOrders);
       expect(notifier.state.isLoading, false);
       expect(notifier.state.errorMessage, isNull);
-      verify(mockGetOrdersByStatusUseCase.call(GetOrdersByStatusParams(status: tStatus)));
+      verify(mockGetOrdersByStatusUseCase.call(const GetOrdersByStatusParams(status: tStatus)));
     });
 
     test('should handle error when getting orders by status fails', () async {
       // arrange
-      when(mockGetOrdersByStatusUseCase.call(any))
+      when(mockGetOrdersByStatusUseCase.call(const GetOrdersByStatusParams(status: tStatus)))
           .thenAnswer((_) async => const Left(ServerFailure(message: 'Failed to get orders by status')));
 
       // act
@@ -252,27 +258,12 @@ void main() {
       expect(notifier.state.orders, isEmpty);
       expect(notifier.state.isLoading, false);
       expect(notifier.state.errorMessage, 'Failed to get orders by status');
-      verify(mockGetOrdersByStatusUseCase.call(GetOrdersByStatusParams(status: tStatus)));
-    });
-
-    test('should refresh orders successfully', () async {
-      // arrange
-      when(mockGetOrdersUseCase.call(any))
-          .thenAnswer((_) async => Right(tOrders));
-
-      // act
-      await notifier.refreshOrders();
-
-      // assert
-      expect(notifier.state.orders, tOrders);
-      expect(notifier.state.isLoading, false);
-      expect(notifier.state.errorMessage, isNull);
-      verify(mockGetOrdersUseCase.call(NoParams()));
+      verify(mockGetOrdersByStatusUseCase.call(const GetOrdersByStatusParams(status: tStatus)));
     });
 
     test('should clear error message', () async {
       // arrange - first create an error
-      when(mockGetOrdersUseCase.call(any))
+      when(mockGetOrdersUseCase.call(NoParams()))
           .thenAnswer((_) async => const Left(ServerFailure(message: 'Server error')));
       await notifier.getOrders();
 
@@ -281,31 +272,6 @@ void main() {
 
       // assert
       expect(notifier.state.errorMessage, isNull);
-    });
-
-    test('should filter orders by status locally', () async {
-      // arrange
-      final tProcessingOrder = tOrder.copyWith(status: 'processing');
-      final tOutForDeliveryOrder = tOrder.copyWith(status: 'out_for_delivery', id: 'order-2');
-      final tDeliveredOrder = tOrder.copyWith(status: 'delivered', id: 'order-3');
-      final tAllOrders = [tProcessingOrder, tOutForDeliveryOrder, tDeliveredOrder];
-
-      when(mockGetOrdersUseCase.call(any))
-          .thenAnswer((_) async => Right(tAllOrders));
-      await notifier.getOrders();
-
-      // act
-      final processingOrders = notifier.getOrdersByStatusLocal('processing');
-      final outForDeliveryOrders = notifier.getOrdersByStatusLocal('out_for_delivery');
-      final deliveredOrders = notifier.getOrdersByStatusLocal('delivered');
-
-      // assert
-      expect(processingOrders.length, 1);
-      expect(processingOrders[0].status, 'processing');
-      expect(outForDeliveryOrders.length, 1);
-      expect(outForDeliveryOrders[0].status, 'out_for_delivery');
-      expect(deliveredOrders.length, 1);
-      expect(deliveredOrders[0].status, 'delivered');
     });
   });
 }

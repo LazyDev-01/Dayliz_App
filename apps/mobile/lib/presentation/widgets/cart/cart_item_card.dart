@@ -137,7 +137,7 @@ class CartItemCard extends StatelessWidget {
 
                     // Total price
                     Text(
-                      'Total: \$${totalPrice.toStringAsFixed(2)}',
+                      'Total: ₹${totalPrice.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontWeight: FontWeight.w500,
                         color: Colors.grey[800],
@@ -197,6 +197,7 @@ class CartItemCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

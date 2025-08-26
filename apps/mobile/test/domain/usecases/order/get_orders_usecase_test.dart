@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:dayliz_app/core/errors/failures.dart';
@@ -11,8 +12,8 @@ import 'package:dayliz_app/domain/entities/payment_method.dart';
 import 'package:dayliz_app/domain/repositories/order_repository.dart';
 import 'package:dayliz_app/domain/usecases/orders/get_orders_usecase.dart';
 
-// Manual mock class
-class MockOrderRepository extends Mock implements OrderRepository {}
+@GenerateMocks([OrderRepository])
+import 'get_orders_usecase_test.mocks.dart';
 
 void main() {
   late GetOrdersUseCase usecase;
@@ -25,7 +26,7 @@ void main() {
 
   const tUserId = 'test-user-id';
 
-  final tAddress = Address(
+  const tAddress = Address(
     id: 'address-id',
     userId: tUserId,
     addressLine1: 'Test Address',
@@ -38,14 +39,19 @@ void main() {
 
   const tPaymentMethod = PaymentMethod(
     id: 'payment-id',
+    userId: tUserId,
     type: 'credit_card',
-    cardNumber: '**** **** **** 1234',
-    expiryDate: '12/25',
-    cardHolderName: 'Test User',
+    name: 'Credit Card',
     isDefault: true,
+    details: {
+      'cardNumber': '**** **** **** 1234',
+      'expiryDate': '12/25',
+      'cardHolderName': 'Test User',
+      'last4': '1234',
+    },
   );
 
-  final tOrderItem = OrderItem(
+  const tOrderItem = OrderItem(
     id: 'item-id',
     productId: 'product-id',
     productName: 'Test Product',
@@ -59,7 +65,7 @@ void main() {
     id: 'test-order-id',
     userId: tUserId,
     orderNumber: 'DLZ-20250609-0001',
-    items: [tOrderItem],
+    items: const [tOrderItem],
     subtotal: 199.98,
     tax: 20.00,
     shipping: 10.00,
@@ -81,7 +87,11 @@ void main() {
     final result = await usecase(NoParams());
 
     // assert
-    expect(result, Right(tOrders));
+    expect(result.isRight(), true);
+    result.fold(
+      (failure) => fail('Should return orders'),
+      (orders) => expect(orders, tOrders),
+    );
     verify(mockOrderRepository.getOrders());
     verifyNoMoreInteractions(mockOrderRepository);
   });
@@ -103,13 +113,13 @@ void main() {
   test('should return empty list when no orders found', () async {
     // arrange
     when(mockOrderRepository.getOrders())
-        .thenAnswer((_) async => const Right([]));
+        .thenAnswer((_) async => const Right(<domain.Order>[]));
 
     // act
     final result = await usecase(NoParams());
 
     // assert
-    expect(result, const Right([]));
+    expect(result, const Right(<domain.Order>[]));
     verify(mockOrderRepository.getOrders());
     verifyNoMoreInteractions(mockOrderRepository);
   });
@@ -156,7 +166,7 @@ void main() {
     final result = await usecase(NoParams());
 
     // assert
-    expect(result, Right(tMixedOrders));
+    expect(result.isRight(), true);
     result.fold(
       (failure) => fail('Should return orders'),
       (orders) {
@@ -172,7 +182,7 @@ void main() {
 
   test('should handle orders with complex order items', () async {
     // arrange
-    final tComplexOrderItem1 = OrderItem(
+    const tComplexOrderItem1 = OrderItem(
       id: 'item-1',
       productId: 'product-1',
       productName: 'Complex Product 1',
@@ -182,7 +192,7 @@ void main() {
       imageUrl: 'https://example.com/image1.jpg',
     );
 
-    final tComplexOrderItem2 = OrderItem(
+    const tComplexOrderItem2 = OrderItem(
       id: 'item-2',
       productId: 'product-2',
       productName: 'Complex Product 2',
@@ -205,7 +215,7 @@ void main() {
     final result = await usecase(NoParams());
 
     // assert
-    expect(result, Right([tComplexOrder]));
+    expect(result.isRight(), true);
     result.fold(
       (failure) => fail('Should return orders'),
       (orders) {

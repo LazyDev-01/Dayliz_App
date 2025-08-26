@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:dayliz_app/core/errors/exceptions.dart';
@@ -8,12 +9,12 @@ import 'package:dayliz_app/core/network/network_info.dart';
 import 'package:dayliz_app/data/datasources/product_local_data_source.dart';
 import 'package:dayliz_app/data/datasources/product_remote_data_source.dart';
 import 'package:dayliz_app/data/repositories/product_repository_impl.dart';
-import 'package:dayliz_app/domain/entities/product.dart';
+import 'package:dayliz_app/data/models/product_model.dart';
 
-// Manual mock classes
-class MockProductRemoteDataSource extends Mock implements ProductRemoteDataSource {}
-class MockProductLocalDataSource extends Mock implements ProductLocalDataSource {}
-class MockNetworkInfo extends Mock implements NetworkInfo {}
+import 'product_repository_impl_test.mocks.dart';
+
+// Generate mocks
+@GenerateMocks([ProductRemoteDataSource, ProductLocalDataSource, NetworkInfo])
 
 void main() {
   late ProductRepositoryImpl repository;
@@ -39,7 +40,7 @@ void main() {
   const tPage = 1;
   const tLimit = 10;
 
-  const tProduct = Product(
+  const tProductModel = ProductModel(
     id: tProductId,
     name: 'Test Product',
     description: 'Test Description',
@@ -55,7 +56,7 @@ void main() {
     brand: 'Test Brand',
   );
 
-  const tProductList = [tProduct];
+  const tProductList = [tProductModel];
 
   group('getProducts', () {
     test('should check if the device is online', () async {
@@ -173,7 +174,7 @@ void main() {
           ascending: anyNamed('ascending'),
           minPrice: anyNamed('minPrice'),
           maxPrice: anyNamed('maxPrice'),
-        )).thenThrow(const ServerException(message: 'Server error'));
+        )).thenThrow(ServerException(message: 'Server error'));
 
         // act
         final result = await repository.getProducts(
@@ -223,7 +224,7 @@ void main() {
       test('should return CacheFailure when there is no cached data present', () async {
         // arrange
         when(mockLocalDataSource.getCachedProducts())
-            .thenThrow(const CacheException(message: 'No cached data'));
+            .thenThrow(CacheException(message: 'No cached data'));
 
         // act
         final result = await repository.getProducts(
@@ -244,21 +245,21 @@ void main() {
     test('should return product when the call to remote data source is successful', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(mockRemoteDataSource.getProductById(any)).thenAnswer((_) async => tProduct);
+      when(mockRemoteDataSource.getProductById(any)).thenAnswer((_) async => tProductModel);
 
       // act
       final result = await repository.getProductById(tProductId);
 
       // assert
       verify(mockRemoteDataSource.getProductById(tProductId));
-      expect(result, equals(const Right(tProduct)));
+      expect(result, equals(const Right(tProductModel)));
     });
 
     test('should return failure when the call to remote data source is unsuccessful', () async {
       // arrange
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
       when(mockRemoteDataSource.getProductById(any))
-          .thenThrow(const ServerException(message: 'Product not found'));
+          .thenThrow(ServerException(message: 'Product not found'));
 
       // act
       final result = await repository.getProductById(tProductId);

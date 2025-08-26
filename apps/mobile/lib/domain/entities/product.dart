@@ -25,6 +25,7 @@ class Product extends Equatable {
   final DateTime? updatedAt;
   final List<String>? images;
   final bool onSale;
+  final bool isFeatured;
   final String? categoryName;
   final String? subcategoryName;
   final String? vendorId;
@@ -57,6 +58,7 @@ class Product extends Equatable {
     this.updatedAt,
     this.images,
     this.onSale = false,
+    this.isFeatured = false,
     this.categoryName,
     this.subcategoryName,
     this.vendorId,
@@ -91,6 +93,7 @@ class Product extends Equatable {
         updatedAt,
         images,
         onSale,
+        isFeatured,
         categoryName,
         subcategoryName,
         vendorId,

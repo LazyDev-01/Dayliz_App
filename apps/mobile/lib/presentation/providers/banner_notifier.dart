@@ -11,8 +11,14 @@ class BannerNotifier extends StateNotifier<BannerState> {
     required this.getActiveBannersUseCase,
   }) : super(const BannerState());
 
-  /// Load active banners from the repository
-  Future<void> loadActiveBanners() async {
+  /// Load active banners from the repository with cache awareness
+  Future<void> loadActiveBanners({bool forceRefresh = false}) async {
+    // Don't reload if we already have banners and it's not a forced refresh
+    if (!forceRefresh && state.hasBanners && !state.hasError) {
+      print('✅ Banners already loaded, skipping reload');
+      return;
+    }
+
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     final result = await getActiveBannersUseCase(NoParams());
@@ -26,6 +32,7 @@ class BannerNotifier extends StateNotifier<BannerState> {
         isLoading: false,
         banners: banners,
         errorMessage: null,
+        lastUpdated: DateTime.now(),
       ),
     );
   }
@@ -37,9 +44,9 @@ class BannerNotifier extends StateNotifier<BannerState> {
     }
   }
 
-  /// Refresh banners (reload from repository)
+  /// Refresh banners (force reload from repository)
   Future<void> refreshBanners() async {
-    await loadActiveBanners();
+    await loadActiveBanners(forceRefresh: true);
   }
 
   /// Clear error message

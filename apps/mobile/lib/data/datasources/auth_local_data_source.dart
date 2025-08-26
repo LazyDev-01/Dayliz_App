@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../domain/entities/user.dart';
 import '../../core/errors/exceptions.dart';
@@ -28,68 +28,104 @@ abstract class AuthLocalDataSource implements AuthDataSource {
 
 /// Implementation of [AuthLocalDataSource]
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
-  final SharedPreferences sharedPreferences;
+  final FlutterSecureStorage _secureStorage;
   static const String CACHED_USER_KEY = 'CACHED_USER';
   static const String AUTH_TOKEN_KEY = 'AUTH_TOKEN';
 
-  AuthLocalDataSourceImpl({required this.sharedPreferences});
+  AuthLocalDataSourceImpl({required FlutterSecureStorage secureStorage})
+      : _secureStorage = secureStorage;
 
   @override
   Future<bool> cacheUser(User user) async {
-    return await sharedPreferences.setString(
-      CACHED_USER_KEY,
-      json.encode({
-        'id': user.id,
-        'email': user.email,
-        'name': user.name,
-        'phone': user.phone,
-        'profile_image_url': user.profileImageUrl,
-        'is_email_verified': user.isEmailVerified,
-        'metadata': user.metadata,
-      }),
-    );
+    try {
+      await _secureStorage.write(
+        key: CACHED_USER_KEY,
+        value: json.encode({
+          'id': user.id,
+          'email': user.email,
+          'name': user.name,
+          'phone': user.phone,
+          'profile_image_url': user.profileImageUrl,
+          'is_email_verified': user.isEmailVerified,
+          'metadata': user.metadata,
+        }),
+      );
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   @override
   Future<User?> getCachedUser() async {
-    final userStr = sharedPreferences.getString(CACHED_USER_KEY);
-    if (userStr != null) {
-      try {
-        final userMap = json.decode(userStr) as Map<String, dynamic>;
-        return User(
-          id: userMap['id'],
-          email: userMap['email'],
-          name: userMap['name'],
-          phone: userMap['phone'],
-          profileImageUrl: userMap['profile_image_url'],
-          isEmailVerified: userMap['is_email_verified'],
-          metadata: userMap['metadata'],
-        );
-      } catch (e) {
-        throw CacheException(message: 'Failed to parse cached user data');
+    try {
+      final userStr = await _secureStorage.read(key: CACHED_USER_KEY);
+      if (userStr != null) {
+        try {
+          final userMap = json.decode(userStr) as Map<String, dynamic>;
+          return User(
+            id: userMap['id'],
+            email: userMap['email'],
+            name: userMap['name'],
+            phone: userMap['phone'],
+            profileImageUrl: userMap['profile_image_url'],
+            isEmailVerified: userMap['is_email_verified'],
+            metadata: userMap['metadata'],
+          );
+        } catch (e) {
+          throw CacheException(message: 'Failed to parse cached user data');
+        }
       }
+      return null;
+    } catch (e) {
+      throw CacheException(message: 'Failed to read cached user data');
     }
-    return null;
   }
 
   @override
   Future<bool> cacheToken(String token) async {
-    return await sharedPreferences.setString(AUTH_TOKEN_KEY, token);
+    try {
+      await _secureStorage.write(key: AUTH_TOKEN_KEY, value: token);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   @override
   String? getCachedToken() {
-    return sharedPreferences.getString(AUTH_TOKEN_KEY);
+    // Note: FlutterSecureStorage read is async, but this method signature is sync
+    // We'll need to handle this differently - for now, return null and use async version
+    return null;
+  }
+
+  /// Async version of getCachedToken for secure storage
+  Future<String?> getCachedTokenAsync() async {
+    try {
+      return await _secureStorage.read(key: AUTH_TOKEN_KEY);
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
   Future<bool> clearToken() async {
-    return await sharedPreferences.remove(AUTH_TOKEN_KEY);
+    try {
+      await _secureStorage.delete(key: AUTH_TOKEN_KEY);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   @override
   Future<bool> clearUser() async {
-    return await sharedPreferences.remove(CACHED_USER_KEY);
+    try {
+      await _secureStorage.delete(key: CACHED_USER_KEY);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   @override
@@ -122,7 +158,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<bool> isAuthenticated() async {
-    final token = getCachedToken();
+    final token = await getCachedTokenAsync();
     return token != null && token.isNotEmpty;
   }
 
@@ -153,7 +189,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<String> refreshToken() async {
     // Return cached token if available
-    final token = getCachedToken();
+    final token = await getCachedTokenAsync();
     if (token != null && token.isNotEmpty) {
       return token;
     }

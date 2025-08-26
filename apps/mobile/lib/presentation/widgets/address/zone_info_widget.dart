@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dayliz_app/models/zone.dart';
-import 'package:dayliz_app/providers/zone_provider.dart';
+
+import '../../../domain/entities/zone.dart';
+import '../../providers/zone_providers.dart';
 
 class ZoneInfoWidget extends ConsumerWidget {
   final double? latitude;
@@ -22,7 +23,7 @@ class ZoneInfoWidget extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final zoneAsyncValue = ref.watch(zoneForCoordinatesProvider(
+    final zoneAsyncValue = ref.watch(zoneObjectForCoordinatesProvider(
       (latitude: latitude!, longitude: longitude!)
     ));
 
@@ -32,10 +33,10 @@ class ZoneInfoWidget extends ConsumerWidget {
           return Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.errorContainer.withOpacity(0.2),
+              color: theme.colorScheme.errorContainer.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: theme.colorScheme.error.withOpacity(0.5),
+                color: theme.colorScheme.error.withValues(alpha: 0.5),
                 width: 1,
               ),
             ),
@@ -74,10 +75,10 @@ class ZoneInfoWidget extends ConsumerWidget {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer.withOpacity(0.2),
+            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: theme.colorScheme.primary.withOpacity(0.5),
+              color: theme.colorScheme.primary.withValues(alpha: 0.5),
               width: 1,
             ),
           ),
@@ -121,7 +122,7 @@ class ZoneInfoWidget extends ConsumerWidget {
                     child: _buildInfoItem(
                       theme,
                       'Delivery Fee',
-                      '₹${zone.deliveryFee.toStringAsFixed(2)}',
+                      '₹${zone.deliveryFee?.toStringAsFixed(2) ?? '0.00'}',
                       Icons.local_shipping,
                     ),
                   ),
@@ -129,7 +130,7 @@ class ZoneInfoWidget extends ConsumerWidget {
                     child: _buildInfoItem(
                       theme,
                       'Min Order',
-                      '₹${zone.minimumOrderAmount.toStringAsFixed(2)}',
+                      '₹${zone.minimumOrderAmount?.toStringAsFixed(2) ?? '0.00'}',
                       Icons.shopping_cart,
                     ),
                   ),
@@ -152,7 +153,7 @@ class ZoneInfoWidget extends ConsumerWidget {
       error: (error, stackTrace) => Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: theme.colorScheme.errorContainer.withOpacity(0.2),
+          color: theme.colorScheme.errorContainer.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(

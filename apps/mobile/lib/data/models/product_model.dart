@@ -29,6 +29,7 @@ class ProductModel extends Product {
     String? vendorFssaiLicense,
     String? vendorAddress,
     bool nutriActive = false,
+    bool isFeatured = false,
   }) : super(
           id: id,
           name: name,
@@ -56,6 +57,7 @@ class ProductModel extends Product {
           vendorFssaiLicense: vendorFssaiLicense,
           vendorAddress: vendorAddress,
           nutriActive: nutriActive,
+          isFeatured: isFeatured,
         );
 
   /// Create a ProductModel from a Product entity
@@ -89,6 +91,7 @@ class ProductModel extends Product {
       vendorFssaiLicense: domainProduct.vendorFssaiLicense,
       vendorAddress: domainProduct.vendorAddress,
       nutriActive: domainProduct.nutriActive,
+      isFeatured: domainProduct.isFeatured,
     );
   }
 
@@ -127,6 +130,7 @@ class ProductModel extends Product {
       vendorFssaiLicense: json['vendor_fssai_license'],
       vendorAddress: json['vendor_address'],
       nutriActive: json['nutri_active'] ?? false,
+      isFeatured: json['is_featured'] ?? false,
     );
   }
 
@@ -157,6 +161,7 @@ class ProductModel extends Product {
       'vendor_fssai_license': vendorFssaiLicense,
       'vendor_address': vendorAddress,
       'nutri_active': nutriActive,
+      'is_featured': isFeatured,
     };
   }
 
@@ -188,6 +193,7 @@ class ProductModel extends Product {
     String? vendorFssaiLicense,
     String? vendorAddress,
     bool? nutriActive,
+    bool? isFeatured,
   }) {
     return ProductModel(
       id: id ?? this.id,
@@ -216,6 +222,7 @@ class ProductModel extends Product {
       vendorFssaiLicense: vendorFssaiLicense ?? this.vendorFssaiLicense,
       vendorAddress: vendorAddress ?? this.vendorAddress,
       nutriActive: nutriActive ?? this.nutriActive,
+      isFeatured: isFeatured ?? this.isFeatured,
     );
   }
 }

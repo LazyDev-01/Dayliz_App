@@ -16,7 +16,7 @@ class EnhancedBannerCarousel extends ConsumerStatefulWidget {
 
   const EnhancedBannerCarousel({
     Key? key,
-    this.height = 200,
+    this.height = 140, // Modern app standard height (reduced from 200)
     this.autoScrollDuration = const Duration(seconds: 5),
     this.animationDuration = const Duration(milliseconds: 400),
     this.enableAutoScroll = true,
@@ -30,9 +30,12 @@ class _EnhancedBannerCarouselState extends ConsumerState<EnhancedBannerCarousel>
   @override
   void initState() {
     super.initState();
-    // Load banners when widget initializes
+    // Load banners when widget initializes (only if not already loaded)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(bannerNotifierProvider.notifier).loadActiveBanners();
+      final bannerState = ref.read(bannerNotifierProvider);
+      if (!bannerState.hasBanners && !bannerState.isLoading) {
+        ref.read(bannerNotifierProvider.notifier).loadActiveBanners();
+      }
     });
   }
 
@@ -116,9 +119,9 @@ class _EnhancedBannerCarouselState extends ConsumerState<EnhancedBannerCarousel>
       height: widget.height,
       margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: Colors.grey[50],
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[300]!, width: 1),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
       ),
       child: Center(
         child: GestureDetector(
@@ -127,22 +130,22 @@ class _EnhancedBannerCarouselState extends ConsumerState<EnhancedBannerCarousel>
             ref.read(bannerNotifierProvider.notifier).refreshBanners();
           },
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: Icon(
-              Icons.refresh,
-              color: Colors.grey[600],
-              size: 20,
+              Icons.refresh_rounded,
+              color: Colors.grey[500],
+              size: 24,
             ),
           ),
         ),

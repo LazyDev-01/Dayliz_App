@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:dayliz_app/core/errors/failures.dart';
@@ -7,8 +8,8 @@ import 'package:dayliz_app/domain/entities/payment_method.dart';
 import 'package:dayliz_app/domain/repositories/payment_method_repository.dart';
 import 'package:dayliz_app/domain/usecases/payment_method/get_payment_methods_usecase.dart';
 
-// Manual mock class
-class MockPaymentMethodRepository extends Mock implements PaymentMethodRepository {}
+@GenerateMocks([PaymentMethodRepository])
+import 'get_payment_methods_usecase_test.mocks.dart';
 
 void main() {
   late GetPaymentMethodsUseCase usecase;
@@ -52,7 +53,7 @@ void main() {
 
   test('should get payment methods from the repository', () async {
     // arrange
-    when(mockPaymentMethodRepository.getPaymentMethods(any))
+    when(mockPaymentMethodRepository.getPaymentMethods(tUserId))
         .thenAnswer((_) async => const Right(tPaymentMethods));
 
     // act
@@ -66,7 +67,7 @@ void main() {
 
   test('should return failure when repository call fails', () async {
     // arrange
-    when(mockPaymentMethodRepository.getPaymentMethods(any))
+    when(mockPaymentMethodRepository.getPaymentMethods(tUserId))
         .thenAnswer((_) async => const Left(ServerFailure(message: 'Server error')));
 
     // act
@@ -80,21 +81,21 @@ void main() {
 
   test('should return empty list when no payment methods found', () async {
     // arrange
-    when(mockPaymentMethodRepository.getPaymentMethods(any))
-        .thenAnswer((_) async => const Right([]));
+    when(mockPaymentMethodRepository.getPaymentMethods(tUserId))
+        .thenAnswer((_) async => const Right(<PaymentMethod>[]));
 
     // act
     final result = await usecase(tUserId);
 
     // assert
-    expect(result, const Right([]));
+    expect(result, const Right(<PaymentMethod>[]));
     verify(mockPaymentMethodRepository.getPaymentMethods(tUserId));
     verifyNoMoreInteractions(mockPaymentMethodRepository);
   });
 
   test('should return network failure when device is offline', () async {
     // arrange
-    when(mockPaymentMethodRepository.getPaymentMethods(any))
+    when(mockPaymentMethodRepository.getPaymentMethods(tUserId))
         .thenAnswer((_) async => const Left(NetworkFailure(message: 'No internet connection')));
 
     // act
@@ -108,7 +109,7 @@ void main() {
 
   test('should return cache failure when no cached data available', () async {
     // arrange
-    when(mockPaymentMethodRepository.getPaymentMethods(any))
+    when(mockPaymentMethodRepository.getPaymentMethods(tUserId))
         .thenAnswer((_) async => const Left(CacheFailure(message: 'No cached payment methods')));
 
     // act
@@ -154,7 +155,7 @@ void main() {
       tDebitCardPaymentMethod,
     ];
 
-    when(mockPaymentMethodRepository.getPaymentMethods(any))
+    when(mockPaymentMethodRepository.getPaymentMethods(tUserId))
         .thenAnswer((_) async => const Right(tMixedPaymentMethods));
 
     // act
@@ -178,7 +179,7 @@ void main() {
 
   test('should handle payment methods with default status', () async {
     // arrange
-    when(mockPaymentMethodRepository.getPaymentMethods(any))
+    when(mockPaymentMethodRepository.getPaymentMethods(tUserId))
         .thenAnswer((_) async => const Right(tPaymentMethods));
 
     // act
@@ -217,14 +218,14 @@ void main() {
       },
     );
 
-    when(mockPaymentMethodRepository.getPaymentMethods(any))
-        .thenAnswer((_) async => Right([tPaymentMethodWithDetails]));
+    when(mockPaymentMethodRepository.getPaymentMethods(tUserId))
+        .thenAnswer((_) async => const Right([tPaymentMethodWithDetails]));
 
     // act
     final result = await usecase(tUserId);
 
     // assert
-    expect(result, Right([tPaymentMethodWithDetails]));
+    expect(result, const Right([tPaymentMethodWithDetails]));
     result.fold(
       (failure) => fail('Should return payment methods'),
       (methods) {
@@ -241,7 +242,7 @@ void main() {
   test('should handle empty user id', () async {
     // arrange
     const emptyUserId = '';
-    when(mockPaymentMethodRepository.getPaymentMethods(any))
+    when(mockPaymentMethodRepository.getPaymentMethods(emptyUserId))
         .thenAnswer((_) async => const Left(ServerFailure(message: 'Invalid user ID')));
 
     // act
@@ -267,7 +268,7 @@ void main() {
       },
     );
 
-    when(mockPaymentMethodRepository.getPaymentMethods(any))
+    when(mockPaymentMethodRepository.getPaymentMethods(tUserId))
         .thenAnswer((_) async => const Right([tUpiPaymentMethod]));
 
     // act

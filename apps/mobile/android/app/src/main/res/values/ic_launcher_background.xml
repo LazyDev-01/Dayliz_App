@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- White background for app icon to match logo -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+
+    <!-- Dayliz brand colors for launch screen -->
+    <color name="zest_yellow">#FFD700</color>
+    <color name="dayliz_green">#2E7D32</color>
+</resources>

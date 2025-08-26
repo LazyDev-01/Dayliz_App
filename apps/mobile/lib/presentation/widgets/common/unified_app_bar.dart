@@ -8,7 +8,6 @@ import '../../../core/utils/address_formatter.dart';
 import '../../providers/user_profile_providers.dart';
 import 'svg_icon_button.dart';
 import '../../../core/constants/app_colors.dart';
-import 'animated_cloud_background.dart';
 
 /// Unified app bar system for consistent design across all screens
 /// 
@@ -357,238 +356,134 @@ class UnifiedAppBars {
     );
   }
 
-  /// Creates the home screen app bar with enhanced profile icon, search bar, and cloud animation
+  /// Creates the home screen app bar with collapsible behavior and sticky search functionality
   ///
-  /// This preserves all the original home screen features while using the unified system:
-  /// - Enhanced profile icon with animations
-  /// - Integrated search bar with custom styling
-  /// - Gradient background (green to yellow)
-  /// - Optional cloud animations
-  /// - "Dayliz" branding with custom typography
+  /// Features:
+  /// - Collapsible app bar that hides delivery address and profile on scroll down
+  /// - Sticky search bar that remains visible when collapsed
+  /// - Top-to-bottom gradient background (green to yellow)
+  /// - Smooth animations for expand/collapse transitions
+  /// - No rounded corners for modern flat design
+
+
+  /// Legacy method for backward compatibility - returns single widget
+  static Widget homeScreenCollapsible({
+    required VoidCallback onSearchTap,
+    required VoidCallback onProfileTap,
+    String? userPhotoUrl,
+    String searchHint = 'Search for products...',
+  }) {
+    // For now, return the old implementation to avoid breaking changes
+    return _CollapsibleHomeAppBar(
+      onSearchTap: onSearchTap,
+      onProfileTap: onProfileTap,
+      userPhotoUrl: userPhotoUrl,
+      searchHint: searchHint,
+    );
+  }
+
+  /// Creates the legacy home screen app bar (for backward compatibility)
   static PreferredSizeWidget homeScreen({
     required VoidCallback onSearchTap,
     required VoidCallback onProfileTap,
     String? userPhotoUrl,
     String searchHint = 'Search for products...',
-    bool enableCloudAnimation = false,
-    CloudAnimationType cloudType = CloudAnimationType.peaceful,
-    Color? cloudColor,
-    double cloudOpacity = 0.15,
   }) {
-    return _UnifiedHomeAppBar(
+    return _OptimizedHomeAppBar(
       onSearchTap: onSearchTap,
       onProfileTap: onProfileTap,
       userPhotoUrl: userPhotoUrl,
       searchHint: searchHint,
-      enableCloudAnimation: enableCloudAnimation,
-      cloudType: cloudType,
-      cloudColor: cloudColor ?? Colors.white,
-      cloudOpacity: cloudOpacity,
     );
   }
 }
 
-/// Unified Home App Bar that preserves all original home screen features
-/// while integrating with the unified app bar system
-/// Now includes location indicator for location-first workflow
-class _UnifiedHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
+/// Collapsible Home App Bar with sticky search functionality
+///
+/// Features:
+/// - Collapsible behavior: hides delivery address and profile on scroll down
+/// - Sticky search bar that remains visible when collapsed
+/// - Smooth animations for expand/collapse transitions
+/// - Top-to-bottom gradient background
+class _CollapsibleHomeAppBar extends ConsumerWidget {
   final VoidCallback onSearchTap;
   final VoidCallback onProfileTap;
   final String? userPhotoUrl;
   final String searchHint;
-  final bool enableCloudAnimation;
-  final CloudAnimationType cloudType;
-  final Color cloudColor;
-  final double cloudOpacity;
 
-  // Location functionality temporarily disabled
-
-  const _UnifiedHomeAppBar({
+  const _CollapsibleHomeAppBar({
     required this.onSearchTap,
     required this.onProfileTap,
     this.userPhotoUrl,
     required this.searchHint,
-    required this.enableCloudAnimation,
-    required this.cloudType,
-    required this.cloudColor,
-    required this.cloudOpacity,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Enhanced profile icon with sophisticated design
-    final profileIcon = _UnifiedEnhancedProfileIcon(
-      userPhotoUrl: userPhotoUrl,
-      onTap: onProfileTap,
-    );
-
-    // Create the actions list with the enhanced profile icon
-    final actions = <Widget>[
-      // Enhanced profile icon button with increased spacing
-      Padding(
-        padding: const EdgeInsets.only(right: 20.0), // Increased right padding
-        child: profileIcon,
+    return SliverAppBar(
+      expandedHeight: 60, // Further reduced for complete collapse
+      floating: false, // Don't show on scroll up
+      pinned: false, // Don't pin the delivery section - let it scroll away completely
+      snap: false, // No snap behavior
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      backgroundColor: Colors.transparent,
+      // No toolbarHeight - this allows it to collapse completely
+      toolbarHeight: 0, // This makes it disappear completely when collapsed
+      flexibleSpace: FlexibleSpaceBar(
+        background: _buildDeliveryAddressSection(context, ref),
+        collapseMode: CollapseMode.parallax,
       ),
-    ];
+    );
+  }
 
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(kToolbarHeight + 80), // Reduced size since no category icons
-      child: Container(
-        decoration: BoxDecoration(
-          // Fresh Green to Sunny Yellow - 120deg linear gradient for better balance
-          gradient: const LinearGradient(
-            begin: Alignment(-0.8, -1.0), // 120 degrees equivalent
-            end: Alignment(0.8, 1.0),
-            colors: [
-              Color(0xFFB5E853), // Slightly brighter fresh green
-              Color(0xFFFFD54F), // Slightly brighter sunny yellow
-            ],
-          ),
-          borderRadius: const BorderRadius.vertical(
-            bottom: Radius.circular(16), // Increased radius for modern look
-          ),
-          boxShadow: [
-            // Fresh green shadow for depth
-            BoxShadow(
-              color: Color(0xFFB5E853).withAlpha(20),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-              spreadRadius: 0,
-            ),
-            // Sunny yellow glow effect
-            BoxShadow(
-              color: Color(0xFFFFD54F).withAlpha(25),
-              blurRadius: 28,
-              offset: const Offset(0, 3),
-              spreadRadius: -4,
-            ),
-            // Light highlight
-            BoxShadow(
-              color: Colors.white.withAlpha(60),
-              blurRadius: 1,
-              offset: const Offset(0, 1),
-              spreadRadius: 0,
-            ),
+  /// Builds the delivery address section (collapsible part)
+  Widget _buildDeliveryAddressSection(BuildContext context, WidgetRef ref) {
+    return Container(
+      decoration: const BoxDecoration(
+        // Top-to-bottom gradient (green to yellow)
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFB5E853), // Fresh green at top
+            Color(0xFFFFD54F), // Sunny yellow at bottom
           ],
         ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(
-            bottom: Radius.circular(16),
+        // No rounded corners for modern flat design
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x1A000000), // Subtle shadow
+            blurRadius: 4,
+            offset: Offset(0, 2),
           ),
-          child: Builder(
-            builder: (context) {
-              final mediaQuery = MediaQuery.of(context);
-              final statusBarHeight = mediaQuery.padding.top;
-
-              // Calculate dynamic spacing based on status bar height - increased for less clutter
-              final topSpacing = statusBarHeight > 24 ? 16.0 : 12.0;
-
-              final appBar = AppBar(
-                title: Container(
-                  margin: EdgeInsets.only(top: topSpacing),
-                  child: _buildLocationTitle(context, ref), // Move location to title position
-                ),
-                centerTitle: false,
-                backgroundColor: Colors.transparent, // Let gradient show through
-                foregroundColor: const Color(0xFF1F2937), // Dark gray icons for excellent contrast
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                actions: actions.map((action) {
-                  // Add top margin to actions (profile icon) for consistent spacing
-                  return Container(
-                    margin: EdgeInsets.only(top: topSpacing),
-                    child: action,
-                  );
-                }).toList(),
-                toolbarHeight: kToolbarHeight + 16, // Adjusted to match profile icon proportions
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(60), // Reduced size since location moved to title
-                  child: Column(
-                    children: [
-                      // Search bar section only
-
-                      // Search bar section
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 12), // Reduced bottom padding
-                        child: GestureDetector(
-                          onTap: onSearchTap,
-                          child: Container(
-                            height: 44, // Matches profile icon size
-                            decoration: BoxDecoration(
-                              // Enhanced search bar with better contrast
-                              color: Colors.white.withAlpha(242), // rgba(255, 255, 255, 0.95)
-                              borderRadius: BorderRadius.circular(14), // More rounded for modern look
-                              border: Border.all(
-                                color: Colors.white.withAlpha(150), // Slightly more visible border
-                                width: 1.0, // Thinner border for cleaner look
-                              ),
-                              boxShadow: [
-                                // Enhanced shadow for depth - 0 2px 6px rgba(0, 0, 0, 0.08)
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(20), // rgba(0, 0, 0, 0.08)
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                  spreadRadius: 0,
-                                ),
-                                // Inner highlight for premium feel
-                                BoxShadow(
-                                  color: Colors.white.withAlpha(120),
-                                  blurRadius: 1,
-                                  offset: const Offset(0, 1),
-                                  spreadRadius: 0,
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                const SizedBox(width: 14),
-                                const Icon(
-                                  Icons.search_rounded, // More modern rounded search icon
-                                  color: Color(0xFF1F2937), // Dark gray for contrast
-                                  size: 22, // Slightly larger for better visibility
-                                ),
-                                const SizedBox(width: 14),
-                                Text(
-                                  searchHint,
-                                  style: const TextStyle(
-                                    color: Color(0xFF6B7280), // Neutral gray for placeholder text
-                                    fontSize: 16, // Better readability
-                                    fontWeight: FontWeight.w500, // Medium weight for premium feel
-                                    letterSpacing: 0.2, // Subtle letter spacing
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-
-              if (enableCloudAnimation) {
-                return Stack(
-                  children: [
-                    appBar,
-                    // Animated cloud background overlay
-                    Positioned.fill(
-                      child: _buildCloudBackground(),
-                    ),
-                  ],
-                );
-              } else {
-                return appBar;
-              }
-            },
+        ],
+      ),
+      child: SafeArea(
+        bottom: false, // Don't add bottom padding
+        child: Container(
+          height: 48, // Reduced height for more compact design
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          margin: const EdgeInsets.only(top: 2), // Even smaller margin
+          child: Row(
+            children: [
+              // Delivery address - wrapped in Expanded to prevent overflow
+              Expanded(
+                child: _buildDeliveryAddress(context, ref),
+              ),
+              const SizedBox(width: 12), // Fixed spacing
+              // Profile icon
+              _buildProfileIcon(),
+            ],
           ),
         ),
       ),
     );
   }
 
-  /// Builds the location title widget - Modern delivery address selector
-  Widget _buildLocationTitle(BuildContext context, WidgetRef ref) {
+  /// Builds the delivery address widget
+  Widget _buildDeliveryAddress(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () {
         HapticService.light();
@@ -633,45 +528,47 @@ class _UnifiedHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Deliver to',
-                          style: TextStyle(
-                            color: Colors.white.withAlpha(180),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Deliver to',
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(180),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 18,
-                          color: Colors.white.withAlpha(200),
-                        ),
-                      ],
-                    ),
-                    const Text(
-                      'Loading...',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 16,
+                            color: Colors.white.withAlpha(200),
+                          ),
+                        ],
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                      const Text(
+                        'Loading...',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );
           }
 
-          // Main address display
+          // Main address display - optimized for space
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -689,7 +586,7 @@ class _UnifiedHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Flexible(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -701,14 +598,14 @@ class _UnifiedHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                           'Deliver to',
                           style: TextStyle(
                             color: Colors.white.withAlpha(180),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Icon(
                           Icons.keyboard_arrow_down,
-                          size: 18,
+                          size: 16,
                           color: Colors.white.withAlpha(200),
                         ),
                       ],
@@ -717,7 +614,7 @@ class _UnifiedHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                       isLocationSet ? address : 'Select location',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -733,7 +630,272 @@ class _UnifiedHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
     );
   }
 
+  /// Builds the profile icon widget
+  Widget _buildProfileIcon() {
+    return GestureDetector(
+      onTap: onProfileTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withAlpha(30),
+          border: Border.all(
+            color: Colors.white.withAlpha(60),
+            width: 1,
+          ),
+        ),
+        child: userPhotoUrl != null && userPhotoUrl!.isNotEmpty
+            ? ClipOval(
+                child: Image.network(
+                  userPhotoUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.person,
+                      color: Color(0xFF1F2937),
+                      size: 20,
+                    );
+                  },
+                ),
+              )
+            : const Icon(
+                Icons.person,
+                color: Color(0xFF1F2937),
+                size: 20,
+              ),
+      ),
+    );
+  }
 
+  /// Navigate to address screen for location management
+  void _navigateToAddressScreen(BuildContext context) {
+    debugPrint('🔄 [LocationIndicator] Navigating to address screen from app bar');
+    context.push('/addresses');
+  }
+}
+
+/// Optimized Home App Bar with delivery address and sticky search functionality
+/// - Dayliz branding instead of location display
+/// - Top-to-bottom gradient (green to yellow)
+/// - No rounded corners for modern flat design
+/// - Sticky search bar on scroll
+/// - Enhanced profile icon
+class _OptimizedHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
+  final VoidCallback onSearchTap;
+  final VoidCallback onProfileTap;
+  final String? userPhotoUrl;
+  final String searchHint;
+
+  const _OptimizedHomeAppBar({
+    required this.onSearchTap,
+    required this.onProfileTap,
+    this.userPhotoUrl,
+    required this.searchHint,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight + 70),
+      child: Container(
+        decoration: const BoxDecoration(
+          // Top-to-bottom gradient (green to yellow)
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFB5E853), // Fresh green at top
+              Color(0xFFFFD54F), // Sunny yellow at bottom
+            ],
+          ),
+          // No rounded corners for modern flat design
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x1A000000), // Subtle shadow
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Main app bar with Dayliz branding
+              Container(
+                height: kToolbarHeight,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    // Delivery address - wrapped in Expanded to prevent overflow
+                    Expanded(
+                      child: _buildDeliveryAddress(context, ref),
+                    ),
+                    const SizedBox(width: 12), // Fixed spacing instead of Spacer
+                    // Profile icon
+                    _buildProfileIcon(),
+                  ],
+                ),
+              ),
+              // Search bar
+              _buildSearchBar(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 70);
+
+  /// Builds the delivery address widget
+  Widget _buildDeliveryAddress(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () {
+        HapticService.light();
+        _navigateToAddressScreen(context);
+      },
+      child: Consumer(
+        builder: (context, ref, child) {
+          // Watch user profile state for reactive updates
+          final userProfileState = ref.watch(userProfileNotifierProvider);
+          final addresses = userProfileState.addresses ?? [];
+
+          String address = 'Set your location';
+          bool isLocationSet = false;
+
+          if (addresses.isNotEmpty) {
+            // Find default address or use first address
+            final defaultAddress = addresses.firstWhere(
+              (address) => address.isDefault,
+              orElse: () => addresses.first,
+            );
+
+            // Format address for display (compact format)
+            address = AddressFormatter.formatAddressCompact(defaultAddress);
+            isLocationSet = true;
+          }
+
+          if (userProfileState.isAddressesLoading) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withAlpha(20),
+                  ),
+                  child: Icon(
+                    Icons.location_on,
+                    size: 18,
+                    color: Colors.white.withAlpha(220),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded( // Added Expanded to prevent overflow
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Deliver to',
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(180),
+                              fontSize: 14, // Reduced from 16
+                              fontWeight: FontWeight.w600, // Reduced from w700
+                            ),
+                          ),
+                          const SizedBox(width: 6), // Reduced from 8
+                          Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 16, // Reduced from 18
+                            color: Colors.white.withAlpha(200),
+                          ),
+                        ],
+                      ),
+                      const Text(
+                        'Loading...',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13, // Reduced from 14
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }
+
+          // Main address display - optimized for space
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withAlpha(20),
+                ),
+                child: Icon(
+                  Icons.location_on,
+                  size: 18,
+                  color: Colors.white.withAlpha(220),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded( // Changed from Flexible to Expanded for better space usage
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Deliver to',
+                          style: TextStyle(
+                            color: Colors.white.withAlpha(180),
+                            fontSize: 14, // Reduced from 16 to save space
+                            fontWeight: FontWeight.w600, // Reduced from w700
+                          ),
+                        ),
+                        const SizedBox(width: 6), // Reduced from 8
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 16, // Reduced from 18
+                          color: Colors.white.withAlpha(200),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      isLocationSet ? address : 'Select location',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13, // Reduced from 14 to save space
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   /// Navigate to address screen for location management
   void _navigateToAddressScreen(BuildContext context) {
@@ -741,34 +903,99 @@ class _UnifiedHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
     context.push('/addresses');
   }
 
-  /// Builds the cloud background based on the selected type
-  Widget _buildCloudBackground() {
-    switch (cloudType) {
-      case CloudAnimationType.subtle:
-        return CloudBackgrounds.subtle(
-          cloudColor: cloudColor,
-          opacity: cloudOpacity,
-        );
-      case CloudAnimationType.prominent:
-        return CloudBackgrounds.prominent(
-          cloudColor: cloudColor,
-          opacity: cloudOpacity,
-        );
-      case CloudAnimationType.dense:
-        return CloudBackgrounds.dense(
-          cloudColor: cloudColor,
-          opacity: cloudOpacity,
-        );
-      case CloudAnimationType.peaceful:
-        return CloudBackgrounds.peaceful(
-          cloudColor: cloudColor,
-          opacity: cloudOpacity,
-        );
-    }
+  /// Builds the profile icon widget
+  Widget _buildProfileIcon() {
+    return GestureDetector(
+      onTap: onProfileTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withAlpha(30),
+          border: Border.all(
+            color: Colors.white.withAlpha(60),
+            width: 1,
+          ),
+        ),
+        child: userPhotoUrl != null && userPhotoUrl!.isNotEmpty
+            ? ClipOval(
+                child: Image.network(
+                  userPhotoUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.person,
+                      color: Color(0xFF1F2937),
+                      size: 20,
+                    );
+                  },
+                ),
+              )
+            : const Icon(
+                Icons.person,
+                color: Color(0xFF1F2937),
+                size: 20,
+              ),
+      ),
+    );
   }
 
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 80); // Reduced since location moved to title
+  /// Builds the search bar widget with sticky functionality
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Hero(
+        tag: 'search_bar', // Hero animation for sticky behavior
+        child: Material(
+          color: Colors.transparent,
+          child: GestureDetector(
+            onTap: onSearchTap,
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(242),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withAlpha(150),
+                  width: 1.0,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x14000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 14),
+                  const Icon(
+                    Icons.search_rounded,
+                    color: Color(0xFF1F2937),
+                    size: 22,
+                  ),
+                  const SizedBox(width: 14),
+                  Text(
+                    searchHint,
+                    style: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
 }
 
 /// Enhanced profile icon widget with sophisticated design and animations

@@ -7,7 +7,6 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import '../config/network_config.dart';
 import '../errors/failures.dart';
 import '../errors/exceptions.dart';
-import '../services/network_service.dart';
 import '../services/error_logging_service.dart';
 
 /// Base repository with standardized error handling and retry mechanisms
@@ -99,11 +98,15 @@ abstract class BaseRepository {
       final List<T> successResults = [];
       
       for (final result in results) {
+        if (result.isLeft() && failFast) {
+          return result.fold(
+            (failure) => Left(failure),
+            (_) => Right(successResults), // This won't be reached
+          );
+        }
+
         result.fold(
           (failure) {
-            if (failFast) {
-              return Left(failure);
-            }
             // Continue collecting results even if some fail
           },
           (success) => successResults.add(success),
@@ -240,33 +243,33 @@ abstract class BaseRepository {
     final code = error.code;
     
     // Business logic errors
-    if (message.contains('insufficient_stock') || 
+    if (message.contains('insufficient_stock') ||
         message.contains('out_of_stock')) {
-      return ValidationFailure(message: 'Some items are out of stock');
+      return const ValidationFailure(message: 'Some items are out of stock');
     }
-    
-    if (message.contains('delivery_area') || 
+
+    if (message.contains('delivery_area') ||
         message.contains('service_area')) {
-      return ValidationFailure(message: 'Service not available in your area');
+      return const ValidationFailure(message: 'Service not available in your area');
     }
-    
+
     if (message.contains('minimum_order')) {
-      return ValidationFailure(message: 'Minimum order amount not met');
+      return const ValidationFailure(message: 'Minimum order amount not met');
     }
     
     // Permission errors
     if (code == '42501' || message.contains('permission denied')) {
-      return AuthFailure(message: 'You don\'t have permission for this action');
+      return const AuthFailure(message: 'You don\'t have permission for this action');
     }
-    
+
     // Not found errors
     if (code == '42P01' || message.contains('does not exist')) {
-      return NotFoundFailure(message: 'Requested resource not found');
+      return const NotFoundFailure(message: 'Requested resource not found');
     }
-    
+
     // Constraint violations
     if (message.contains('duplicate key') || message.contains('already exists')) {
-      return ValidationFailure(message: 'This item already exists');
+      return const ValidationFailure(message: 'This item already exists');
     }
     
     // Default server error

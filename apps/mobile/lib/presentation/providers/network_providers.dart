@@ -14,24 +14,29 @@ final networkInfoProvider = Provider<NetworkInfo>((ref) {
 class ConnectivityNotifier extends StateNotifier<ConnectivityState> {
   Timer? _connectivityTimer;
   StreamSubscription? _connectivitySubscription;
+  int _consecutiveFailures = 0;
+  static const int _failureThreshold = 2; // Require 2 consecutive failures before marking as disconnected
 
-  ConnectivityNotifier() : super(ConnectivityState.unknown()) {
+  ConnectivityNotifier() : super(ConnectivityState.connected()) {
+    // Start with optimistic connected state to prevent initial flickering
     _initializeConnectivity();
   }
 
   /// Initialize connectivity monitoring
   void _initializeConnectivity() async {
-    // Get initial connectivity state
-    await _checkConnectivity();
+    // Delay initial check to allow app to settle
+    Future.delayed(const Duration(seconds: 3), () {
+      _checkConnectivity();
+    });
 
-    // Set up periodic checks (every 30 seconds when app is active)
+    // Set up periodic checks (every 45 seconds when app is active - less aggressive)
     _connectivityTimer = Timer.periodic(
-      const Duration(seconds: 30),
+      const Duration(seconds: 45),
       (_) => _checkConnectivity(),
     );
   }
 
-  /// Check connectivity and update state
+  /// Check connectivity and update state with failure threshold
   Future<void> _checkConnectivity() async {
     if (state.isChecking) return; // Prevent multiple simultaneous checks
 
@@ -39,23 +44,53 @@ class ConnectivityNotifier extends StateNotifier<ConnectivityState> {
 
     try {
       final hasConnection = await ConnectivityChecker.hasConnection(fastMode: true);
-      final newState = hasConnection
-          ? ConnectivityState.connected()
-          : ConnectivityState.disconnected();
 
-      // Only update if state actually changed to prevent unnecessary rebuilds
-      if (state.status != newState.status) {
-        state = newState;
+      if (hasConnection) {
+        // Reset failure counter on successful connection
+        _consecutiveFailures = 0;
+        final newState = ConnectivityState.connected();
+
+        // Only update if state actually changed to prevent unnecessary rebuilds
+        if (state.status != newState.status) {
+          state = newState;
+        } else {
+          state = state.copyWith(isChecking: false);
+        }
+      } else {
+        // Increment failure counter
+        _consecutiveFailures++;
+
+        // Only mark as disconnected after threshold failures
+        if (_consecutiveFailures >= _failureThreshold) {
+          final newState = ConnectivityState.disconnected();
+
+          if (state.status != newState.status) {
+            state = newState;
+          } else {
+            state = state.copyWith(isChecking: false);
+          }
+        } else {
+          // Keep current state but stop checking indicator
+          state = state.copyWith(isChecking: false);
+        }
+      }
+    } catch (e) {
+      // On exception, increment failure counter
+      _consecutiveFailures++;
+
+      // Only mark as disconnected after threshold failures
+      if (_consecutiveFailures >= _failureThreshold) {
+        state = ConnectivityState.disconnected();
       } else {
         state = state.copyWith(isChecking: false);
       }
-    } catch (e) {
-      state = ConnectivityState.disconnected();
     }
   }
 
   /// Force refresh connectivity (for retry buttons)
   Future<void> refresh() async {
+    // Reset failure counter on manual refresh
+    _consecutiveFailures = 0;
     await _checkConnectivity();
   }
 

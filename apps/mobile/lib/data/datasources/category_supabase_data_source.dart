@@ -18,7 +18,9 @@ class CategorySupabaseDataSource implements CategoryRemoteDataSource {
       final response = await supabaseClient
           .from('categories')
           .select('*')
-          .order('display_order', ascending: true); // Explicitly order ascending by display_order
+          .eq('is_active', true)
+          .eq('show_in_categories_screen', true)
+          .order('display_order', ascending: true);
 
       debugPrint('🏷️ CATEGORIES: Raw response: $response');
       final categories = response.map((data) => _mapToCategory(data)).toList();
@@ -55,11 +57,12 @@ class CategorySupabaseDataSource implements CategoryRemoteDataSource {
   Future<List<CategoryModel>> getCategoriesWithSubcategories() async {
     try {
       // Get categories with their subcategories
-      // Don't rely on database display_order, we'll sort manually
       final response = await supabaseClient
           .from('categories')
           .select('*, subcategories(*)')
-          .order('display_order', ascending: true); // Explicitly order ascending by display_order
+          .eq('is_active', true)
+          .eq('show_in_categories_screen', true)
+          .order('display_order', ascending: true);
 
       final categories = response.map((data) => _mapToCategoryWithSubcategories(data)).toList();
 

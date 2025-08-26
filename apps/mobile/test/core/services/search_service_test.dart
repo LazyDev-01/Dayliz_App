@@ -31,16 +31,15 @@ void main() {
         name: 'Test Product 1',
         description: 'Test Description 1',
         price: 10.0,
-        imageUrl: 'test_image_1.jpg',
+        mainImageUrl: 'test_image_1.jpg',
         categoryId: 'cat1',
         subcategoryId: 'subcat1',
-        isAvailable: true,
-        stock: 100,
-        unit: 'piece',
-        weight: 1.0,
+        inStock: true,
+        stockQuantity: 100,
+        weight: '1.0 kg',
         brand: 'Test Brand',
-        tags: ['test'],
-        nutritionalInfo: {},
+        tags: const ['test'],
+        nutritionalInfo: const {},
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
@@ -49,16 +48,15 @@ void main() {
         name: 'Test Product 2',
         description: 'Test Description 2',
         price: 20.0,
-        imageUrl: 'test_image_2.jpg',
+        mainImageUrl: 'test_image_2.jpg',
         categoryId: 'cat1',
         subcategoryId: 'subcat1',
-        isAvailable: true,
-        stock: 50,
-        unit: 'piece',
-        weight: 2.0,
+        inStock: true,
+        stockQuantity: 50,
+        weight: '2.0 kg',
         brand: 'Test Brand',
-        tags: ['test'],
-        nutritionalInfo: {},
+        tags: const ['test'],
+        nutritionalInfo: const {},
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
@@ -69,7 +67,7 @@ void main() {
       const query = 'test';
       when(mockProductRepository.searchProducts(
         query: query,
-        page: null,
+        page: 1,
         limit: 20,
       )).thenAnswer((_) async => Right(testProducts));
 
@@ -89,7 +87,7 @@ void main() {
 
       verify(mockProductRepository.searchProducts(
         query: query,
-        page: null,
+        page: 1,
         limit: 20,
       )).called(1);
     });
@@ -100,7 +98,7 @@ void main() {
       const failure = ServerFailure(message: 'Server error');
       when(mockProductRepository.searchProducts(
         query: query,
-        page: null,
+        page: 1,
         limit: 20,
       )).thenAnswer((_) async => const Left(failure));
 
@@ -130,11 +128,7 @@ void main() {
         },
       );
 
-      verifyNever(mockProductRepository.searchProducts(
-        query: anyNamed('query'),
-        page: anyNamed('page'),
-        limit: anyNamed('limit'),
-      ));
+      verifyZeroInteractions(mockProductRepository);
     });
 
     test('should cache search results', () async {
@@ -142,7 +136,7 @@ void main() {
       const query = 'test';
       when(mockProductRepository.searchProducts(
         query: query,
-        page: null,
+        page: 1,
         limit: 20,
       )).thenAnswer((_) async => Right(testProducts));
 
@@ -164,7 +158,7 @@ void main() {
       // Repository should only be called once due to caching
       verify(mockProductRepository.searchProducts(
         query: query,
-        page: null,
+        page: 1,
         limit: 20,
       )).called(1);
     });
@@ -174,7 +168,7 @@ void main() {
       const query = 'test';
       when(mockProductRepository.searchProducts(
         query: query,
-        page: null,
+        page: 1,
         limit: 20,
       )).thenAnswer((_) async => Right(testProducts));
 
@@ -192,9 +186,9 @@ void main() {
       const query1 = 'test1';
       const query2 = 'test2';
       when(mockProductRepository.searchProducts(
-        query: anyNamed('query'),
-        page: anyNamed('page'),
-        limit: anyNamed('limit'),
+        query: argThat(isA<String>()),
+        page: argThat(anything),
+        limit: argThat(anything),
       )).thenAnswer((_) async => Right(testProducts));
 
       // Act
@@ -213,9 +207,9 @@ void main() {
       const query1 = 'test product';
       const query2 = 'test item';
       when(mockProductRepository.searchProducts(
-        query: anyNamed('query'),
-        page: anyNamed('page'),
-        limit: anyNamed('limit'),
+        query: argThat(isA<String>()),
+        page: argThat(anything),
+        limit: argThat(anything),
       )).thenAnswer((_) async => Right(testProducts));
 
       // Act - Build search history
@@ -244,7 +238,7 @@ void main() {
       const query = 'test';
       when(mockProductRepository.searchProducts(
         query: query,
-        page: null,
+        page: 1,
         limit: 20,
       )).thenAnswer((_) async => Right(testProducts));
 

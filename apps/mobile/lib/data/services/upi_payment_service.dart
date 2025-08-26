@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
-import '../../core/constants/api_constants.dart';
+import '../../core/config/app_config.dart';
 import '../../core/error/exceptions.dart';
 import '../models/upi_payment_model.dart';
 
@@ -13,8 +13,8 @@ class UpiPaymentService {
 
   UpiPaymentService({
     required this.client,
-    this.baseUrl = ApiConstants.baseUrl,
-  });
+    String? baseUrl,
+  }) : baseUrl = baseUrl ?? AppConfig.fastApiBaseUrl;
 
   /// Create order with payment method selection
   Future<OrderCreationResponse> createOrderWithPayment({
@@ -35,7 +35,7 @@ class UpiPaymentService {
         final data = json.decode(response.body);
         return OrderCreationResponse.fromJson(data);
       } else if (response.statusCode == 401) {
-        throw AuthenticationException('Authentication failed');
+        throw const AuthException('Authentication failed');
       } else {
         final errorData = json.decode(response.body);
         throw ServerException(
@@ -67,9 +67,9 @@ class UpiPaymentService {
         final data = json.decode(response.body);
         return PaymentStatusResponse.fromJson(data);
       } else if (response.statusCode == 401) {
-        throw AuthenticationException('Authentication failed');
+        throw const AuthException('Authentication failed');
       } else if (response.statusCode == 404) {
-        throw NotFoundException('Order not found');
+        throw const NotFoundException(message: 'Order not found');
       } else {
         final errorData = json.decode(response.body);
         throw ServerException(
@@ -102,7 +102,7 @@ class UpiPaymentService {
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else if (response.statusCode == 401) {
-        throw AuthenticationException('Authentication failed');
+        throw const AuthException('Authentication failed');
       } else if (response.statusCode == 400) {
         final errorData = json.decode(response.body);
         throw ValidationException(
@@ -141,7 +141,7 @@ class UpiPaymentService {
         final data = json.decode(response.body);
         return PaymentResponse.fromJson(data);
       } else if (response.statusCode == 401) {
-        throw AuthenticationException('Authentication failed');
+        throw const AuthException('Authentication failed');
       } else if (response.statusCode == 400) {
         final errorData = json.decode(response.body);
         throw ValidationException(
@@ -180,7 +180,7 @@ class UpiPaymentService {
         final data = json.decode(response.body);
         return PaymentResponse.fromJson(data);
       } else if (response.statusCode == 401) {
-        throw AuthenticationException('Authentication failed');
+        throw const AuthException('Authentication failed');
       } else if (response.statusCode == 400) {
         final errorData = json.decode(response.body);
         throw ValidationException(
@@ -225,7 +225,7 @@ class UpiPaymentService {
         final data = json.decode(response.body);
         return RazorpayOrderResponse.fromJson(data);
       } else if (response.statusCode == 401) {
-        throw AuthenticationException('Authentication failed');
+        throw const AuthException('Authentication failed');
       } else if (response.statusCode == 400) {
         final errorData = json.decode(response.body);
         throw ValidationException(

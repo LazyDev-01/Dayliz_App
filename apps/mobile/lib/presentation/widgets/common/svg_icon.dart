@@ -37,11 +37,18 @@ class SvgIcon extends StatelessWidget {
 /// Enum containing all available SVG icons in the app
 enum DaylizIcons {
   // Navigation Icons
-  home('assets/icons/svg_icons/home.svg', 'Home'),
   cart('assets/icons/svg_icons/cart.svg', 'Shopping Cart'),
   profile('assets/icons/svg_icons/profile.svg', 'Profile'),
   menu('assets/icons/svg_icons/menu.svg', 'Menu'),
   search('assets/icons/svg_icons/search.svg', 'Search'),
+
+  // Home Icons (Basil Design)
+  homeOutline('assets/icons/svg_icons/Basil/Outline/Home.svg', 'Home'),
+  homeFilled('assets/icons/svg_icons/Basil/solid/Home_filled.svg', 'Home Active'),
+
+  // Categories Icons (Basil Design)
+  categoriesOutline('assets/icons/svg_icons/Basil/Outline/Categories.svg', 'Categories'),
+  categoriesFilled('assets/icons/svg_icons/Basil/solid/Categories_filled.svg', 'Categories Active'),
   
   // Arrow Icons
   arrowBackward('assets/icons/svg_icons/arrow_backward.svg', 'Back'),

@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:dayliz_app/core/errors/failures.dart';
@@ -10,8 +11,8 @@ import 'package:dayliz_app/domain/entities/payment_method.dart';
 import 'package:dayliz_app/domain/repositories/order_repository.dart';
 import 'package:dayliz_app/domain/usecases/orders/create_order_usecase.dart';
 
-// Manual mock class
-class MockOrderRepository extends Mock implements OrderRepository {}
+@GenerateMocks([OrderRepository])
+import 'create_order_usecase_test.mocks.dart';
 
 void main() {
   late CreateOrderUseCase usecase;
@@ -38,14 +39,19 @@ void main() {
 
   const tPaymentMethod = PaymentMethod(
     id: 'payment-id',
+    userId: tUserId,
     type: 'credit_card',
-    cardNumber: '**** **** **** 1234',
-    expiryDate: '12/25',
-    cardHolderName: 'Test User',
+    name: 'Credit Card',
     isDefault: true,
+    details: {
+      'cardNumber': '**** **** **** 1234',
+      'expiryDate': '12/25',
+      'cardHolderName': 'Test User',
+      'last4': '1234',
+    },
   );
 
-  final tOrderItem = OrderItem(
+  const tOrderItem = OrderItem(
     id: 'item-id',
     productId: 'product-id',
     productName: 'Test Product',
@@ -59,7 +65,7 @@ void main() {
     id: tOrderId,
     userId: tUserId,
     orderNumber: 'DLZ-20250609-0001',
-    items: [tOrderItem],
+    items: const [tOrderItem],
     subtotal: 199.98,
     tax: 20.00,
     shipping: 10.00,
@@ -72,7 +78,7 @@ void main() {
 
   test('should create order from the repository', () async {
     // arrange
-    when(mockOrderRepository.createOrder(any))
+    when(mockOrderRepository.createOrder(tOrder))
         .thenAnswer((_) async => Right(tOrder));
 
     // act
@@ -86,7 +92,7 @@ void main() {
 
   test('should return failure when repository call fails', () async {
     // arrange
-    when(mockOrderRepository.createOrder(any))
+    when(mockOrderRepository.createOrder(tOrder))
         .thenAnswer((_) async => const Left(ServerFailure(message: 'Failed to create order')));
 
     // act
@@ -100,7 +106,7 @@ void main() {
 
   test('should return network failure when device is offline', () async {
     // arrange
-    when(mockOrderRepository.createOrder(any))
+    when(mockOrderRepository.createOrder(tOrder))
         .thenAnswer((_) async => const Left(NetworkFailure(message: 'No internet connection')));
 
     // act
@@ -114,7 +120,7 @@ void main() {
 
   test('should handle order with multiple items', () async {
     // arrange
-    final tOrderItem2 = OrderItem(
+    const tOrderItem2 = OrderItem(
       id: 'item-id-2',
       productId: 'product-id-2',
       productName: 'Test Product 2',
@@ -130,7 +136,7 @@ void main() {
       total: 384.97,
     );
 
-    when(mockOrderRepository.createOrder(any))
+    when(mockOrderRepository.createOrder(tMultiItemOrder))
         .thenAnswer((_) async => Right(tMultiItemOrder));
 
     // act
@@ -158,7 +164,7 @@ void main() {
       total: 209.98, // Original total minus discount
     );
 
-    when(mockOrderRepository.createOrder(any))
+    when(mockOrderRepository.createOrder(tDiscountedOrder))
         .thenAnswer((_) async => Right(tDiscountedOrder));
 
     // act
@@ -191,7 +197,7 @@ void main() {
 
     final tCashOrder = tOrder.copyWith(paymentMethod: tCashPaymentMethod);
 
-    when(mockOrderRepository.createOrder(any))
+    when(mockOrderRepository.createOrder(tCashOrder))
         .thenAnswer((_) async => Right(tCashOrder));
 
     // act
@@ -203,7 +209,7 @@ void main() {
       (failure) => fail('Should return order'),
       (order) {
         expect(order.paymentMethod.type, 'cash_on_delivery');
-        expect(order.paymentMethod.cardNumber, isNull);
+        expect(order.paymentMethod.details['cardNumber'], isNull);
       },
     );
     verify(mockOrderRepository.createOrder(tCashOrder));
@@ -212,7 +218,7 @@ void main() {
 
   test('should handle order with billing address different from shipping', () async {
     // arrange
-    final tBillingAddress = Address(
+    const tBillingAddress = Address(
       id: 'billing-address-id',
       userId: tUserId,
       addressLine1: 'Billing Address',
@@ -225,7 +231,7 @@ void main() {
 
     final tOrderWithBilling = tOrder.copyWith(billingAddress: tBillingAddress);
 
-    when(mockOrderRepository.createOrder(any))
+    when(mockOrderRepository.createOrder(tOrderWithBilling))
         .thenAnswer((_) async => Right(tOrderWithBilling));
 
     // act
@@ -247,7 +253,7 @@ void main() {
 
   test('should return validation failure for invalid order data', () async {
     // arrange
-    when(mockOrderRepository.createOrder(any))
+    when(mockOrderRepository.createOrder(tOrder))
         .thenAnswer((_) async => const Left(ServerFailure(message: 'Invalid order data')));
 
     // act
@@ -263,7 +269,7 @@ void main() {
     // arrange
     final tOrderWithNotes = tOrder.copyWith(notes: 'Please deliver after 6 PM');
 
-    when(mockOrderRepository.createOrder(any))
+    when(mockOrderRepository.createOrder(tOrderWithNotes))
         .thenAnswer((_) async => Right(tOrderWithNotes));
 
     // act

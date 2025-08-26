@@ -264,8 +264,26 @@ class _LocationAccessScreenState extends ConsumerState<LocationAccessScreen>
   }
 
   Widget _buildLocationAnimation(LocationGatingState locationState) {
+    // For failed state, show icon instead of animation
+    if (locationState.status == LocationGatingStatus.failed) {
+      return Container(
+        width: 200.w,
+        height: 200.h,
+        decoration: BoxDecoration(
+          color: AppColors.greyLight,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.location_off,
+          size: 80.sp,
+          color: AppColors.textSecondary,
+        ),
+      );
+    }
+
+    // For other states, use animation
     String animationAsset;
-    
+
     switch (locationState.status) {
       case LocationGatingStatus.permissionRequesting:
       case LocationGatingStatus.locationDetecting:
@@ -328,9 +346,9 @@ class _LocationAccessScreenState extends ConsumerState<LocationAccessScreen>
         if (errorMsg.contains('permanently denied') || errorMsg.contains('deniedForever')) {
           description = 'Location permission is permanently denied. Please go to Settings > Apps > Dayliz > Permissions and enable Location access.';
         } else if (errorMsg.contains('permission')) {
-          description = 'Location permission is required to find delivery areas near you. Please allow location access and try again.';
+          description = 'Please allow location access and try again.';
         } else if (errorMsg.contains('Network connection required')) {
-          description = 'Internet connection is needed to check service availability. Please connect to WiFi or mobile data and try again.';
+          description = 'Please connect to WiFi or mobile data and try again.';
         } else if (errorMsg.contains('GPS') || errorMsg.contains('disabled') || errorMsg.contains('Location services')) {
           description = 'Please enable GPS/Location services in your device settings and try again.';
         } else if (errorMsg.contains('timeout') || errorMsg.contains('timed out')) {

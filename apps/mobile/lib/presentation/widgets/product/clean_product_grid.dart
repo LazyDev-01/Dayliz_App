@@ -335,7 +335,7 @@ class _CleanProductGridState extends State<CleanProductGrid> {
               ),
               SizedBox(height: 16),
               Text(
-                'No products found',
+                'Stocking up soon',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey,

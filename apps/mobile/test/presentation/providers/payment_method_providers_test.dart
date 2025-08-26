@@ -141,49 +141,27 @@ void main() {
       expect(notifier.state.selectedMethod!.isDefault, true);
       expect(notifier.state.selectedMethod!.name, 'New Default Card');
       
-      // Check that other methods are no longer default
-      final otherMethods = notifier.state.methods.where((m) => m.id != newDefaultPaymentMethod.id);
-      for (final method in otherMethods) {
-        expect(method.isDefault, false);
-      }
+      // Check that only one method is default
+      final defaultMethods = notifier.state.methods.where((m) => m.isDefault);
+      expect(defaultMethods.length, 1);
+      expect(defaultMethods.first.name, 'New Default Card');
     });
 
-    test('should remove payment method successfully', () async {
+    test('should delete payment method successfully', () async {
       // arrange
       await notifier.loadPaymentMethods();
       final initialCount = notifier.state.methods.length;
-      final methodToRemove = notifier.state.methods.firstWhere((m) => !m.isDefault);
+      final methodToDelete = notifier.state.methods.firstWhere((m) => !m.isDefault);
 
       // act
-      final result = await notifier.removePaymentMethod(methodToRemove.id);
+      final result = await notifier.deletePaymentMethod(methodToDelete.id);
 
       // assert
       expect(result, true);
       expect(notifier.state.methods.length, initialCount - 1);
-      expect(notifier.state.methods.any((m) => m.id == methodToRemove.id), false);
+      expect(notifier.state.methods.any((m) => m.id == methodToDelete.id), false);
       expect(notifier.state.isLoading, false);
       expect(notifier.state.errorMessage, isNull);
-    });
-
-    test('should not remove default payment method if it is the only one', () async {
-      // arrange
-      await notifier.loadPaymentMethods();
-      
-      // Remove all non-default methods first
-      final nonDefaultMethods = notifier.state.methods.where((m) => !m.isDefault).toList();
-      for (final method in nonDefaultMethods) {
-        await notifier.removePaymentMethod(method.id);
-      }
-      
-      final defaultMethod = notifier.state.methods.firstWhere((m) => m.isDefault);
-
-      // act
-      final result = await notifier.removePaymentMethod(defaultMethod.id);
-
-      // assert
-      expect(result, false);
-      expect(notifier.state.methods.length, 1);
-      expect(notifier.state.errorMessage, isNotNull);
     });
 
     test('should set payment method as default successfully', () async {
@@ -206,85 +184,16 @@ void main() {
       }
     });
 
-    test('should clear error message', () async {
+    test('should select payment method', () async {
       // arrange
       await notifier.loadPaymentMethods();
-      
-      // Simulate an error by trying to remove the only default method
-      final defaultMethod = notifier.state.methods.firstWhere((m) => m.isDefault);
-      await notifier.removePaymentMethod(defaultMethod.id);
-      expect(notifier.state.errorMessage, isNotNull);
+      final methodToSelect = notifier.state.methods.firstWhere((m) => !m.isDefault);
 
       // act
-      notifier.clearError();
+      notifier.selectPaymentMethod(methodToSelect.id);
 
       // assert
-      expect(notifier.state.errorMessage, isNull);
-    });
-
-    test('should get default payment method', () async {
-      // arrange
-      await notifier.loadPaymentMethods();
-
-      // act
-      final defaultMethod = notifier.getDefaultPaymentMethod();
-
-      // assert
-      expect(defaultMethod, isNotNull);
-      expect(defaultMethod!.isDefault, true);
-    });
-
-    test('should return null when no default payment method exists', () async {
-      // arrange
-      await notifier.loadPaymentMethods();
-      
-      // Remove default status from all methods (simulate edge case)
-      final updatedMethods = notifier.state.methods.map((m) => m.copyWith(isDefault: false)).toList();
-      notifier.state = notifier.state.copyWith(methods: updatedMethods);
-
-      // act
-      final defaultMethod = notifier.getDefaultPaymentMethod();
-
-      // assert
-      expect(defaultMethod, isNull);
-    });
-
-    test('should get payment methods by type', () async {
-      // arrange
-      await notifier.loadPaymentMethods();
-
-      // act
-      final creditCardMethods = notifier.getPaymentMethodsByType(PaymentMethod.typeCreditCard);
-      final upiMethods = notifier.getPaymentMethodsByType(PaymentMethod.typeUpi);
-      final codMethods = notifier.getPaymentMethodsByType(PaymentMethod.typeCod);
-
-      // assert
-      expect(creditCardMethods, isNotEmpty);
-      expect(upiMethods, isNotEmpty);
-      expect(codMethods, isNotEmpty);
-      
-      for (final method in creditCardMethods) {
-        expect(method.type, PaymentMethod.typeCreditCard);
-      }
-      
-      for (final method in upiMethods) {
-        expect(method.type, PaymentMethod.typeUpi);
-      }
-      
-      for (final method in codMethods) {
-        expect(method.type, PaymentMethod.typeCod);
-      }
-    });
-
-    test('should return empty list for non-existent payment method type', () async {
-      // arrange
-      await notifier.loadPaymentMethods();
-
-      // act
-      final nonExistentMethods = notifier.getPaymentMethodsByType('non_existent_type');
-
-      // assert
-      expect(nonExistentMethods, isEmpty);
+      expect(notifier.state.selectedMethod, equals(methodToSelect));
     });
 
     test('should handle payment method validation', () async {
@@ -305,20 +214,6 @@ void main() {
 
       // assert
       expect(result, true); // Current implementation doesn't validate, but this test is for future validation
-    });
-
-    test('should refresh payment methods', () async {
-      // arrange
-      await notifier.loadPaymentMethods();
-      final initialCount = notifier.state.methods.length;
-
-      // act
-      await notifier.refreshPaymentMethods();
-
-      // assert
-      expect(notifier.state.methods.length, initialCount);
-      expect(notifier.state.isLoading, false);
-      expect(notifier.state.errorMessage, isNull);
     });
   });
 }

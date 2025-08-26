@@ -3,26 +3,32 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i5;
+import 'dart:async' as _i6;
 
 import 'package:dartz/dartz.dart' as _i3;
-import 'package:dayliz_app/core/errors/failures.dart' as _i6;
-import 'package:dayliz_app/domain/entities/user.dart' as _i7;
+import 'package:dayliz_app/core/errors/failures.dart' as _i7;
+import 'package:dayliz_app/core/usecases/usecase.dart' as _i18;
+import 'package:dayliz_app/domain/entities/user.dart' as _i8;
 import 'package:dayliz_app/domain/repositories/auth_repository.dart' as _i2;
+import 'package:dayliz_app/domain/repositories/cart_repository.dart' as _i4;
 import 'package:dayliz_app/domain/usecases/change_password_usecase.dart'
-    as _i14;
-import 'package:dayliz_app/domain/usecases/forgot_password_usecase.dart'
-    as _i12;
-import 'package:dayliz_app/domain/usecases/get_current_user_usecase.dart'
-    as _i10;
-import 'package:dayliz_app/domain/usecases/is_authenticated_usecase.dart'
-    as _i11;
-import 'package:dayliz_app/domain/usecases/login_usecase.dart' as _i8;
-import 'package:dayliz_app/domain/usecases/logout_usecase.dart' as _i9;
-import 'package:dayliz_app/domain/usecases/register_usecase.dart' as _i4;
-import 'package:dayliz_app/domain/usecases/reset_password_usecase.dart' as _i13;
-import 'package:dayliz_app/domain/usecases/sign_in_with_google_usecase.dart'
     as _i15;
+import 'package:dayliz_app/domain/usecases/check_email_exists_usecase.dart'
+    as _i19;
+import 'package:dayliz_app/domain/usecases/forgot_password_usecase.dart'
+    as _i13;
+import 'package:dayliz_app/domain/usecases/get_current_user_usecase.dart'
+    as _i11;
+import 'package:dayliz_app/domain/usecases/is_authenticated_usecase.dart'
+    as _i12;
+import 'package:dayliz_app/domain/usecases/login_usecase.dart' as _i9;
+import 'package:dayliz_app/domain/usecases/logout_usecase.dart' as _i10;
+import 'package:dayliz_app/domain/usecases/migrate_guest_cart_usecase.dart'
+    as _i17;
+import 'package:dayliz_app/domain/usecases/register_usecase.dart' as _i5;
+import 'package:dayliz_app/domain/usecases/reset_password_usecase.dart' as _i14;
+import 'package:dayliz_app/domain/usecases/sign_in_with_google_usecase.dart'
+    as _i16;
 import 'package:mockito/mockito.dart' as _i1;
 
 // ignore_for_file: type=lint
@@ -60,10 +66,21 @@ class _FakeEither_1<L, R> extends _i1.SmartFake implements _i3.Either<L, R> {
         );
 }
 
+class _FakeCartRepository_2 extends _i1.SmartFake
+    implements _i4.CartRepository {
+  _FakeCartRepository_2(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
 /// A class which mocks [RegisterUseCase].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockRegisterUseCase extends _i1.Mock implements _i4.RegisterUseCase {
+class MockRegisterUseCase extends _i1.Mock implements _i5.RegisterUseCase {
   MockRegisterUseCase() {
     _i1.throwOnMissingStub(this);
   }
@@ -78,28 +95,28 @@ class MockRegisterUseCase extends _i1.Mock implements _i4.RegisterUseCase {
       ) as _i2.AuthRepository);
 
   @override
-  _i5.Future<_i3.Either<_i6.Failure, _i7.User>> call(
-          _i4.RegisterParams? params) =>
+  _i6.Future<_i3.Either<_i7.Failure, _i8.User>> call(
+          _i5.RegisterParams? params) =>
       (super.noSuchMethod(
         Invocation.method(
           #call,
           [params],
         ),
-        returnValue: _i5.Future<_i3.Either<_i6.Failure, _i7.User>>.value(
-            _FakeEither_1<_i6.Failure, _i7.User>(
+        returnValue: _i6.Future<_i3.Either<_i7.Failure, _i8.User>>.value(
+            _FakeEither_1<_i7.Failure, _i8.User>(
           this,
           Invocation.method(
             #call,
             [params],
           ),
         )),
-      ) as _i5.Future<_i3.Either<_i6.Failure, _i7.User>>);
+      ) as _i6.Future<_i3.Either<_i7.Failure, _i8.User>>);
 }
 
 /// A class which mocks [LoginUseCase].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLoginUseCase extends _i1.Mock implements _i8.LoginUseCase {
+class MockLoginUseCase extends _i1.Mock implements _i9.LoginUseCase {
   MockLoginUseCase() {
     _i1.throwOnMissingStub(this);
   }
@@ -114,27 +131,27 @@ class MockLoginUseCase extends _i1.Mock implements _i8.LoginUseCase {
       ) as _i2.AuthRepository);
 
   @override
-  _i5.Future<_i3.Either<_i6.Failure, _i7.User>> call(_i8.LoginParams? params) =>
+  _i6.Future<_i3.Either<_i7.Failure, _i8.User>> call(_i9.LoginParams? params) =>
       (super.noSuchMethod(
         Invocation.method(
           #call,
           [params],
         ),
-        returnValue: _i5.Future<_i3.Either<_i6.Failure, _i7.User>>.value(
-            _FakeEither_1<_i6.Failure, _i7.User>(
+        returnValue: _i6.Future<_i3.Either<_i7.Failure, _i8.User>>.value(
+            _FakeEither_1<_i7.Failure, _i8.User>(
           this,
           Invocation.method(
             #call,
             [params],
           ),
         )),
-      ) as _i5.Future<_i3.Either<_i6.Failure, _i7.User>>);
+      ) as _i6.Future<_i3.Either<_i7.Failure, _i8.User>>);
 }
 
 /// A class which mocks [LogoutUseCase].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLogoutUseCase extends _i1.Mock implements _i9.LogoutUseCase {
+class MockLogoutUseCase extends _i1.Mock implements _i10.LogoutUseCase {
   MockLogoutUseCase() {
     _i1.throwOnMissingStub(this);
   }
@@ -149,27 +166,27 @@ class MockLogoutUseCase extends _i1.Mock implements _i9.LogoutUseCase {
       ) as _i2.AuthRepository);
 
   @override
-  _i5.Future<_i3.Either<_i6.Failure, bool>> call() => (super.noSuchMethod(
+  _i6.Future<_i3.Either<_i7.Failure, bool>> call() => (super.noSuchMethod(
         Invocation.method(
           #call,
           [],
         ),
-        returnValue: _i5.Future<_i3.Either<_i6.Failure, bool>>.value(
-            _FakeEither_1<_i6.Failure, bool>(
+        returnValue: _i6.Future<_i3.Either<_i7.Failure, bool>>.value(
+            _FakeEither_1<_i7.Failure, bool>(
           this,
           Invocation.method(
             #call,
             [],
           ),
         )),
-      ) as _i5.Future<_i3.Either<_i6.Failure, bool>>);
+      ) as _i6.Future<_i3.Either<_i7.Failure, bool>>);
 }
 
 /// A class which mocks [GetCurrentUserUseCase].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockGetCurrentUserUseCase extends _i1.Mock
-    implements _i10.GetCurrentUserUseCase {
+    implements _i11.GetCurrentUserUseCase {
   MockGetCurrentUserUseCase() {
     _i1.throwOnMissingStub(this);
   }
@@ -184,27 +201,27 @@ class MockGetCurrentUserUseCase extends _i1.Mock
       ) as _i2.AuthRepository);
 
   @override
-  _i5.Future<_i3.Either<_i6.Failure, _i7.User>> call() => (super.noSuchMethod(
+  _i6.Future<_i3.Either<_i7.Failure, _i8.User>> call() => (super.noSuchMethod(
         Invocation.method(
           #call,
           [],
         ),
-        returnValue: _i5.Future<_i3.Either<_i6.Failure, _i7.User>>.value(
-            _FakeEither_1<_i6.Failure, _i7.User>(
+        returnValue: _i6.Future<_i3.Either<_i7.Failure, _i8.User>>.value(
+            _FakeEither_1<_i7.Failure, _i8.User>(
           this,
           Invocation.method(
             #call,
             [],
           ),
         )),
-      ) as _i5.Future<_i3.Either<_i6.Failure, _i7.User>>);
+      ) as _i6.Future<_i3.Either<_i7.Failure, _i8.User>>);
 }
 
 /// A class which mocks [IsAuthenticatedUseCase].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockIsAuthenticatedUseCase extends _i1.Mock
-    implements _i11.IsAuthenticatedUseCase {
+    implements _i12.IsAuthenticatedUseCase {
   MockIsAuthenticatedUseCase() {
     _i1.throwOnMissingStub(this);
   }
@@ -219,20 +236,20 @@ class MockIsAuthenticatedUseCase extends _i1.Mock
       ) as _i2.AuthRepository);
 
   @override
-  _i5.Future<bool> call() => (super.noSuchMethod(
+  _i6.Future<bool> call() => (super.noSuchMethod(
         Invocation.method(
           #call,
           [],
         ),
-        returnValue: _i5.Future<bool>.value(false),
-      ) as _i5.Future<bool>);
+        returnValue: _i6.Future<bool>.value(false),
+      ) as _i6.Future<bool>);
 }
 
 /// A class which mocks [ForgotPasswordUseCase].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockForgotPasswordUseCase extends _i1.Mock
-    implements _i12.ForgotPasswordUseCase {
+    implements _i13.ForgotPasswordUseCase {
   MockForgotPasswordUseCase() {
     _i1.throwOnMissingStub(this);
   }
@@ -247,29 +264,29 @@ class MockForgotPasswordUseCase extends _i1.Mock
       ) as _i2.AuthRepository);
 
   @override
-  _i5.Future<_i3.Either<_i6.Failure, bool>> call(
-          _i12.ForgotPasswordParams? params) =>
+  _i6.Future<_i3.Either<_i7.Failure, bool>> call(
+          _i13.ForgotPasswordParams? params) =>
       (super.noSuchMethod(
         Invocation.method(
           #call,
           [params],
         ),
-        returnValue: _i5.Future<_i3.Either<_i6.Failure, bool>>.value(
-            _FakeEither_1<_i6.Failure, bool>(
+        returnValue: _i6.Future<_i3.Either<_i7.Failure, bool>>.value(
+            _FakeEither_1<_i7.Failure, bool>(
           this,
           Invocation.method(
             #call,
             [params],
           ),
         )),
-      ) as _i5.Future<_i3.Either<_i6.Failure, bool>>);
+      ) as _i6.Future<_i3.Either<_i7.Failure, bool>>);
 }
 
 /// A class which mocks [ResetPasswordUseCase].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockResetPasswordUseCase extends _i1.Mock
-    implements _i13.ResetPasswordUseCase {
+    implements _i14.ResetPasswordUseCase {
   MockResetPasswordUseCase() {
     _i1.throwOnMissingStub(this);
   }
@@ -284,29 +301,29 @@ class MockResetPasswordUseCase extends _i1.Mock
       ) as _i2.AuthRepository);
 
   @override
-  _i5.Future<_i3.Either<_i6.Failure, bool>> call(
-          _i13.ResetPasswordParams? params) =>
+  _i6.Future<_i3.Either<_i7.Failure, bool>> call(
+          _i14.ResetPasswordParams? params) =>
       (super.noSuchMethod(
         Invocation.method(
           #call,
           [params],
         ),
-        returnValue: _i5.Future<_i3.Either<_i6.Failure, bool>>.value(
-            _FakeEither_1<_i6.Failure, bool>(
+        returnValue: _i6.Future<_i3.Either<_i7.Failure, bool>>.value(
+            _FakeEither_1<_i7.Failure, bool>(
           this,
           Invocation.method(
             #call,
             [params],
           ),
         )),
-      ) as _i5.Future<_i3.Either<_i6.Failure, bool>>);
+      ) as _i6.Future<_i3.Either<_i7.Failure, bool>>);
 }
 
 /// A class which mocks [ChangePasswordUseCase].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockChangePasswordUseCase extends _i1.Mock
-    implements _i14.ChangePasswordUseCase {
+    implements _i15.ChangePasswordUseCase {
   MockChangePasswordUseCase() {
     _i1.throwOnMissingStub(this);
   }
@@ -321,29 +338,29 @@ class MockChangePasswordUseCase extends _i1.Mock
       ) as _i2.AuthRepository);
 
   @override
-  _i5.Future<_i3.Either<_i6.Failure, bool>> call(
-          _i14.ChangePasswordParams? params) =>
+  _i6.Future<_i3.Either<_i7.Failure, bool>> call(
+          _i15.ChangePasswordParams? params) =>
       (super.noSuchMethod(
         Invocation.method(
           #call,
           [params],
         ),
-        returnValue: _i5.Future<_i3.Either<_i6.Failure, bool>>.value(
-            _FakeEither_1<_i6.Failure, bool>(
+        returnValue: _i6.Future<_i3.Either<_i7.Failure, bool>>.value(
+            _FakeEither_1<_i7.Failure, bool>(
           this,
           Invocation.method(
             #call,
             [params],
           ),
         )),
-      ) as _i5.Future<_i3.Either<_i6.Failure, bool>>);
+      ) as _i6.Future<_i3.Either<_i7.Failure, bool>>);
 }
 
 /// A class which mocks [SignInWithGoogleUseCase].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockSignInWithGoogleUseCase extends _i1.Mock
-    implements _i15.SignInWithGoogleUseCase {
+    implements _i16.SignInWithGoogleUseCase {
   MockSignInWithGoogleUseCase() {
     _i1.throwOnMissingStub(this);
   }
@@ -358,19 +375,92 @@ class MockSignInWithGoogleUseCase extends _i1.Mock
       ) as _i2.AuthRepository);
 
   @override
-  _i5.Future<_i3.Either<_i6.Failure, _i7.User>> call(_i15.NoParams? params) =>
+  _i6.Future<_i3.Either<_i7.Failure, _i8.User>> call(_i16.NoParams? params) =>
       (super.noSuchMethod(
         Invocation.method(
           #call,
           [params],
         ),
-        returnValue: _i5.Future<_i3.Either<_i6.Failure, _i7.User>>.value(
-            _FakeEither_1<_i6.Failure, _i7.User>(
+        returnValue: _i6.Future<_i3.Either<_i7.Failure, _i8.User>>.value(
+            _FakeEither_1<_i7.Failure, _i8.User>(
           this,
           Invocation.method(
             #call,
             [params],
           ),
         )),
-      ) as _i5.Future<_i3.Either<_i6.Failure, _i7.User>>);
+      ) as _i6.Future<_i3.Either<_i7.Failure, _i8.User>>);
+}
+
+/// A class which mocks [MigrateGuestCartUseCase].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockMigrateGuestCartUseCase extends _i1.Mock
+    implements _i17.MigrateGuestCartUseCase {
+  MockMigrateGuestCartUseCase() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i4.CartRepository get repository => (super.noSuchMethod(
+        Invocation.getter(#repository),
+        returnValue: _FakeCartRepository_2(
+          this,
+          Invocation.getter(#repository),
+        ),
+      ) as _i4.CartRepository);
+
+  @override
+  _i6.Future<_i3.Either<_i7.Failure, bool>> call([_i18.NoParams? params]) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #call,
+          [params],
+        ),
+        returnValue: _i6.Future<_i3.Either<_i7.Failure, bool>>.value(
+            _FakeEither_1<_i7.Failure, bool>(
+          this,
+          Invocation.method(
+            #call,
+            [params],
+          ),
+        )),
+      ) as _i6.Future<_i3.Either<_i7.Failure, bool>>);
+}
+
+/// A class which mocks [CheckEmailExistsUseCase].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockCheckEmailExistsUseCase extends _i1.Mock
+    implements _i19.CheckEmailExistsUseCase {
+  MockCheckEmailExistsUseCase() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i2.AuthRepository get repository => (super.noSuchMethod(
+        Invocation.getter(#repository),
+        returnValue: _FakeAuthRepository_0(
+          this,
+          Invocation.getter(#repository),
+        ),
+      ) as _i2.AuthRepository);
+
+  @override
+  _i6.Future<_i3.Either<_i7.Failure, bool>> call(
+          _i19.CheckEmailExistsParams? params) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #call,
+          [params],
+        ),
+        returnValue: _i6.Future<_i3.Either<_i7.Failure, bool>>.value(
+            _FakeEither_1<_i7.Failure, bool>(
+          this,
+          Invocation.method(
+            #call,
+            [params],
+          ),
+        )),
+      ) as _i6.Future<_i3.Either<_i7.Failure, bool>>);
 }

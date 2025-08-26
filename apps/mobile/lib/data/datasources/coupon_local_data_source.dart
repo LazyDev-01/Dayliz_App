@@ -49,19 +49,19 @@ class CouponSharedPrefsDataSource implements CouponLocalDataSource {
       debugPrint('🎫 [CouponLocalDataSource] Getting cached available coupons');
 
       if (!_isCacheValid(_availableCouponsKey)) {
-        throw const CacheException(message: 'Cache expired');
+        throw CacheException(message: 'Cache expired');
       }
 
       final couponsJson = sharedPreferences.getString(_availableCouponsKey);
       if (couponsJson == null) {
-        throw const CacheException(message: 'No cached available coupons found');
+        throw CacheException(message: 'No cached available coupons found');
       }
 
       final List<dynamic> couponsList = jsonDecode(couponsJson);
       return couponsList.map((json) => CouponModel.fromJson(json)).toList();
     } catch (e) {
       debugPrint('❌ [CouponLocalDataSource] Error getting cached available coupons: $e');
-      throw const CacheException(message: 'Failed to get cached available coupons');
+      throw CacheException(message: 'Failed to get cached available coupons');
     }
   }
 
@@ -75,7 +75,7 @@ class CouponSharedPrefsDataSource implements CouponLocalDataSource {
       await _setCacheTimestamp(_availableCouponsKey);
     } catch (e) {
       debugPrint('❌ [CouponLocalDataSource] Error caching available coupons: $e');
-      throw const CacheException(message: 'Failed to cache available coupons');
+      throw CacheException(message: 'Failed to cache available coupons');
     }
   }
 
@@ -86,12 +86,12 @@ class CouponSharedPrefsDataSource implements CouponLocalDataSource {
 
       final key = '${_userCouponsKey}_$userId';
       if (!_isCacheValid(key)) {
-        throw const CacheException(message: 'Cache expired');
+        throw CacheException(message: 'Cache expired');
       }
 
       final couponsJson = sharedPreferences.getString(key);
       if (couponsJson == null) {
-        throw const CacheException(message: 'No cached user coupons found');
+        throw CacheException(message: 'No cached user coupons found');
       }
 
       final List<dynamic> couponsList = jsonDecode(couponsJson);
@@ -129,7 +129,7 @@ class CouponSharedPrefsDataSource implements CouponLocalDataSource {
       }).toList();
     } catch (e) {
       debugPrint('❌ [CouponLocalDataSource] Error getting cached user coupons: $e');
-      throw const CacheException(message: 'Failed to get cached user coupons');
+      throw CacheException(message: 'Failed to get cached user coupons');
     }
   }
 
@@ -152,7 +152,7 @@ class CouponSharedPrefsDataSource implements CouponLocalDataSource {
       await _setCacheTimestamp(key);
     } catch (e) {
       debugPrint('❌ [CouponLocalDataSource] Error caching user coupons: $e');
-      throw const CacheException(message: 'Failed to cache user coupons');
+      throw CacheException(message: 'Failed to cache user coupons');
     }
   }
 
@@ -190,7 +190,7 @@ class CouponSharedPrefsDataSource implements CouponLocalDataSource {
       await _setCacheTimestamp(key);
     } catch (e) {
       debugPrint('❌ [CouponLocalDataSource] Error caching coupon: $e');
-      throw const CacheException(message: 'Failed to cache coupon');
+      throw CacheException(message: 'Failed to cache coupon');
     }
   }
 
@@ -200,19 +200,19 @@ class CouponSharedPrefsDataSource implements CouponLocalDataSource {
       debugPrint('🎫 [CouponLocalDataSource] Getting cached trending coupons');
 
       if (!_isCacheValid(_trendingCouponsKey)) {
-        throw const CacheException(message: 'Cache expired');
+        throw CacheException(message: 'Cache expired');
       }
 
       final couponsJson = sharedPreferences.getString(_trendingCouponsKey);
       if (couponsJson == null) {
-        throw const CacheException(message: 'No cached trending coupons found');
+        throw CacheException(message: 'No cached trending coupons found');
       }
 
       final List<dynamic> couponsList = jsonDecode(couponsJson);
       return couponsList.map((json) => CouponModel.fromJson(json)).toList();
     } catch (e) {
       debugPrint('❌ [CouponLocalDataSource] Error getting cached trending coupons: $e');
-      throw const CacheException(message: 'Failed to get cached trending coupons');
+      throw CacheException(message: 'Failed to get cached trending coupons');
     }
   }
 
@@ -226,7 +226,7 @@ class CouponSharedPrefsDataSource implements CouponLocalDataSource {
       await _setCacheTimestamp(_trendingCouponsKey);
     } catch (e) {
       debugPrint('❌ [CouponLocalDataSource] Error caching trending coupons: $e');
-      throw const CacheException(message: 'Failed to cache trending coupons');
+      throw CacheException(message: 'Failed to cache trending coupons');
     }
   }
 
@@ -270,7 +270,7 @@ class CouponSharedPrefsDataSource implements CouponLocalDataSource {
       await _setCacheTimestamp(key);
     } catch (e) {
       debugPrint('❌ [CouponLocalDataSource] Error caching best coupon: $e');
-      throw const CacheException(message: 'Failed to cache best coupon');
+      throw CacheException(message: 'Failed to cache best coupon');
     }
   }
 
@@ -292,7 +292,7 @@ class CouponSharedPrefsDataSource implements CouponLocalDataSource {
       }
     } catch (e) {
       debugPrint('❌ [CouponLocalDataSource] Error clearing cached coupons: $e');
-      throw const CacheException(message: 'Failed to clear cached coupons');
+      throw CacheException(message: 'Failed to clear cached coupons');
     }
   }
 
@@ -306,7 +306,7 @@ class CouponSharedPrefsDataSource implements CouponLocalDataSource {
       await sharedPreferences.remove('${_cacheTimestampKey}_$key');
     } catch (e) {
       debugPrint('❌ [CouponLocalDataSource] Error clearing user coupons: $e');
-      throw const CacheException(message: 'Failed to clear user coupons');
+      throw CacheException(message: 'Failed to clear user coupons');
     }
   }
 

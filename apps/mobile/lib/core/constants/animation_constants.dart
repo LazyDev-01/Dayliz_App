@@ -57,11 +57,11 @@ class AnimationConstants {
   static const Curve bounceCurve = Curves.bounceOut;
   static const Curve elasticCurve = Curves.elasticOut;
   
-  // Animation Sizes
+  // Animation Sizes (Updated for better performance)
   static const double smallSize = 24.0;
   static const double mediumSize = 48.0;
-  static const double largeSize = 96.0;
-  static const double extraLargeSize = 150.0;
+  static const double largeSize = 90.0;  // Reduced from 96 to 90
+  static const double extraLargeSize = 120.0;  // Reduced from 150 to 120
   
   // Animation Repeat Counts
   static const int noRepeat = 1;

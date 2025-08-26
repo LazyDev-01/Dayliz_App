@@ -7,12 +7,16 @@ class BannerState extends Equatable {
   final bool isLoading;
   final String? errorMessage;
   final int currentIndex;
+  final bool isFromCache;
+  final DateTime? lastUpdated;
 
   const BannerState({
     this.banners = const [],
     this.isLoading = false,
     this.errorMessage,
     this.currentIndex = 0,
+    this.isFromCache = false,
+    this.lastUpdated,
   });
 
   /// Create a copy of the state with updated values
@@ -21,12 +25,16 @@ class BannerState extends Equatable {
     bool? isLoading,
     String? errorMessage,
     int? currentIndex,
+    bool? isFromCache,
+    DateTime? lastUpdated,
   }) {
     return BannerState(
       banners: banners ?? this.banners,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
       currentIndex: currentIndex ?? this.currentIndex,
+      isFromCache: isFromCache ?? this.isFromCache,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
     );
   }
 
@@ -51,6 +59,8 @@ class BannerState extends Equatable {
         isLoading,
         errorMessage,
         currentIndex,
+        isFromCache,
+        lastUpdated,
       ];
 
   @override

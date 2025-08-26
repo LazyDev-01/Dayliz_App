@@ -9,6 +9,7 @@ import '../../providers/cart_providers.dart';
 
 import '../../widgets/auth/auth_guard.dart';
 import '../../widgets/common/unified_app_bar.dart';
+import '../../widgets/product/standard_product_card.dart';
 
 class CleanProductDetailsScreen extends ConsumerWidget {
   final String productId;
@@ -130,10 +131,7 @@ Download Dayliz App for the best grocery deals!
               height: MediaQuery.of(context).size.height * 0.4, // Responsive height
               width: double.infinity,
               decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
+                // No rounded corners but keep shadow effect
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.1),
@@ -143,10 +141,7 @@ Download Dayliz App for the best grocery deals!
                 ],
               ),
               child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
+                borderRadius: BorderRadius.zero, // No rounded corners
                 child: Stack(
                   children: [
                     // Product image with loading and error states
@@ -259,26 +254,6 @@ Download Dayliz App for the best grocery deals!
                     height: 1.2,
                   ),
                 ),
-
-                const SizedBox(height: 12),
-
-                // Product attributes (weight, volume, etc.)
-                if (product.attributes != null && product.attributes!.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _getProductAttributes(product),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
 
                 const SizedBox(height: 16),
 
@@ -400,16 +375,17 @@ Download Dayliz App for the best grocery deals!
 
                 const SizedBox(height: 24),
 
-                // Nutritional Information Section (controlled by nutri_active flag)
-                if (product.nutriActive && product.nutritionalInfo != null && product.nutritionalInfo!.isNotEmpty)
-                  _buildNutritionalInfoSection(context, product.nutritionalInfo!),
+                // Product Details Section (only shown if data is available)
+                _buildProductDetailsSection(context, product),
 
-                const SizedBox(height: 24),
+                // Dynamic spacing - only add space if Product Details section was shown
+                if (_hasDescription(product) || _hasSpecifications(product) || _hasNutritionalInfo(product))
+                  const SizedBox(height: 24),
 
                 // Seller Information Section
                 _buildSellerInfoSection(context, product),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 40), // Increased spacing
 
                 // Similar Products Section
                 _buildSimilarProductsSection(context, ref, relatedProductsState),
@@ -679,192 +655,297 @@ Download Dayliz App for the best grocery deals!
     }
   }
 
-  /// Helper method to extract product attributes for display
-  String _getProductAttributes(Product product) {
-    if (product.attributes == null || product.attributes!.isEmpty) {
-      return 'Product details';
+
+
+  /// Builds the Product Details section with Description, Specifications, and Nutritional Information
+  /// Only shows sections that have data available
+  Widget _buildProductDetailsSection(BuildContext context, Product product) {
+    // Check if any section has data
+    final hasDescription = _hasDescription(product);
+    final hasSpecifications = _hasSpecifications(product);
+    final hasNutritionalInfo = _hasNutritionalInfo(product);
+
+    // If no data is available for any section, don't show the Product Details section at all
+    if (!hasDescription && !hasSpecifications && !hasNutritionalInfo) {
+      return const SizedBox.shrink();
     }
 
-    final attributes = <String>[];
+    // Build list of sections that have data
+    final sections = <Widget>[];
 
-    // Check for common attributes
-    if (product.attributes!['weight'] != null) {
-      attributes.add(product.attributes!['weight'] as String);
-    }
-    if (product.attributes!['volume'] != null) {
-      attributes.add(product.attributes!['volume'] as String);
-    }
-    if (product.attributes!['quantity'] != null) {
-      attributes.add(product.attributes!['quantity'] as String);
-    }
-    if (product.attributes!['size'] != null) {
-      attributes.add(product.attributes!['size'] as String);
+    if (hasDescription) {
+      sections.add(_buildDescriptionSection(context, product));
     }
 
-    // If no specific attributes found, try to extract from product name
-    if (attributes.isEmpty) {
-      final name = product.name.toLowerCase();
-      if (name.contains('kg')) {
-        final match = RegExp(r'(\d+(?:\.\d+)?)\s*kg').firstMatch(name);
-        if (match != null) attributes.add('${match.group(1)}kg');
-      } else if (name.contains('g') && !name.contains('kg')) {
-        final match = RegExp(r'(\d+)\s*g').firstMatch(name);
-        if (match != null) attributes.add('${match.group(1)}g');
-      } else if (name.contains('ml')) {
-        final match = RegExp(r'(\d+)\s*ml').firstMatch(name);
-        if (match != null) attributes.add('${match.group(1)}ml');
-      } else if (name.contains('l') && !name.contains('ml')) {
-        final match = RegExp(r'(\d+(?:\.\d+)?)\s*l').firstMatch(name);
-        if (match != null) attributes.add('${match.group(1)}L');
-      }
+    if (hasSpecifications) {
+      if (sections.isNotEmpty) sections.add(const SizedBox(height: 20));
+      sections.add(_buildSpecificationsSection(context, product));
     }
 
-    return attributes.isNotEmpty ? attributes.join(' • ') : 'Product details';
-  }
+    if (hasNutritionalInfo) {
+      if (sections.isNotEmpty) sections.add(const SizedBox(height: 20));
+      sections.add(_buildNutritionalInfoSection(context, product));
+    }
 
-  /// Builds the nutritional information section with table format
-  Widget _buildNutritionalInfoSection(BuildContext context, Map<String, dynamic> nutritionalInfo) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section title
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline,
-                color: Colors.grey[700],
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Nutritional Information',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section title outside the container
+        Text(
+          'Product Details',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Container with rounded corners and box shadow
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: sections,
+          ),
+        ),
+      ],
+    );
+  }
 
-          // Nutritional info table
-          Container(
+  /// Builds the Description section using real product data
+  Widget _buildDescriptionSection(BuildContext context, Product product) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Description',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          product.description,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[700],
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Builds the Specifications section using real attributes data
+  Widget _buildSpecificationsSection(BuildContext context, Product product) {
+    final specificationsData = _getSpecificationsData(product);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Specifications',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildExcelTable(specificationsData),
+      ],
+    );
+  }
+
+  /// Builds the Nutritional Information section using real nutritional data
+  Widget _buildNutritionalInfoSection(BuildContext context, Product product) {
+    final nutritionalData = _getNutritionalData(product);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Nutritional Info',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildExcelTable(nutritionalData),
+      ],
+    );
+  }
+
+  /// Builds an Excel-like table with borders and proper formatting
+  Widget _buildExcelTable(List<List<String>> data) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Table(
+        columnWidths: const {
+          0: FlexColumnWidth(1.2), // Label column slightly wider
+          1: FlexColumnWidth(1.8), // Value column
+        },
+        children: data.asMap().entries.map((entry) {
+          final index = entry.key;
+          final row = entry.value;
+          final isLastRow = index == data.length - 1;
+
+          return TableRow(
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Table(
-                columnWidths: const {
-                  0: FlexColumnWidth(2.5),
-                  1: FlexColumnWidth(1.5),
-                },
-                children: [
-                // Table header
-                TableRow(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(8),
-                      topRight: Radius.circular(8),
-                    ),
-                  ),
-                  children: [
-                    _buildTableCell(
-                      'Nutrient',
-                      isHeader: true,
-                      context: context,
-                    ),
-                    _buildTableCell(
-                      'Amount',
-                      isHeader: true,
-                      context: context,
-                    ),
-                  ],
-                ),
-                // Table rows for nutritional data
-                ...nutritionalInfo.entries.map((entry) {
-                  return TableRow(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: Colors.grey[200]!, width: 0.5),
-                      ),
-                    ),
-                    children: [
-                      _buildTableCell(
-                        _formatNutritionalKey(entry.key),
-                        context: context,
-                      ),
-                      _buildTableCell(
-                        entry.value.toString(),
-                        context: context,
-                        isValue: true,
-                      ),
-                    ],
-                  );
-                }).toList(),
-                ],
+              border: Border(
+                bottom: isLastRow
+                    ? BorderSide.none
+                    : BorderSide(color: Colors.grey[300]!, width: 0.5),
               ),
             ),
-          ),
-        ],
+            children: [
+              _buildExcelTableCell(row[0], isLabel: true),
+              _buildExcelTableCell(row[1], isLabel: false),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
 
-  /// Helper method to build table cells for nutritional information
-  Widget _buildTableCell(
-    String text, {
-    required BuildContext context,
-    bool isHeader = false,
-    bool isValue = false,
-  }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: isHeader ? 12 : 10,
+  /// Builds a table cell for the Excel-like table
+  Widget _buildExcelTableCell(String text, {required bool isLabel}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(
+          right: isLabel
+              ? BorderSide(color: Colors.grey[300]!, width: 0.5)
+              : BorderSide.none,
+        ),
       ),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: isHeader ? 14 : 13,
-          fontWeight: isHeader
-              ? FontWeight.bold
-              : isValue
-                  ? FontWeight.w600
-                  : FontWeight.w500,
-          color: isHeader
-              ? Colors.grey[800]
-              : isValue
-                  ? Colors.grey[900]
-                  : Colors.grey[700],
-          letterSpacing: isHeader ? 0.5 : 0,
+          fontSize: 14,
+          fontWeight: isLabel ? FontWeight.w600 : FontWeight.w500,
+          color: isLabel ? Colors.grey[700] : Colors.grey[800],
         ),
-        textAlign: isValue ? TextAlign.right : TextAlign.left,
       ),
     );
   }
 
-  /// Helper method to format nutritional info keys for display
-  String _formatNutritionalKey(String key) {
-    // Convert snake_case to Title Case
+  /// Helper methods to check if sections have data
+  bool _hasDescription(Product product) {
+    return product.description.isNotEmpty;
+  }
+
+  bool _hasSpecifications(Product product) {
+    return product.attributes != null &&
+           product.attributes!.isNotEmpty &&
+           product.attributes!.values.any((value) =>
+             value != null && value.toString().trim().isNotEmpty);
+  }
+
+  bool _hasNutritionalInfo(Product product) {
+    return product.nutritionalInfo != null &&
+           product.nutritionalInfo!.isNotEmpty &&
+           product.nutritionalInfo!.values.any((value) =>
+             value != null && value.toString().trim().isNotEmpty);
+  }
+
+  /// Helper method to get specifications data from attributes
+  List<List<String>> _getSpecificationsData(Product product) {
+    final data = <List<String>>[];
+
+    if (product.attributes != null && product.attributes!.isNotEmpty) {
+      // Define common specification keys and their display names
+      final specKeys = {
+        'weight': 'Weight',
+        'volume': 'Volume',
+        'quantity': 'Quantity',
+        'brand': 'Brand',
+        'manufacturer': 'Manufacturer',
+        'dimension': 'Dimension',
+        'size': 'Size',
+        'color': 'Color',
+        'material': 'Material',
+        'origin': 'Origin',
+        'shelf_life': 'Shelf Life',
+        'storage': 'Storage',
+      };
+
+      // Add available specifications
+      for (final entry in product.attributes!.entries) {
+        final key = entry.key.toLowerCase();
+        final value = entry.value;
+
+        if (value != null && value.toString().trim().isNotEmpty) {
+          final displayName = specKeys[key] ?? _formatKey(key);
+          data.add([displayName, value.toString()]);
+        }
+      }
+
+      // Add vendor information if available
+      if (product.vendorName != null && product.vendorName!.isNotEmpty) {
+        data.add(['Brand', product.vendorName!]);
+      }
+    }
+
+    return data;
+  }
+
+  /// Helper method to get nutritional data from nutritionalInfo
+  List<List<String>> _getNutritionalData(Product product) {
+    final data = <List<String>>[];
+
+    if (product.nutritionalInfo != null && product.nutritionalInfo!.isNotEmpty) {
+      // Define common nutritional keys and their display names
+      final nutritionKeys = {
+        'calories': 'Calories',
+        'energy': 'Energy',
+        'protein': 'Protein',
+        'fat': 'Fat',
+        'carbohydrates': 'Carbohydrates',
+        'sugar': 'Sugar',
+        'fiber': 'Fiber',
+        'sodium': 'Sodium',
+        'cholesterol': 'Cholesterol',
+        'vitamin_a': 'Vitamin A',
+        'vitamin_c': 'Vitamin C',
+        'calcium': 'Calcium',
+        'iron': 'Iron',
+      };
+
+      // Add available nutritional information
+      for (final entry in product.nutritionalInfo!.entries) {
+        final key = entry.key.toLowerCase();
+        final value = entry.value;
+
+        if (value != null && value.toString().trim().isNotEmpty) {
+          final displayName = nutritionKeys[key] ?? _formatKey(key);
+          data.add([displayName, value.toString()]);
+        }
+      }
+    }
+
+    return data;
+  }
+
+  /// Helper method to format keys for display
+  String _formatKey(String key) {
     return key
         .split('_')
         .map((word) => word[0].toUpperCase() + word.substring(1))
@@ -873,36 +954,38 @@ Download Dayliz App for the best grocery deals!
 
   /// Builds the seller information section
   Widget _buildSellerInfoSection(BuildContext context, Product product) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section title
-          Row(
-            children: [
-              Icon(
-                Icons.store_outlined,
-                color: Colors.grey[700],
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Seller Information',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section title outside the container
+        Text(
+          'Seller Information',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Container with seller details
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
 
           // Seller details
           _buildSellerInfoRow(
@@ -936,8 +1019,10 @@ Download Dayliz App for the best grocery deals!
             'support@dayliz.in',
             Icons.support_agent_outlined,
           ),
-        ],
-      ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -988,22 +1073,12 @@ Download Dayliz App for the best grocery deals!
         // Section title
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            children: [
-              Icon(
-                Icons.recommend_outlined,
-                color: Colors.grey[700],
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'You might also like',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-              ),
-            ],
+          child: Text(
+            'You might also like',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -1100,106 +1175,15 @@ Download Dayliz App for the best grocery deals!
           final product = products[index];
           return Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: _buildSimilarProductCard(context, product),
+            child: StandardProductCard(
+              product: product,
+              width: 120, // Compact width for similar products
+            ),
           );
         },
       ),
     );
   }
 
-  /// Builds individual similar product card
-  Widget _buildSimilarProductCard(BuildContext context, Product product) {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to the product details
-        context.push('/clean/product/${product.id}');
-      },
-      child: Container(
-        width: 140,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Product image
-            Expanded(
-              flex: 3,
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                  child: Image.network(
-                    product.mainImageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[200],
-                        child: const Icon(
-                          Icons.image_not_supported,
-                          color: Colors.grey,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
 
-            // Product details
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Product name
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const Spacer(),
-
-                    // Price
-                    Text(
-                      '₹${product.discountedPrice.toStringAsFixed(0)}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

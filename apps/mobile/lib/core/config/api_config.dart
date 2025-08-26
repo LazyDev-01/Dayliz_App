@@ -3,13 +3,7 @@ class ApiConfig {
   // Google Places API Configuration
   static const String googlePlacesApiKey = String.fromEnvironment(
     'GOOGLE_PLACES_API_KEY',
-    defaultValue: 'YOUR_GOOGLE_PLACES_API_KEY_HERE', // TODO: Replace with your actual API key
-  );
-  
-  // Mapbox Configuration (already in use)
-  static const String mapboxAccessToken = String.fromEnvironment(
-    'MAPBOX_ACCESS_TOKEN',
-    defaultValue: 'pk.eyJ1IjoiZGF5bGl6IiwiYSI6ImNtYmJ0a244bzB6YXUybHNiaHB1bGI4bDkifQ.ZJdfmD9NbE3zAaDACGtg_g',
+    defaultValue: '', // Will be configured via environment variables
   );
   
   // Cost Control Settings

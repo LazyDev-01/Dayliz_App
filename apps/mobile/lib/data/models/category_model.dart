@@ -12,6 +12,11 @@ class CategoryModel extends Category {
     String? imageUrl,
     int displayOrder = 0,
     List<SubCategoryModel>? subCategories,
+    CategoryType categoryType = CategoryType.product,
+    BusinessModel businessModel = BusinessModel.instantDelivery,
+    AvailabilityScope availabilityScope = AvailabilityScope.zoneBased,
+    bool isActive = true,
+    bool showInCategoriesScreen = true,
   }) : super(
           id: id,
           name: name,
@@ -20,6 +25,11 @@ class CategoryModel extends Category {
           imageUrl: imageUrl,
           displayOrder: displayOrder,
           subCategories: subCategories,
+          categoryType: categoryType,
+          businessModel: businessModel,
+          availabilityScope: availabilityScope,
+          isActive: isActive,
+          showInCategoriesScreen: showInCategoriesScreen,
         );
 
   /// Create a CategoryModel from a JSON map
@@ -45,6 +55,8 @@ class CategoryModel extends Category {
         case 'face': return Icons.face;
         case 'home': return Icons.home;
         case 'toys': return Icons.toys;
+        case 'cake': return Icons.cake;
+        case 'local_laundry_service': return Icons.local_laundry_service;
         default: return Icons.category;
       }
     }
@@ -59,6 +71,41 @@ class CategoryModel extends Category {
       return Color(int.parse(hexColor, radix: 16));
     }
 
+    // Helper for enum conversion
+    CategoryType getCategoryType(String? type) {
+      switch (type) {
+        case 'service':
+          return CategoryType.service;
+        case 'product':
+        default:
+          return CategoryType.product;
+      }
+    }
+
+    BusinessModel getBusinessModel(String? model) {
+      switch (model) {
+        case 'scheduled_service':
+          return BusinessModel.scheduledService;
+        case 'booking':
+          return BusinessModel.booking;
+        case 'reservation':
+          return BusinessModel.reservation;
+        case 'instant_delivery':
+        default:
+          return BusinessModel.instantDelivery;
+      }
+    }
+
+    AvailabilityScope getAvailabilityScope(String? scope) {
+      switch (scope) {
+        case 'city_wide':
+          return AvailabilityScope.cityWide;
+        case 'zone_based':
+        default:
+          return AvailabilityScope.zoneBased;
+      }
+    }
+
     return CategoryModel(
       id: json['id'],
       name: json['name'],
@@ -66,6 +113,11 @@ class CategoryModel extends Category {
       themeColor: getColorFromHex(json['theme_color']),
       imageUrl: json['image_url'],
       displayOrder: json['display_order'] ?? 0,
+      categoryType: getCategoryType(json['category_type']),
+      businessModel: getBusinessModel(json['business_model']),
+      availabilityScope: getAvailabilityScope(json['availability_scope']),
+      isActive: json['is_active'] ?? true,
+      showInCategoriesScreen: json['show_in_categories_screen'] ?? true,
       subCategories: subcategories,
     );
   }
@@ -89,7 +141,7 @@ class CategoryModel extends Category {
     
     // Helper to convert color to hex
     String colorToHex(Color color) {
-      return '#${color.value.toRadixString(16).substring(2)}';
+      return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
     }
     
     return {

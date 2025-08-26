@@ -13,7 +13,7 @@ class GetAddressesUseCase implements UseCase<List<Address>, GetAddressesParams> 
 
   @override
   Future<Either<Failure, List<Address>>> call(GetAddressesParams params) async {
-    return await repository.getAddresses(params.userId);
+    return await repository.getUserAddresses(params.userId);
   }
 }
 

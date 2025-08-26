@@ -276,7 +276,7 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
     }
   }
 
-  /// Get featured products (using latest products as featured for now)
+  /// Get featured products (filtered by is_featured column)
   @override
   Future<List<ProductModel>> getFeaturedProducts({
     int? limit,
@@ -284,10 +284,13 @@ class ProductSupabaseDataSource implements ProductRemoteDataSource {
     try {
       debugPrint('ProductSupabaseDataSource: Fetching featured products from Supabase');
 
-      // Since is_featured column doesn't exist, use latest products as featured
+      // Filter by is_featured column and ensure products are active and in stock
       final response = await supabaseClient
           .from('products_with_images')
           .select('*')
+          .eq('is_featured', true)
+          .eq('is_active', true)
+          .eq('is_in_stock', true)
           .order('created_at', ascending: false)
           .limit(limit ?? 10);
 

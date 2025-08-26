@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_text_styles.dart';
 import '../../providers/viewing_mode_provider.dart';
 
 /// Bottom sheet that appears when user is in viewing mode (city but no delivery)
@@ -49,13 +49,13 @@ class DeliveryRestrictionBottomSheet extends ConsumerWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: AppColors.orange.withValues(alpha: 0.1),
+                color: AppColors.accent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(32),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.location_on_outlined,
                 size: 32,
-                color: AppColors.orange,
+                color: AppColors.accent,
               ),
             ),
             const SizedBox(height: 16),
@@ -63,7 +63,7 @@ class DeliveryRestrictionBottomSheet extends ConsumerWidget {
             // Title
             Text(
               'Limited Service Area',
-              style: AppTextStyles.headingMedium.copyWith(
+              style: AppTextStyles.headline3.copyWith(
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
               ),
@@ -211,23 +211,23 @@ class ViewingModeIndicator extends ConsumerWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: AppColors.orange.withValues(alpha: 0.1),
+          color: AppColors.accent.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.orange.withValues(alpha: 0.3)),
+          border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.visibility_outlined,
               size: 14,
-              color: AppColors.orange,
+              color: AppColors.accent,
             ),
             const SizedBox(width: 4),
             Text(
               'Viewing Only',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.orange,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.accent,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -239,23 +239,23 @@ class ViewingModeIndicator extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.orange.withOpacity(0.1),
+        color: AppColors.accent.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.orange.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
+          const Icon(
             Icons.visibility_outlined,
             size: 16,
-            color: AppColors.orange,
+            color: AppColors.accent,
           ),
           const SizedBox(width: 8),
           Text(
             'Viewing Mode - No Delivery Available',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.orange,
+              color: AppColors.accent,
               fontWeight: FontWeight.w500,
             ),
           ),

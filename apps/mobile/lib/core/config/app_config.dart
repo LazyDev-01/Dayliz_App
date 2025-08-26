@@ -22,6 +22,11 @@ class AppConfig {
   static String _supabaseUrl = '';
   static String _supabaseAnonKey = '';
 
+  // Payment configuration
+  static String _paymentApiBaseUrl = '';
+  static String _razorpayKeyId = '';
+  static String _razorpayKeySecret = '';
+
   /// Initialize the app configuration
   static Future<void> init() async {
     // Load environment variables
@@ -31,9 +36,20 @@ class AppConfig {
     _prefs = await SharedPreferences.getInstance();
 
     // Load configuration from environment
-    _fastApiBaseUrl = dotenv.env['FASTAPI_BASE_URL'] ?? 'http://localhost:8000';
+    // Remove /api/v1 suffix if present to avoid double path
+    String rawFastApiUrl = dotenv.env['FASTAPI_BASE_URL'] ?? 'http://localhost:8000';
+    if (rawFastApiUrl.endsWith('/api/v1')) {
+      rawFastApiUrl = rawFastApiUrl.substring(0, rawFastApiUrl.length - 7);
+    }
+    _fastApiBaseUrl = rawFastApiUrl;
+
     _supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
     _supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+
+    // Load payment configuration
+    _paymentApiBaseUrl = dotenv.env['PAYMENT_API_BASE_URL'] ?? '$_fastApiBaseUrl/api/v1';
+    _razorpayKeyId = dotenv.env['RAZORPAY_KEY_ID'] ?? '';
+    _razorpayKeySecret = dotenv.env['RAZORPAY_KEY_SECRET'] ?? '';
 
     // Load feature flags from shared preferences
     _useFastAPI = _prefs.getBool(_useFastAPIKey) ?? false;
@@ -68,6 +84,15 @@ class AppConfig {
 
   /// The Supabase anonymous key
   static String get supabaseAnonKey => _supabaseAnonKey;
+
+  /// The payment API base URL
+  static String get paymentApiBaseUrl => _paymentApiBaseUrl;
+
+  /// The Razorpay key ID
+  static String get razorpayKeyId => _razorpayKeyId;
+
+  /// The Razorpay key secret (for backend use only)
+  static String get razorpayKeySecret => _razorpayKeySecret;
 
   /// Check if the app is in development mode
   static bool get isDevelopment {

@@ -5,8 +5,9 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
 
-import 'package:dayliz_app/core/network/network_info.dart' as _i6;
+import 'package:dayliz_app/core/network/network_info.dart' as _i7;
 import 'package:dayliz_app/data/datasources/auth_data_source.dart' as _i3;
+import 'package:dayliz_app/data/datasources/auth_local_data_source.dart' as _i6;
 import 'package:dayliz_app/domain/entities/user.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i5;
@@ -152,6 +153,15 @@ class MockAuthDataSource extends _i1.Mock implements _i3.AuthDataSource {
       ) as _i4.Future<void>);
 
   @override
+  _i4.Future<bool> checkEmailExists(String? email) => (super.noSuchMethod(
+        Invocation.method(
+          #checkEmailExists,
+          [email],
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
   _i4.Future<bool> resetPassword({
     required String? token,
     required String? newPassword,
@@ -211,10 +221,240 @@ class MockAuthDataSource extends _i1.Mock implements _i3.AuthDataSource {
       ) as _i4.Future<void>);
 }
 
+/// A class which mocks [AuthLocalDataSourceImpl].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockAuthLocalDataSourceImpl extends _i1.Mock
+    implements _i6.AuthLocalDataSourceImpl {
+  MockAuthLocalDataSourceImpl() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i4.Future<bool> cacheUser(_i2.User? user) => (super.noSuchMethod(
+        Invocation.method(
+          #cacheUser,
+          [user],
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
+  _i4.Future<_i2.User?> getCachedUser() => (super.noSuchMethod(
+        Invocation.method(
+          #getCachedUser,
+          [],
+        ),
+        returnValue: _i4.Future<_i2.User?>.value(),
+      ) as _i4.Future<_i2.User?>);
+
+  @override
+  _i4.Future<bool> cacheToken(String? token) => (super.noSuchMethod(
+        Invocation.method(
+          #cacheToken,
+          [token],
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
+  _i4.Future<String?> getCachedTokenAsync() => (super.noSuchMethod(
+        Invocation.method(
+          #getCachedTokenAsync,
+          [],
+        ),
+        returnValue: _i4.Future<String?>.value(),
+      ) as _i4.Future<String?>);
+
+  @override
+  _i4.Future<bool> clearToken() => (super.noSuchMethod(
+        Invocation.method(
+          #clearToken,
+          [],
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> clearUser() => (super.noSuchMethod(
+        Invocation.method(
+          #clearUser,
+          [],
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
+  _i4.Future<_i2.User> login(
+    String? email,
+    String? password,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #login,
+          [
+            email,
+            password,
+          ],
+        ),
+        returnValue: _i4.Future<_i2.User>.value(_FakeUser_0(
+          this,
+          Invocation.method(
+            #login,
+            [
+              email,
+              password,
+            ],
+          ),
+        )),
+      ) as _i4.Future<_i2.User>);
+
+  @override
+  _i4.Future<_i2.User> register(
+    String? email,
+    String? password,
+    String? name, {
+    String? phone,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #register,
+          [
+            email,
+            password,
+            name,
+          ],
+          {#phone: phone},
+        ),
+        returnValue: _i4.Future<_i2.User>.value(_FakeUser_0(
+          this,
+          Invocation.method(
+            #register,
+            [
+              email,
+              password,
+              name,
+            ],
+            {#phone: phone},
+          ),
+        )),
+      ) as _i4.Future<_i2.User>);
+
+  @override
+  _i4.Future<bool> logout() => (super.noSuchMethod(
+        Invocation.method(
+          #logout,
+          [],
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
+  _i4.Future<_i2.User?> getCurrentUser() => (super.noSuchMethod(
+        Invocation.method(
+          #getCurrentUser,
+          [],
+        ),
+        returnValue: _i4.Future<_i2.User?>.value(),
+      ) as _i4.Future<_i2.User?>);
+
+  @override
+  _i4.Future<bool> isAuthenticated() => (super.noSuchMethod(
+        Invocation.method(
+          #isAuthenticated,
+          [],
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
+  _i4.Future<void> forgotPassword(String? email) => (super.noSuchMethod(
+        Invocation.method(
+          #forgotPassword,
+          [email],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<bool> checkEmailExists(String? email) => (super.noSuchMethod(
+        Invocation.method(
+          #checkEmailExists,
+          [email],
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> resetPassword({
+    required String? token,
+    required String? newPassword,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #resetPassword,
+          [],
+          {
+            #token: token,
+            #newPassword: newPassword,
+          },
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> changePassword({
+    required String? currentPassword,
+    required String? newPassword,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #changePassword,
+          [],
+          {
+            #currentPassword: currentPassword,
+            #newPassword: newPassword,
+          },
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
+  _i4.Future<String> refreshToken() => (super.noSuchMethod(
+        Invocation.method(
+          #refreshToken,
+          [],
+        ),
+        returnValue: _i4.Future<String>.value(_i5.dummyValue<String>(
+          this,
+          Invocation.method(
+            #refreshToken,
+            [],
+          ),
+        )),
+      ) as _i4.Future<String>);
+
+  @override
+  _i4.Future<_i2.User> signInWithGoogle() => (super.noSuchMethod(
+        Invocation.method(
+          #signInWithGoogle,
+          [],
+        ),
+        returnValue: _i4.Future<_i2.User>.value(_FakeUser_0(
+          this,
+          Invocation.method(
+            #signInWithGoogle,
+            [],
+          ),
+        )),
+      ) as _i4.Future<_i2.User>);
+}
+
 /// A class which mocks [NetworkInfo].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNetworkInfo extends _i1.Mock implements _i6.NetworkInfo {
+class MockNetworkInfo extends _i1.Mock implements _i7.NetworkInfo {
   MockNetworkInfo() {
     _i1.throwOnMissingStub(this);
   }

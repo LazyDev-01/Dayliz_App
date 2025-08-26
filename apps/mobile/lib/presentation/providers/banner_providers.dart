@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/datasources/banner_remote_data_source.dart';
+import '../../data/datasources/banner_local_data_source.dart';
 import '../../data/repositories/banner_repository_impl.dart';
 import '../../domain/repositories/banner_repository.dart';
 import '../../domain/usecases/banner/get_active_banners.dart';
@@ -8,6 +9,8 @@ import '../../domain/usecases/banner/get_banner_by_id.dart';
 import '../../domain/entities/banner.dart';
 import 'banner_notifier.dart';
 import 'banner_state.dart';
+import 'network_providers.dart';
+import '../../di/dependency_injection.dart';
 
 // Data Source Providers
 final bannerRemoteDataSourceProvider = Provider<BannerRemoteDataSource>((ref) {
@@ -16,10 +19,19 @@ final bannerRemoteDataSourceProvider = Provider<BannerRemoteDataSource>((ref) {
   );
 });
 
+final bannerLocalDataSourceProvider = Provider<BannerLocalDataSource>((ref) {
+  // Use the service locator to get SharedPreferences
+  return BannerLocalDataSourceImpl(
+    sharedPreferences: sl(),
+  );
+});
+
 // Repository Providers
 final bannerRepositoryProvider = Provider<BannerRepository>((ref) {
   return BannerRepositoryImpl(
     remoteDataSource: ref.watch(bannerRemoteDataSourceProvider),
+    localDataSource: ref.watch(bannerLocalDataSourceProvider),
+    networkInfo: ref.watch(networkInfoProvider),
   );
 });
 

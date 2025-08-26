@@ -6,7 +6,6 @@ import 'package:lottie/lottie.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../providers/location_gating_provider.dart';
-import '../../widgets/common/dayliz_button.dart';
 import '../../../core/constants/app_colors.dart';
 
 /// Service not available screen for areas outside delivery zones
@@ -203,15 +202,27 @@ class _ServiceNotAvailableScreenState extends ConsumerState<ServiceNotAvailableS
   Widget _buildActionButtons() {
     return Padding(
       padding: EdgeInsets.all(24.w),
-      child: DaylizButton(
-        label: 'Change Location',
+      child: ElevatedButton(
         onPressed: () {
-          // Navigate to location search screen instead of location access
-          context.push('/location-search');
+          // Navigate to location selection screen (manual address entry)
+          context.push('/location-selection');
         },
-        type: DaylizButtonType.primary,
-        isFullWidth: true,
-        // Removed GPS icon as requested
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          minimumSize: Size.fromHeight(48.h),
+        ),
+        child: Text(
+          'Change Location',
+          style: TextStyle(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

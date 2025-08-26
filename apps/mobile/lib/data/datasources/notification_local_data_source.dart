@@ -55,7 +55,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
 
       final notificationsJson = sharedPreferences.getString('${_notificationsKey}_$userId');
       if (notificationsJson == null) {
-        throw const CacheException(message: 'No cached notifications found');
+        throw CacheException(message: 'No cached notifications found');
       }
 
       final List<dynamic> notificationsList = jsonDecode(notificationsJson);
@@ -88,7 +88,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
       return paginatedNotifications;
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error getting cached notifications: $e');
-      throw const CacheException(message: 'Failed to get cached notifications');
+      throw CacheException(message: 'Failed to get cached notifications');
     }
   }
 
@@ -113,17 +113,17 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
 
           final notification = notifications.firstWhere(
             (n) => n.id == id,
-            orElse: () => throw const CacheException(message: 'Notification not found in cache'),
+            orElse: () => throw CacheException(message: 'Notification not found in cache'),
           );
 
           return notification;
         }
       }
 
-      throw const CacheException(message: 'Notification not found in cache');
+      throw CacheException(message: 'Notification not found in cache');
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error getting cached notification by ID: $e');
-      throw const CacheException(message: 'Failed to get cached notification');
+      throw CacheException(message: 'Failed to get cached notification');
     }
   }
 
@@ -162,10 +162,10 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
         }
       }
 
-      throw const CacheException(message: 'Notification not found in cache');
+      throw CacheException(message: 'Notification not found in cache');
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error marking notification as read: $e');
-      throw const CacheException(message: 'Failed to mark notification as read');
+      throw CacheException(message: 'Failed to mark notification as read');
     }
   }
 
@@ -188,7 +188,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
       return updatedNotifications;
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error marking multiple notifications as read: $e');
-      throw const CacheException(message: 'Failed to mark multiple notifications as read');
+      throw CacheException(message: 'Failed to mark multiple notifications as read');
     }
   }
 
@@ -214,7 +214,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
       return true;
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error marking all notifications as read: $e');
-      throw const CacheException(message: 'Failed to mark all notifications as read');
+      throw CacheException(message: 'Failed to mark all notifications as read');
     }
   }
 
@@ -250,7 +250,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
       return true; // Notification not found, consider it deleted
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error deleting notification: $e');
-      throw const CacheException(message: 'Failed to delete notification');
+      throw CacheException(message: 'Failed to delete notification');
     }
   }
 
@@ -266,7 +266,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
       return true;
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error deleting multiple notifications: $e');
-      throw const CacheException(message: 'Failed to delete multiple notifications');
+      throw CacheException(message: 'Failed to delete multiple notifications');
     }
   }
 
@@ -281,7 +281,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
       return true;
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error clearing all notifications: $e');
-      throw const CacheException(message: 'Failed to clear all notifications');
+      throw CacheException(message: 'Failed to clear all notifications');
     }
   }
 
@@ -292,13 +292,13 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
 
       final count = sharedPreferences.getInt('${_unreadCountKey}_$userId');
       if (count == null) {
-        throw const CacheException(message: 'No cached unread count found');
+        throw CacheException(message: 'No cached unread count found');
       }
 
       return count;
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error getting cached unread count: $e');
-      throw const CacheException(message: 'Failed to get cached unread count');
+      throw CacheException(message: 'Failed to get cached unread count');
     }
   }
 
@@ -331,7 +331,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
       await sharedPreferences.setString('${_notificationsKey}_$userId', updatedJson);
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error caching notification: $e');
-      throw const CacheException(message: 'Failed to cache notification');
+      throw CacheException(message: 'Failed to cache notification');
     }
   }
 
@@ -347,7 +347,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
       await sharedPreferences.setString('${_notificationsKey}_$userId', notificationsJson);
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error caching notifications: $e');
-      throw const CacheException(message: 'Failed to cache notifications');
+      throw CacheException(message: 'Failed to cache notifications');
     }
   }
 
@@ -359,7 +359,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
       await sharedPreferences.setInt('${_unreadCountKey}_$userId', count);
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error caching unread count: $e');
-      throw const CacheException(message: 'Failed to cache unread count');
+      throw CacheException(message: 'Failed to cache unread count');
     }
   }
 
@@ -370,7 +370,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
 
       final preferencesJson = sharedPreferences.getString('${_preferencesKey}_$userId');
       if (preferencesJson == null) {
-        throw const CacheException(message: 'No cached notification preferences found');
+        throw CacheException(message: 'No cached notification preferences found');
       }
 
       final Map<String, dynamic> preferencesMap = jsonDecode(preferencesJson);
@@ -389,7 +389,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
       );
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error getting cached notification preferences: $e');
-      throw const CacheException(message: 'Failed to get cached notification preferences');
+      throw CacheException(message: 'Failed to get cached notification preferences');
     }
   }
 
@@ -416,7 +416,7 @@ class NotificationSharedPrefsDataSource implements NotificationLocalDataSource {
       await sharedPreferences.setString('${_preferencesKey}_${preferences.userId}', preferencesJson);
     } catch (e) {
       debugPrint('❌ [NotificationLocalDataSource] Error caching notification preferences: $e');
-      throw const CacheException(message: 'Failed to cache notification preferences');
+      throw CacheException(message: 'Failed to cache notification preferences');
     }
   }
 }

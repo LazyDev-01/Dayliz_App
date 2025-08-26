@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // Unused imports removed for production
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:flutter/foundation.dart';
@@ -55,6 +56,7 @@ import 'package:dayliz_app/presentation/providers/weather_provider.dart';
 
 
 import 'package:dayliz_app/presentation/screens/orders/clean_order_confirmation_screen.dart';
+import 'package:dayliz_app/presentation/screens/order/order_summary_screen.dart';
 // Import for clean architecture initialization
 import 'di/dependency_injection.dart' as di;
 import 'di/product_dependency_injection.dart' as product_di;
@@ -94,6 +96,7 @@ import 'presentation/screens/legal/privacy_policy_screen.dart';
 import 'presentation/screens/legal/terms_of_service_screen.dart';
 import 'presentation/screens/legal/consent_preferences_screen.dart';
 import 'presentation/screens/legal/data_rights_screen.dart';
+import 'presentation/screens/services/services_screen.dart';
 
 // Monitoring services
 import 'core/services/app_monitoring_integration.dart';
@@ -252,6 +255,19 @@ Future<void> _initializeEssentialServices() async {
 
     // Initialize Supabase-specific error handling
     GlobalErrorHandler.initializeSupabaseErrorHandling();
+
+    // Register FlutterSecureStorage before authentication (CRITICAL FIX)
+    if (!sl.isRegistered<FlutterSecureStorage>()) {
+      const secureStorage = FlutterSecureStorage(
+        aOptions: AndroidOptions(
+          encryptedSharedPreferences: true,
+        ),
+        iOptions: IOSOptions(
+          accessibility: KeychainAccessibility.first_unlock_this_device,
+        ),
+      );
+      sl.registerLazySingleton(() => secureStorage);
+    }
 
     // Initialize basic authentication components
     await di.initAuthentication();
@@ -806,6 +822,26 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
         ),
       ),
+
+      // Services route
+      GoRoute(
+        path: '/services',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const ServicesScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        ),
+      ),
+
+
       // Legacy routes
       GoRoute(
         path: '/categories',
@@ -864,6 +900,27 @@ final routerProvider = Provider<GoRouter>((ref) {
                   scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
                   child: child,
                 ),
+              );
+            },
+          );
+        },
+      ),
+
+      // Order Summary Route (for direct navigation from COD and order history)
+      GoRoute(
+        path: '/clean/order-summary/:orderId',
+        pageBuilder: (context, state) {
+          final orderId = state.pathParameters['orderId']!;
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: OrderSummaryScreen(orderId: orderId),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
               );
             },
           );

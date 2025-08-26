@@ -275,7 +275,7 @@ class _CleanProductListingScreenState extends ConsumerState<CleanProductListingS
           Text(
             widget.searchQuery != null
                 ? 'No products found for "${widget.searchQuery}"'
-                : 'No products available',
+                : 'Stocking up soon',
             style: const TextStyle(fontSize: 16, color: Colors.grey),
             textAlign: TextAlign.center,
           ),

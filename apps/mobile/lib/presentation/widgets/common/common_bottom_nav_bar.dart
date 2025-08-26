@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'svg_icon.dart';
 
 /// Provider for the current bottom navigation index
 final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
@@ -36,42 +37,60 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
 
-    return BottomNavigationBar(
-      currentIndex: widget.currentIndex,
-      onTap: (index) => _handleTap(context, index),
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: isDarkMode
-          ? theme.bottomNavigationBarTheme.backgroundColor ?? const Color(0xFF1E1E1E)
-          : theme.bottomNavigationBarTheme.backgroundColor ?? Colors.white,
-      selectedItemColor: const Color(0xFF424242), // Dark grey instead of green
-      unselectedItemColor: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          activeIcon: Icon(Icons.home),
-          label: 'Home',
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey[300]!, // Thin light grey line
+            width: 0.5,
+          ),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.grid_view_outlined),
-          activeIcon: Icon(Icons.grid_view),
-          label: 'Categories',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.shopping_cart_outlined),
-          activeIcon: Icon(Icons.shopping_cart),
-          label: 'Cart',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.receipt_outlined),
-          activeIcon: Icon(Icons.receipt),
-          label: 'Orders',
-        ),
-      ],
-      elevation: 8.0, // Add shadow/box effect
-      selectedFontSize: 12, // Same size as unselected to remove animation
-      unselectedFontSize: 12, // Same size as selected to remove animation
-      showSelectedLabels: true,
-      showUnselectedLabels: true,
+      ),
+      child: BottomNavigationBar(
+        currentIndex: widget.currentIndex,
+        onTap: (index) => _handleTap(context, index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: isDarkMode
+            ? theme.bottomNavigationBarTheme.backgroundColor ?? const Color(0xFF1E1E1E)
+            : theme.bottomNavigationBarTheme.backgroundColor ?? Colors.white,
+        selectedItemColor: const Color(0xFF1C1C1C), // Updated to darker color
+        unselectedItemColor: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+        items: [
+          BottomNavigationBarItem(
+            icon: SvgIcon(
+              DaylizIcons.homeOutline,
+              size: 24,
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+            ),
+            activeIcon: const SvgIcon(DaylizIcons.homeFilled, size: 24),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: SvgIcon(
+              DaylizIcons.categoriesOutline,
+              size: 24,
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+            ),
+            activeIcon: const SvgIcon(DaylizIcons.categoriesFilled, size: 24),
+            label: 'Categories',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart_outlined),
+            activeIcon: Icon(Icons.shopping_cart),
+            label: 'Cart',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.receipt_outlined),
+            activeIcon: Icon(Icons.receipt),
+            label: 'Orders',
+          ),
+        ],
+        elevation: 8.0, // Add shadow/box effect
+        selectedFontSize: 12, // Same size as unselected to remove animation
+        unselectedFontSize: 12, // Same size as selected to remove animation
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+      ),
     );
   }
 
@@ -80,8 +99,9 @@ class _CommonBottomNavBarState extends ConsumerState<CommonBottomNavBar> {
     // Haptic feedback
     HapticFeedback.lightImpact();
 
-    // Only update provider state if not using custom navigation
-    if (!widget.useCustomNavigation) {
+    // Only update provider state for Home and Categories (indexes 0 and 1)
+    // Cart and Orders use push navigation and shouldn't update the main screen index
+    if (!widget.useCustomNavigation && (index == 0 || index == 1)) {
       ref.read(bottomNavIndexProvider.notifier).state = index;
     }
 

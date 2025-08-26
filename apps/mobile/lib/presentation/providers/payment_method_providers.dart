@@ -57,54 +57,44 @@ class PaymentMethodNotifier extends StateNotifier<PaymentMethodState> {
     await Future.delayed(const Duration(milliseconds: 800));
 
     try {
+      // Only COD available for MVP launch - other methods coming soon
       final methods = [
-        PaymentMethod(
-          id: '1',
-          userId: userId,
-          type: PaymentMethod.typeCreditCard,
-          name: 'Personal Visa',
-          isDefault: true,
-          details: {
-            'cardNumber': '4242',
-            'cardHolderName': 'John Doe',
-            'expiryDate': '12/25',
-            'cardType': 'visa',
-            'last4': '4242',
-            'brand': 'visa',
-          },
-        ),
-        PaymentMethod(
-          id: '2',
-          userId: userId,
-          type: PaymentMethod.typeCreditCard,
-          name: 'Work Mastercard',
-          isDefault: false,
-          details: {
-            'cardNumber': '5353',
-            'cardHolderName': 'John Doe',
-            'expiryDate': '10/26',
-            'cardType': 'mastercard',
-            'last4': '5353',
-            'brand': 'mastercard',
-          },
-        ),
-        PaymentMethod(
-          id: '3',
-          userId: userId,
-          type: PaymentMethod.typeUpi,
-          name: 'UPI Payment',
-          isDefault: false,
-          details: {
-            'upiId': 'johndoe@upi',
-          },
-        ),
         PaymentMethod(
           id: '4',
           userId: userId,
           type: PaymentMethod.typeCod,
           name: 'Cash on Delivery',
-          isDefault: false,
+          isDefault: true, // Make COD the default since it's the only available option
           details: {},
+        ),
+        // UPI methods marked as coming soon (disabled)
+        PaymentMethod(
+          id: '3',
+          userId: userId,
+          type: PaymentMethod.typeUpi,
+          name: 'UPI Payment (Coming Soon)',
+          isDefault: false,
+          details: {
+            'upiId': 'coming@soon',
+            'isComingSoon': true,
+          },
+        ),
+        // Card methods marked as coming soon (disabled)
+        PaymentMethod(
+          id: '1',
+          userId: userId,
+          type: PaymentMethod.typeCreditCard,
+          name: 'Credit/Debit Card (Coming Soon)',
+          isDefault: false,
+          details: {
+            'cardNumber': '****',
+            'cardHolderName': 'Coming Soon',
+            'expiryDate': '**/**',
+            'cardType': 'visa',
+            'last4': '****',
+            'brand': 'visa',
+            'isComingSoon': true,
+          },
         ),
       ];
 

@@ -121,15 +121,15 @@ class CouponSupabaseDataSource implements CouponRemoteDataSource {
             *,
             coupons (*)
           ''')
-          .eq('user_id', userId)
-          .order('created_at', ascending: false)
-          .range((page - 1) * limit, page * limit - 1);
+          .eq('user_id', userId);
 
       if (isUsed != null) {
         query = query.eq('is_used', isUsed);
       }
 
-      final response = await query;
+      final response = await query
+          .order('created_at', ascending: false)
+          .range((page - 1) * limit, page * limit - 1);
 
       return response.map<CouponWithUserInfo>((json) {
         final couponJson = json['coupons'] as Map<String, dynamic>;

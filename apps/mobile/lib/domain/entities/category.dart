@@ -1,6 +1,26 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
+/// Enum for category types
+enum CategoryType {
+  product,
+  service,
+}
+
+/// Enum for business models
+enum BusinessModel {
+  instantDelivery,
+  scheduledService,
+  booking,
+  reservation,
+}
+
+/// Enum for availability scope
+enum AvailabilityScope {
+  zoneBased,
+  cityWide,
+}
+
 /// Category entity class representing a product category in the domain layer
 class Category extends Equatable {
   final String id;
@@ -11,6 +31,13 @@ class Category extends Equatable {
   final int displayOrder;
   final List<SubCategory>? subCategories;
 
+  // New service-related fields
+  final CategoryType categoryType;
+  final BusinessModel businessModel;
+  final AvailabilityScope availabilityScope;
+  final bool isActive;
+  final bool showInCategoriesScreen;
+
   const Category({
     required this.id,
     required this.name,
@@ -19,6 +46,11 @@ class Category extends Equatable {
     this.imageUrl,
     this.displayOrder = 0,
     this.subCategories,
+    this.categoryType = CategoryType.product,
+    this.businessModel = BusinessModel.instantDelivery,
+    this.availabilityScope = AvailabilityScope.zoneBased,
+    this.isActive = true,
+    this.showInCategoriesScreen = true,
   });
 
   @override
@@ -30,6 +62,11 @@ class Category extends Equatable {
         imageUrl,
         displayOrder,
         subCategories,
+        categoryType,
+        businessModel,
+        availabilityScope,
+        isActive,
+        showInCategoriesScreen,
       ];
 
   /// Returns a copy of this Category with the given fields replaced

@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:dayliz_app/core/errors/failures.dart';
@@ -7,8 +8,8 @@ import 'package:dayliz_app/domain/entities/product.dart';
 import 'package:dayliz_app/domain/repositories/product_repository.dart';
 import 'package:dayliz_app/domain/usecases/search_products_usecase.dart';
 
-// Manual mock class
-class MockProductRepository extends Mock implements ProductRepository {}
+@GenerateMocks([ProductRepository])
+import 'search_products_usecase_test.mocks.dart';
 
 void main() {
   late SearchProductsUseCase usecase;
@@ -43,9 +44,9 @@ void main() {
   test('should search products from the repository', () async {
     // arrange
     when(mockProductRepository.searchProducts(
-      query: anyNamed('query'),
-      page: anyNamed('page'),
-      limit: anyNamed('limit'),
+      query: tQuery,
+      page: tPage,
+      limit: tLimit,
     )).thenAnswer((_) async => const Right(tProducts));
 
     // act
@@ -68,9 +69,9 @@ void main() {
   test('should return failure when repository call fails', () async {
     // arrange
     when(mockProductRepository.searchProducts(
-      query: anyNamed('query'),
-      page: anyNamed('page'),
-      limit: anyNamed('limit'),
+      query: tQuery,
+      page: tPage,
+      limit: tLimit,
     )).thenAnswer((_) async => const Left(ServerFailure(message: 'Search failed')));
 
     // act
@@ -93,10 +94,10 @@ void main() {
   test('should return empty list when no products found', () async {
     // arrange
     when(mockProductRepository.searchProducts(
-      query: anyNamed('query'),
-      page: anyNamed('page'),
-      limit: anyNamed('limit'),
-    )).thenAnswer((_) async => const Right([]));
+      query: tQuery,
+      page: tPage,
+      limit: tLimit,
+    )).thenAnswer((_) async => const Right(<Product>[]));
 
     // act
     final result = await usecase(const SearchProductsParams(
@@ -106,7 +107,7 @@ void main() {
     ));
 
     // assert
-    expect(result, const Right([]));
+    expect(result, const Right(<Product>[]));
     verify(mockProductRepository.searchProducts(
       query: tQuery,
       page: tPage,
@@ -118,9 +119,9 @@ void main() {
   test('should return network failure when device is offline', () async {
     // arrange
     when(mockProductRepository.searchProducts(
-      query: anyNamed('query'),
-      page: anyNamed('page'),
-      limit: anyNamed('limit'),
+      query: tQuery,
+      page: tPage,
+      limit: tLimit,
     )).thenAnswer((_) async => const Left(NetworkFailure(message: 'No internet connection')));
 
     // act
@@ -143,9 +144,9 @@ void main() {
   test('should return cache failure when no cached data available', () async {
     // arrange
     when(mockProductRepository.searchProducts(
-      query: anyNamed('query'),
-      page: anyNamed('page'),
-      limit: anyNamed('limit'),
+      query: tQuery,
+      page: tPage,
+      limit: tLimit,
     )).thenAnswer((_) async => const Left(CacheFailure(message: 'No cached search results')));
 
     // act
@@ -169,10 +170,10 @@ void main() {
     // arrange
     const emptyQuery = '';
     when(mockProductRepository.searchProducts(
-      query: anyNamed('query'),
-      page: anyNamed('page'),
-      limit: anyNamed('limit'),
-    )).thenAnswer((_) async => const Right([]));
+      query: emptyQuery,
+      page: tPage,
+      limit: tLimit,
+    )).thenAnswer((_) async => const Right(<Product>[]));
 
     // act
     final result = await usecase(const SearchProductsParams(
@@ -182,7 +183,7 @@ void main() {
     ));
 
     // assert
-    expect(result, const Right([]));
+    expect(result, const Right(<Product>[]));
     verify(mockProductRepository.searchProducts(
       query: emptyQuery,
       page: tPage,
@@ -195,9 +196,9 @@ void main() {
     // arrange
     const specialQuery = 'apple & orange!';
     when(mockProductRepository.searchProducts(
-      query: anyNamed('query'),
-      page: anyNamed('page'),
-      limit: anyNamed('limit'),
+      query: specialQuery,
+      page: tPage,
+      limit: tLimit,
     )).thenAnswer((_) async => const Right(tProducts));
 
     // act
@@ -222,9 +223,9 @@ void main() {
     const tPage2 = 2;
     const tLimit50 = 50;
     when(mockProductRepository.searchProducts(
-      query: anyNamed('query'),
-      page: anyNamed('page'),
-      limit: anyNamed('limit'),
+      query: tQuery,
+      page: tPage2,
+      limit: tLimit50,
     )).thenAnswer((_) async => const Right(tProducts));
 
     // act
@@ -247,9 +248,9 @@ void main() {
   test('should handle search with null pagination parameters', () async {
     // arrange
     when(mockProductRepository.searchProducts(
-      query: anyNamed('query'),
-      page: anyNamed('page'),
-      limit: anyNamed('limit'),
+      query: tQuery,
+      page: null,
+      limit: null,
     )).thenAnswer((_) async => const Right(tProducts));
 
     // act
@@ -289,9 +290,9 @@ void main() {
     const tMultipleProducts = [tProduct, tProduct2];
 
     when(mockProductRepository.searchProducts(
-      query: anyNamed('query'),
-      page: anyNamed('page'),
-      limit: anyNamed('limit'),
+      query: tQuery,
+      page: tPage,
+      limit: tLimit,
     )).thenAnswer((_) async => const Right(tMultipleProducts));
 
     // act

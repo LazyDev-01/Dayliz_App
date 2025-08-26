@@ -75,9 +75,7 @@ class NotificationSupabaseDataSource implements NotificationRemoteDataSource {
       var query = client
           .from('notifications')
           .select()
-          .eq('user_id', userId)
-          .order('created_at', ascending: false)
-          .range((page - 1) * limit, page * limit - 1);
+          .eq('user_id', userId);
 
       if (type != null) {
         query = query.eq('type', type);
@@ -87,7 +85,9 @@ class NotificationSupabaseDataSource implements NotificationRemoteDataSource {
         query = query.eq('is_read', isRead);
       }
 
-      final response = await query;
+      final response = await query
+          .order('created_at', ascending: false)
+          .range((page - 1) * limit, page * limit - 1);
       
       return response.map<NotificationModel>((json) => NotificationModel.fromJson(json)).toList();
     } catch (e) {
@@ -147,7 +147,7 @@ class NotificationSupabaseDataSource implements NotificationRemoteDataSource {
             'is_read': true,
             'read_at': DateTime.now().toIso8601String(),
           })
-          .in_('id', ids)
+          .inFilter('id', ids)
           .select();
 
       return response.map<NotificationModel>((json) => NotificationModel.fromJson(json)).toList();
@@ -203,7 +203,7 @@ class NotificationSupabaseDataSource implements NotificationRemoteDataSource {
       await client
           .from('notifications')
           .delete()
-          .in_('id', ids);
+          .inFilter('id', ids);
 
       return true;
     } catch (e) {
@@ -236,11 +236,11 @@ class NotificationSupabaseDataSource implements NotificationRemoteDataSource {
 
       final response = await client
           .from('notifications')
-          .select('id', const FetchOptions(count: CountOption.exact))
+          .select('id')
           .eq('user_id', userId)
           .eq('is_read', false);
 
-      return response.count ?? 0;
+      return response.length;
     } catch (e) {
       debugPrint('❌ [NotificationSupabaseDataSource] Error getting unread count: $e');
       throw ServerException(message: e.toString());
@@ -339,7 +339,7 @@ class NotificationSupabaseDataSource implements NotificationRemoteDataSource {
           .from('notifications')
           .delete()
           .eq('id', id)
-          .is_('scheduled_at', null);
+          .isFilter('scheduled_at', null);
 
       return true;
     } catch (e) {

@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../constants/app_colors.dart';
 import '../errors/failures.dart';
-import '../errors/exceptions.dart';
 
 /// Unified Error Handling System for Dayliz App
 /// This system provides consistent error handling across all app features
@@ -25,7 +24,7 @@ class UnifiedErrorSystem {
   static ErrorInfo _mapFailureToErrorInfo(Failure failure) {
     switch (failure.runtimeType) {
       case NetworkFailure:
-        return ErrorInfo(
+        return const ErrorInfo(
           type: ErrorType.network,
           title: 'Connection Problem',
           message: 'Please check your internet connection and try again',
@@ -33,9 +32,9 @@ class UnifiedErrorSystem {
           retryText: 'Retry',
           canRetry: true,
         );
-        
+
       case ServerFailure:
-        return ErrorInfo(
+        return const ErrorInfo(
           type: ErrorType.server,
           title: 'Service Unavailable',
           message: 'Our servers are having issues. Please try again in a moment',
@@ -45,7 +44,7 @@ class UnifiedErrorSystem {
         );
         
       case AuthFailure:
-        return ErrorInfo(
+        return const ErrorInfo(
           type: ErrorType.authentication,
           title: 'Authentication Required',
           message: 'Please log in again to continue',
@@ -53,7 +52,7 @@ class UnifiedErrorSystem {
           retryText: 'Log In',
           canRetry: true,
         );
-        
+
       case ValidationFailure:
         return ErrorInfo(
           type: ErrorType.validation,
@@ -65,7 +64,7 @@ class UnifiedErrorSystem {
         );
         
       case CacheFailure:
-        return ErrorInfo(
+        return const ErrorInfo(
           type: ErrorType.storage,
           title: 'Storage Error',
           message: 'Unable to save or retrieve data locally',
@@ -73,7 +72,7 @@ class UnifiedErrorSystem {
           retryText: 'Retry',
           canRetry: true,
         );
-        
+
       case NotFoundFailure:
         return ErrorInfo(
           type: ErrorType.notFound,
@@ -83,9 +82,9 @@ class UnifiedErrorSystem {
           retryText: 'Go Back',
           canRetry: false,
         );
-        
+
       default:
-        return ErrorInfo(
+        return const ErrorInfo(
           type: ErrorType.unknown,
           title: 'Something Went Wrong',
           message: 'Please try again or contact support if the problem persists',
@@ -101,10 +100,10 @@ class UnifiedErrorSystem {
     final errorString = exception.toString().toLowerCase();
     
     // Network errors
-    if (errorString.contains('socketexception') || 
+    if (errorString.contains('socketexception') ||
         errorString.contains('network') ||
         errorString.contains('connection')) {
-      return ErrorInfo(
+      return const ErrorInfo(
         type: ErrorType.network,
         title: 'Connection Problem',
         message: 'Please check your internet connection and try again',
@@ -113,12 +112,12 @@ class UnifiedErrorSystem {
         canRetry: true,
       );
     }
-    
+
     // Server errors
-    if (errorString.contains('500') || 
+    if (errorString.contains('500') ||
         errorString.contains('server') ||
         errorString.contains('timeout')) {
-      return ErrorInfo(
+      return const ErrorInfo(
         type: ErrorType.server,
         title: 'Service Unavailable',
         message: 'Our servers are having issues. Please try again in a moment',
@@ -129,10 +128,10 @@ class UnifiedErrorSystem {
     }
     
     // Authentication errors
-    if (errorString.contains('401') || 
+    if (errorString.contains('401') ||
         errorString.contains('unauthorized') ||
         errorString.contains('authentication')) {
-      return ErrorInfo(
+      return const ErrorInfo(
         type: ErrorType.authentication,
         title: 'Authentication Required',
         message: 'Please log in again to continue',
@@ -141,12 +140,12 @@ class UnifiedErrorSystem {
         canRetry: true,
       );
     }
-    
+
     // Permission errors
-    if (errorString.contains('403') || 
+    if (errorString.contains('403') ||
         errorString.contains('forbidden') ||
         errorString.contains('permission')) {
-      return ErrorInfo(
+      return const ErrorInfo(
         type: ErrorType.permission,
         title: 'Access Denied',
         message: 'You don\'t have permission to access this resource',
@@ -157,10 +156,10 @@ class UnifiedErrorSystem {
     }
     
     // Format errors
-    if (errorString.contains('format') || 
+    if (errorString.contains('format') ||
         errorString.contains('json') ||
         errorString.contains('parsing')) {
-      return ErrorInfo(
+      return const ErrorInfo(
         type: ErrorType.dataFormat,
         title: 'Data Error',
         message: 'The data received was in an unexpected format',
@@ -169,9 +168,9 @@ class UnifiedErrorSystem {
         canRetry: true,
       );
     }
-    
+
     // Default exception handling
-    return ErrorInfo(
+    return const ErrorInfo(
       type: ErrorType.unknown,
       title: 'Something Went Wrong',
       message: 'Please try again or contact support if the problem persists',
@@ -183,7 +182,7 @@ class UnifiedErrorSystem {
   
   /// Maps generic errors to error info
   static ErrorInfo _mapGenericErrorToErrorInfo(dynamic error) {
-    return ErrorInfo(
+    return const ErrorInfo(
       type: ErrorType.unknown,
       title: 'Unexpected Error',
       message: 'Something unexpected happened. Please try again',

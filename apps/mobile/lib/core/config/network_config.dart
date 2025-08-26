@@ -12,9 +12,9 @@ class NetworkConfig {
   /// Timeout for image loading and caching
   static const Duration imageTimeout = Duration(seconds: 15);
   
-  /// Fast timeout for connectivity checks
-  static const Duration connectivityTimeout = Duration(seconds: 2);
-  
+  /// Fast timeout for connectivity checks (increased for better reliability)
+  static const Duration connectivityTimeout = Duration(seconds: 5);
+
   /// Timeout for authentication operations
   static const Duration authTimeout = Duration(seconds: 8);
   
@@ -60,8 +60,8 @@ class NetworkConfig {
   /// Interval for periodic connectivity checks
   static const Duration connectivityCheckInterval = Duration(seconds: 30);
   
-  /// Timeout for individual connectivity test URLs
-  static const Duration connectivityUrlTimeout = Duration(seconds: 1);
+  /// Timeout for individual connectivity test URLs (increased for reliability)
+  static const Duration connectivityUrlTimeout = Duration(seconds: 3);
   
   // ==================== CACHE CONFIGURATIONS ====================
   

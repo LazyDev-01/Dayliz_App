@@ -19,11 +19,11 @@ class ProductDataSourceFactory {
   }
 
   /// Get the data source for a specific backend type
-  static ProductRemoteDataSource getDataSource(AppConfig.BackendType type) {
+  static ProductRemoteDataSource getDataSource(BackendType type) {
     switch (type) {
-      case AppConfig.BackendType.supabase:
+      case BackendType.supabase:
         return getSupabaseDataSource();
-      case AppConfig.BackendType.fastAPI:
+      case BackendType.fastAPI:
         return getFastAPIDataSource();
     }
   }

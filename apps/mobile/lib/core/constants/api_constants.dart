@@ -2,8 +2,11 @@
 class ApiConstants {
   ApiConstants._();
 
-  // Base URLs
-  static const String baseUrl = 'https://api.dayliz.com';
+  // Base URLs - Use environment variable or fallback to localhost for development
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:8000',
+  );
   static const String apiVersion = '/api/v1';
   static const String baseApiUrl = '$baseUrl$apiVersion';
 
@@ -59,4 +62,11 @@ class ApiConstants {
   // Payment endpoints
   static const String paymentMethodsEndpoint = '/payment-methods';
   static const String addPaymentMethodEndpoint = '/payment-methods/add';
+
+  // Payment processing endpoints
+  static const String createOrderWithPaymentEndpoint = '/payments/create-order-with-payment';
+  static const String verifyPaymentEndpoint = '/payments/razorpay/verify';
+  static const String paymentStatusEndpoint = '/payments/status';
+  static const String retryPaymentEndpoint = '/payments/retry';
+  static const String razorpayWebhookEndpoint = '/payments/webhook/razorpay';
 } 

@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -144,6 +145,19 @@ Future<void> initCleanArchitecture() async {
     sl.registerLazySingleton(() => sharedPreferences);
   }
 
+  // Register FlutterSecureStorage only if not already registered
+  if (!sl.isRegistered<FlutterSecureStorage>()) {
+    const secureStorage = FlutterSecureStorage(
+      aOptions: AndroidOptions(
+        encryptedSharedPreferences: true,
+      ),
+      iOptions: IOSOptions(
+        accessibility: KeychainAccessibility.first_unlock_this_device,
+      ),
+    );
+    sl.registerLazySingleton(() => secureStorage);
+  }
+
   // Register Supabase client only if not already registered
   if (!sl.isRegistered<SupabaseClient>()) {
     try {
@@ -177,7 +191,7 @@ Future<void> initCleanArchitecture() async {
 
   if (!sl.isRegistered<AuthDataSource>(instanceName: 'local')) {
     sl.registerLazySingleton<AuthDataSource>(
-      () => AuthLocalDataSourceImpl(sharedPreferences: sl<SharedPreferences>()),
+      () => AuthLocalDataSourceImpl(secureStorage: sl<FlutterSecureStorage>()),
       instanceName: 'local',
     );
   }
@@ -637,7 +651,7 @@ Future<void> initAuthentication() async {
 
     if (!sl.isRegistered<AuthDataSource>(instanceName: 'local')) {
       sl.registerLazySingleton<AuthDataSource>(
-        () => AuthLocalDataSourceImpl(sharedPreferences: sl<SharedPreferences>()),
+        () => AuthLocalDataSourceImpl(secureStorage: sl<FlutterSecureStorage>()),
         instanceName: 'local',
       );
     }
@@ -775,7 +789,7 @@ Future<void> reInitializeAuthDependencies() async {
   );
 
   sl.registerLazySingleton<AuthDataSource>(
-    () => AuthLocalDataSourceImpl(sharedPreferences: sl<SharedPreferences>()),
+    () => AuthLocalDataSourceImpl(secureStorage: sl<FlutterSecureStorage>()),
     instanceName: 'local',
   );
 

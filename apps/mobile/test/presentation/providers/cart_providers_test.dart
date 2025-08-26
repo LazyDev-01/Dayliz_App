@@ -1,9 +1,9 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:dayliz_app/core/errors/failures.dart';
-import 'package:dayliz_app/core/usecases/usecase.dart';
 import 'package:dayliz_app/domain/entities/cart_item.dart';
 import 'package:dayliz_app/domain/entities/product.dart';
 import 'package:dayliz_app/domain/usecases/get_cart_items_usecase.dart';
@@ -16,15 +16,17 @@ import 'package:dayliz_app/domain/usecases/get_cart_item_count_usecase.dart';
 import 'package:dayliz_app/domain/usecases/is_in_cart_usecase.dart';
 import 'package:dayliz_app/presentation/providers/cart_providers.dart';
 
-// Manual mock classes
-class MockGetCartItemsUseCase extends Mock implements GetCartItemsUseCase {}
-class MockAddToCartUseCase extends Mock implements AddToCartUseCase {}
-class MockRemoveFromCartUseCase extends Mock implements RemoveFromCartUseCase {}
-class MockUpdateCartQuantityUseCase extends Mock implements UpdateCartQuantityUseCase {}
-class MockClearCartUseCase extends Mock implements ClearCartUseCase {}
-class MockGetCartTotalPriceUseCase extends Mock implements GetCartTotalPriceUseCase {}
-class MockGetCartItemCountUseCase extends Mock implements GetCartItemCountUseCase {}
-class MockIsInCartUseCase extends Mock implements IsInCartUseCase {}
+@GenerateMocks([
+  GetCartItemsUseCase,
+  AddToCartUseCase,
+  RemoveFromCartUseCase,
+  UpdateCartQuantityUseCase,
+  ClearCartUseCase,
+  GetCartTotalPriceUseCase,
+  GetCartItemCountUseCase,
+  IsInCartUseCase,
+])
+import 'cart_providers_test.mocks.dart';
 
 void main() {
   late MockGetCartItemsUseCase mockGetCartItemsUseCase;
@@ -92,56 +94,61 @@ void main() {
     });
 
     test('initial state should have empty cart items', () {
-      expect(notifier.state.cartItems, isEmpty);
+      expect(notifier.state.items, isEmpty);
       expect(notifier.state.isLoading, false);
       expect(notifier.state.errorMessage, isNull);
     });
 
     test('should get cart items successfully', () async {
       // arrange
-      when(mockGetCartItemsUseCase.call(any))
+      when(mockGetCartItemsUseCase.call())
           .thenAnswer((_) async => Right(tCartItems));
-      when(mockGetCartTotalPriceUseCase.call(any))
+      when(mockGetCartTotalPriceUseCase.call())
           .thenAnswer((_) async => const Right(tTotalPrice));
-      when(mockGetCartItemCountUseCase.call(any))
+      when(mockGetCartItemCountUseCase.call())
           .thenAnswer((_) async => const Right(tItemCount));
 
       // act
       await notifier.getCartItems();
 
+      // Wait a bit for async operations to complete
+      await Future.delayed(const Duration(milliseconds: 10));
+
       // assert
-      expect(notifier.state.cartItems, tCartItems);
+      expect(notifier.state.items, tCartItems);
       expect(notifier.state.totalPrice, tTotalPrice);
       expect(notifier.state.itemCount, tItemCount);
       expect(notifier.state.isLoading, false);
       expect(notifier.state.errorMessage, isNull);
-      verify(mockGetCartItemsUseCase.call(NoParams()));
+      verify(mockGetCartItemsUseCase.call()).called(1);
     });
 
     test('should handle error when getting cart items fails', () async {
       // arrange
-      when(mockGetCartItemsUseCase.call(any))
+      when(mockGetCartItemsUseCase.call())
           .thenAnswer((_) async => const Left(ServerFailure(message: 'Server error')));
 
       // act
       await notifier.getCartItems();
 
       // assert
-      expect(notifier.state.cartItems, isEmpty);
+      expect(notifier.state.items, isEmpty);
       expect(notifier.state.isLoading, false);
-      expect(notifier.state.errorMessage, 'Server error');
-      verify(mockGetCartItemsUseCase.call(NoParams()));
+      expect(notifier.state.errorMessage, 'Server error occurred. Please try again later.');
+      verify(mockGetCartItemsUseCase.call()).called(1);
     });
 
     test('should add product to cart successfully', () async {
       // arrange
-      when(mockAddToCartUseCase.call(any))
-          .thenAnswer((_) async => Right(tCartItem));
-      when(mockGetCartItemsUseCase.call(any))
+      when(mockAddToCartUseCase.call(const AddToCartParams(
+        product: tProduct,
+        quantity: tQuantity,
+      ))).thenAnswer((_) async => Right(tCartItem));
+      when(mockGetCartItemsUseCase.call())
           .thenAnswer((_) async => Right(tCartItems));
-      when(mockGetCartTotalPriceUseCase.call(any))
+      when(mockGetCartTotalPriceUseCase.call())
           .thenAnswer((_) async => const Right(tTotalPrice));
-      when(mockGetCartItemCountUseCase.call(any))
+      when(mockGetCartItemCountUseCase.call())
           .thenAnswer((_) async => const Right(tItemCount));
 
       // act
@@ -149,7 +156,7 @@ void main() {
 
       // assert
       expect(result, true);
-      expect(notifier.state.cartItems, tCartItems);
+      expect(notifier.state.items, tCartItems);
       verify(mockAddToCartUseCase.call(const AddToCartParams(
         product: tProduct,
         quantity: tQuantity,
@@ -158,15 +165,25 @@ void main() {
 
     test('should handle error when adding to cart fails', () async {
       // arrange
-      when(mockAddToCartUseCase.call(any))
-          .thenAnswer((_) async => const Left(ServerFailure(message: 'Failed to add to cart')));
+      // Mock lazy initialization
+      when(mockGetCartItemsUseCase.call())
+          .thenAnswer((_) async => const Right([]));
+      when(mockGetCartTotalPriceUseCase.call())
+          .thenAnswer((_) async => const Right(0.0));
+      when(mockGetCartItemCountUseCase.call())
+          .thenAnswer((_) async => const Right(0));
+
+      when(mockAddToCartUseCase.call(const AddToCartParams(
+        product: tProduct,
+        quantity: tQuantity,
+      ))).thenAnswer((_) async => const Left(ServerFailure(message: 'Failed to add to cart')));
 
       // act
       final result = await notifier.addToCart(product: tProduct, quantity: tQuantity);
 
       // assert
       expect(result, false);
-      expect(notifier.state.errorMessage, 'Failed to add to cart');
+      expect(notifier.state.errorMessage, 'Server error occurred. Please try again later.');
       verify(mockAddToCartUseCase.call(const AddToCartParams(
         product: tProduct,
         quantity: tQuantity,
@@ -175,13 +192,17 @@ void main() {
 
     test('should remove item from cart successfully', () async {
       // arrange
-      when(mockRemoveFromCartUseCase.call(any))
-          .thenAnswer((_) async => const Right(true));
-      when(mockGetCartItemsUseCase.call(any))
+      // Set up initial cart state with the item to be removed
+      notifier.state = notifier.state.copyWith(items: tCartItems);
+
+      when(mockRemoveFromCartUseCase.call(const RemoveFromCartParams(
+        cartItemId: tCartItemId,
+      ))).thenAnswer((_) async => const Right(true));
+      when(mockGetCartItemsUseCase.call())
           .thenAnswer((_) async => const Right([]));
-      when(mockGetCartTotalPriceUseCase.call(any))
+      when(mockGetCartTotalPriceUseCase.call())
           .thenAnswer((_) async => const Right(0.0));
-      when(mockGetCartItemCountUseCase.call(any))
+      when(mockGetCartItemCountUseCase.call())
           .thenAnswer((_) async => const Right(0));
 
       // act
@@ -189,7 +210,7 @@ void main() {
 
       // assert
       expect(result, true);
-      expect(notifier.state.cartItems, isEmpty);
+      expect(notifier.state.items, isEmpty);
       verify(mockRemoveFromCartUseCase.call(const RemoveFromCartParams(
         cartItemId: tCartItemId,
       )));
@@ -197,13 +218,18 @@ void main() {
 
     test('should update cart item quantity successfully', () async {
       // arrange
-      when(mockUpdateCartQuantityUseCase.call(any))
-          .thenAnswer((_) async => Right(tCartItem));
-      when(mockGetCartItemsUseCase.call(any))
+      // Set up initial cart state with the item to be updated
+      notifier.state = notifier.state.copyWith(items: tCartItems);
+
+      when(mockUpdateCartQuantityUseCase.call(const UpdateCartQuantityParams(
+        cartItemId: tCartItemId,
+        quantity: tQuantity,
+      ))).thenAnswer((_) async => Right(tCartItem));
+      when(mockGetCartItemsUseCase.call())
           .thenAnswer((_) async => Right(tCartItems));
-      when(mockGetCartTotalPriceUseCase.call(any))
+      when(mockGetCartTotalPriceUseCase.call())
           .thenAnswer((_) async => const Right(tTotalPrice));
-      when(mockGetCartItemCountUseCase.call(any))
+      when(mockGetCartItemCountUseCase.call())
           .thenAnswer((_) async => const Right(tItemCount));
 
       // act
@@ -222,13 +248,13 @@ void main() {
 
     test('should clear cart successfully', () async {
       // arrange
-      when(mockClearCartUseCase.call(any))
+      when(mockClearCartUseCase.call())
           .thenAnswer((_) async => const Right(true));
-      when(mockGetCartItemsUseCase.call(any))
+      when(mockGetCartItemsUseCase.call())
           .thenAnswer((_) async => const Right([]));
-      when(mockGetCartTotalPriceUseCase.call(any))
+      when(mockGetCartTotalPriceUseCase.call())
           .thenAnswer((_) async => const Right(0.0));
-      when(mockGetCartItemCountUseCase.call(any))
+      when(mockGetCartItemCountUseCase.call())
           .thenAnswer((_) async => const Right(0));
 
       // act
@@ -236,38 +262,40 @@ void main() {
 
       // assert
       expect(result, true);
-      expect(notifier.state.cartItems, isEmpty);
+      expect(notifier.state.items, isEmpty);
       expect(notifier.state.totalPrice, 0.0);
       expect(notifier.state.itemCount, 0);
-      verify(mockClearCartUseCase.call(NoParams()));
+      verify(mockClearCartUseCase.call());
     });
 
     test('should check if product is in cart', () async {
       // arrange
-      when(mockIsInCartUseCase.call(any))
-          .thenAnswer((_) async => const Right(true));
+      when(mockIsInCartUseCase.call(IsInCartParams(
+        productId: tProduct.id,
+      ))).thenAnswer((_) async => const Right(true));
 
       // act
       final result = await notifier.isInCart(productId: tProduct.id);
 
       // assert
       expect(result, true);
-      verify(mockIsInCartUseCase.call(const IsInCartParams(
+      verify(mockIsInCartUseCase.call(IsInCartParams(
         productId: tProduct.id,
       )));
     });
 
     test('should return false when product is not in cart', () async {
       // arrange
-      when(mockIsInCartUseCase.call(any))
-          .thenAnswer((_) async => const Right(false));
+      when(mockIsInCartUseCase.call(IsInCartParams(
+        productId: tProduct.id,
+      ))).thenAnswer((_) async => const Right(false));
 
       // act
       final result = await notifier.isInCart(productId: tProduct.id);
 
       // assert
       expect(result, false);
-      verify(mockIsInCartUseCase.call(const IsInCartParams(
+      verify(mockIsInCartUseCase.call(IsInCartParams(
         productId: tProduct.id,
       )));
     });
