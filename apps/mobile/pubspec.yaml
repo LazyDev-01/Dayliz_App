@@ -102,7 +102,7 @@ dependencies:
   flutter_secure_storage: ^8.0.0 # Secure storage
   url_launcher: ^6.1.14       # URL launcher
   share_plus: ^7.1.0          # Sharing content
-  flutter_slidable: ^3.1.1
+  flutter_slidable: ^4.0.0
   image_picker: ^1.1.2
   google_sign_in: ^6.1.5      # Google Sign-In
   intl_phone_field: ^3.2.0    # International phone number input
