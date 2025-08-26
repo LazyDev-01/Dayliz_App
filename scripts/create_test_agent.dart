@@ -1,15 +1,15 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Script to create a test agent for the Dayliz Agent App
-/// This creates a test agent with ID: DLZ-AG-GHY-00001 and password: test123
-/// 
+/// This creates a test agent with ID: DLZ-AG-GHY-00001 and secure password
+///
 /// Usage: dart run scripts/create_test_agent.dart
 
 Future<void> main() async {
-  // Initialize Supabase
+  // Initialize Supabase - Replace with your credentials
   await Supabase.initialize(
-    url: 'https://zdezerezpbeuebnompyj.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkZXplcmV6cGJldWVibm9tcHlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMDI3MDgsImV4cCI6MjA1OTc3ODcwOH0.VpbFxH9EeSpi-TV6JYUsyQ-nY6C1-KC8_5defc_pMnA',
+    url: 'https://your-project.supabase.co',  // Replace with your Supabase URL
+    anonKey: 'your_supabase_anon_key_here',  // Replace with your Supabase anon key
   );
 
   final supabase = Supabase.instance.client;
@@ -17,9 +17,9 @@ Future<void> main() async {
   try {
     print('Creating test agent...');
     
-    // Test agent details
+    // Test agent details - Replace with secure password
     const agentId = 'DLZ-AG-GHY-00001';
-    const password = 'test123';
+    const password = 'your_test_password_here';
     const email = '$agentId@dayliz.internal';
     
     // Step 1: Create auth user

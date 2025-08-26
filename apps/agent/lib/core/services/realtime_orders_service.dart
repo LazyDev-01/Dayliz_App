@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/agent_order_model.dart';
 
@@ -43,9 +44,9 @@ class RealtimeOrdersService {
           )
           .subscribe();
 
-      print('Subscribed to real-time orders for agent: $agentId');
+      developer.log('Subscribed to real-time orders for agent: $agentId', name: 'RealtimeOrdersService');
     } catch (e) {
-      print('Error subscribing to orders: $e');
+      developer.log('Error subscribing to orders: $e', name: 'RealtimeOrdersService', error: e);
     }
   }
 
@@ -71,53 +72,49 @@ class RealtimeOrdersService {
           )
           .subscribe();
 
-      print('Subscribed to real-time availability for agent: $agentId');
+      developer.log('Subscribed to real-time availability for agent: $agentId', name: 'RealtimeOrdersService');
     } catch (e) {
-      print('Error subscribing to availability: $e');
+      developer.log('Error subscribing to availability: $e', name: 'RealtimeOrdersService', error: e);
     }
   }
 
   /// Handle order changes from real-time subscription
   void _handleOrderChange(PostgresChangePayload payload) {
     try {
-      print('Order change detected: ${payload.eventType}');
-      print('Order data: ${payload.newRecord}');
+      developer.log('Order change detected: ${payload.eventType}', name: 'RealtimeOrdersService');
+      developer.log('Order data: ${payload.newRecord}', name: 'RealtimeOrdersService');
 
       // Emit order status change for individual order updates
       final newRecord = payload.newRecord;
-      if (newRecord != null) {
-        _orderStatusController.add({
-          'event': payload.eventType.name,
-          'order_id': newRecord['id'],
-          'status': newRecord['status'],
-          'data': newRecord,
-        });
-      }
+      _orderStatusController.add({
+        'event': payload.eventType.name,
+        'order_id': newRecord['id'],
+        'status': newRecord['status'],
+        'data': newRecord,
+      });
 
       // Trigger full orders refresh
       _refreshOrders();
     } catch (e) {
-      print('Error handling order change: $e');
+      developer.log('Error handling order change: $e', name: 'RealtimeOrdersService', error: e);
     }
   }
 
   /// Handle availability changes from real-time subscription
   void _handleAvailabilityChange(PostgresChangePayload payload) {
     try {
-      print('Availability change detected: ${payload.eventType}');
+      developer.log('Availability change detected: ${payload.eventType}', name: 'RealtimeOrdersService');
 
       final newRecord = payload.newRecord;
-      if (newRecord != null) {
-        _availabilityController.add({
-          'event': payload.eventType.name,
-          'agent_id': newRecord['agent_id'],
-          'status': newRecord['status'],
-          'current_orders_count': newRecord['current_orders_count'],
-          'data': newRecord,
-        });
-      }
+      _availabilityController.add({
+        'event': payload.eventType.name,
+        'agent_id': newRecord['agent_id'],
+        'status': newRecord['status'],
+        'current_orders_count': newRecord['current_orders_count'],
+        'data': newRecord,
+      });
     } catch (e) {
-      print('Error handling availability change: $e');
+      developer.log('Error handling availability change: $e', name: 'RealtimeOrdersService', error: e);
     }
   }
 
@@ -128,7 +125,7 @@ class RealtimeOrdersService {
       // For now, we'll emit a refresh signal
       _ordersController.add([]);
     } catch (e) {
-      print('Error refreshing orders: $e');
+      developer.log('Error refreshing orders: $e', name: 'RealtimeOrdersService', error: e);
     }
   }
 
@@ -137,7 +134,7 @@ class RealtimeOrdersService {
     if (_ordersChannel != null) {
       await _supabase.removeChannel(_ordersChannel!);
       _ordersChannel = null;
-      print('Unsubscribed from orders channel');
+      developer.log('Unsubscribed from orders channel', name: 'RealtimeOrdersService');
     }
   }
 
@@ -146,7 +143,7 @@ class RealtimeOrdersService {
     if (_availabilityChannel != null) {
       await _supabase.removeChannel(_availabilityChannel!);
       _availabilityChannel = null;
-      print('Unsubscribed from availability channel');
+      developer.log('Unsubscribed from availability channel', name: 'RealtimeOrdersService');
     }
   }
 
@@ -170,7 +167,7 @@ class RealtimeOrdersService {
         },
       );
     } catch (e) {
-      print('Error broadcasting order assignment: $e');
+      developer.log('Error broadcasting order assignment: $e', name: 'RealtimeOrdersService', error: e);
     }
   }
 
@@ -189,7 +186,7 @@ class RealtimeOrdersService {
         },
       );
     } catch (e) {
-      print('Error broadcasting status update: $e');
+      developer.log('Error broadcasting status update: $e', name: 'RealtimeOrdersService', error: e);
     }
   }
 

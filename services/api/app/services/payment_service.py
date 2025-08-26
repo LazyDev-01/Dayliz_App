@@ -16,6 +16,7 @@ from fastapi import HTTPException, status
 
 from app.core.config import settings
 from app.services.supabase import supabase_client
+from app.services.mock_payment_service import mock_gateway
 from app.schemas.payment import (
     PaymentMethodType, UpiApp, PaymentStatus,
     OrderWithPaymentCreate, RazorpayOrderResponse,
@@ -30,14 +31,27 @@ class PaymentService:
     
     def __init__(self):
         self.logger = logger
-        # Initialize Razorpay client (when keys are available)
-        if settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET:
+        self.is_mock_mode = self._is_mock_mode()
+
+        if self.is_mock_mode:
+            self.logger.info("🧪 Payment Service initialized in MOCK MODE - No Razorpay signup needed!")
+            self.razorpay_client = None
+        elif settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET:
             self.razorpay_client = razorpay.Client(
                 auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
             )
+            self.logger.info("Razorpay client initialized successfully")
         else:
             self.razorpay_client = None
             self.logger.warning("Razorpay credentials not configured - using mock mode")
+
+    def _is_mock_mode(self) -> bool:
+        """Check if we should use mock payment gateway"""
+        return (
+            getattr(settings, 'PAYMENT_MODE', '') == 'mock' or
+            settings.RAZORPAY_KEY_ID.startswith('rzp_test_mock') or
+            settings.RAZORPAY_KEY_SECRET.startswith('mock_')
+        )
     
     async def create_order_with_payment(
         self, 

@@ -5,9 +5,9 @@ import uuid
 from urllib.parse import urlparse
 from supabase import create_client, Client
 
-# Supabase configuration
-SUPABASE_URL = "https://zdezerezpbeuebnompyj.supabase.co"
-SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkZXplcmV6cGJldWVibm9tcHlqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDIwMjcwOCwiZXhwIjoyMDU5Nzc4NzA4fQ.r2zsrRbhhc2w97je_7h9vIAchykCcNlviY_P-9aQoCE"
+# Supabase configuration - Replace with your credentials
+SUPABASE_URL = "https://your-project.supabase.co"  # Replace with your Supabase URL
+SUPABASE_SERVICE_KEY = "your_supabase_service_key_here"  # Replace with your Supabase service key
 
 def download_and_store_image(image_url: str, product_id: str, product_name: str = "") -> str:
     """

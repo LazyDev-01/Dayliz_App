@@ -7,10 +7,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Supabase
+  // Initialize Supabase - Replace with your credentials
   await Supabase.initialize(
-    url: 'https://zdezerezpbeuebnompyj.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkZXplcmV6cGJldWVibm9tcHlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMDI3MDgsImV4cCI6MjA1OTc3ODcwOH0.VpbFxH9EeSpi-TV6JYUsyQ-nY6C1-KC8_5defc_pMnA',
+    url: 'https://your-project.supabase.co',  // Replace with your Supabase URL
+    anonKey: 'your_supabase_anon_key_here',  // Replace with your Supabase anon key
   );
 
   final supabase = Supabase.instance.client;
@@ -18,9 +18,9 @@ Future<void> main() async {
   print('🔄 Testing Agent Login Credentials...');
   print('');
   
-  // Test credentials
+  // Test credentials - Replace with secure password
   const email = 'testuser@gmail.com';
-  const password = 'test123';
+  const password = 'your_test_password_here';
   
   try {
     print('Step 1: Testing Supabase Auth Login...');

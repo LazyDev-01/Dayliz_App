@@ -7,17 +7,17 @@ This ensures the user is created through the proper Supabase flow
 import requests
 import json
 
-# Supabase configuration
-SUPABASE_URL = "https://zdezerezpbeuebnompyj.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkZXplcmV6cGJldWVibm9tcHlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMDI3MDgsImV4cCI6MjA1OTc3ODcwOH0.VpbFxH9EeSpi-TV6JYUsyQ-nY6C1-KC8_5defc_pMnA"
+# Supabase configuration - Use environment variables in production
+SUPABASE_URL = "https://your-project.supabase.co"  # Replace with your Supabase URL
+SUPABASE_ANON_KEY = "your_supabase_anon_key_here"  # Replace with your Supabase anon key
 
 def create_test_agent():
     """Create a test agent using Supabase's auth signup API"""
     
-    # Test credentials
+    # Test credentials - Use environment variables in production
     agent_id = "DLZ-AG-GHY-00001"
     email = f"{agent_id}@dayliz.internal"
-    password = "test123"
+    password = "your_test_password_here"  # Replace with secure password
     
     print(f"🔄 Creating test agent with email: {email}")
     
@@ -92,7 +92,7 @@ def test_authentication():
     
     agent_id = "DLZ-AG-GHY-00001"
     email = f"{agent_id}@dayliz.internal"
-    password = "test123"
+    password = "your_test_password_here"  # Replace with secure password
     
     print(f"\n🔄 Testing authentication with email: {email}")
     

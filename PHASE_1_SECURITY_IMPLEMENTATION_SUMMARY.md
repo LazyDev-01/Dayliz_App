@@ -36,7 +36,7 @@
 <!-- BEFORE: Hardcoded API key -->
 <meta-data
     android:name="com.google.android.geo.API_KEY"
-    android:value="AIzaSyBf-rFSTkhfN_Z6DB8PR4suHjimIMxxXg0" />
+    android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE" />
 
 <!-- AFTER: Environment variable injection -->
 <meta-data
@@ -60,7 +60,7 @@ manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsKey
 ### **File: `apps/mobile/.env.example`**
 ```env
 # BEFORE: Real credentials exposed
-GOOGLE_MAPS_API_KEY=AIzaSyBf-rFSTkhfN_Z6DB8PR4suHjimIMxxXg0
+GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY_HERE
 SUPABASE_URL=https://zdezerezpbeuebnompyj.supabase.co
 
 # AFTER: Safe placeholders
@@ -79,7 +79,7 @@ You need to complete these steps in Google Cloud Console:
 #### **1. Google Maps API Key:**
 1. ✅ Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. ✅ Navigate to **APIs & Services** → **Credentials**
-3. 🔄 **DISABLE/DELETE** old key: `AIzaSyBf-rFSTkhfN_Z6DB8PR4suHjimIMxxXg0`
+3. 🔄 **DISABLE/DELETE** old key: `YOUR_OLD_API_KEY_TO_DELETE`
 4. 🔄 **CREATE NEW** API key with restrictions:
    - **Application restriction**: Android apps
    - **Package name**: `com.dayliz.dayliz_app`

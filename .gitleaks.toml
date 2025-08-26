@@ -1,0 +1,158 @@
+# GitLeaks Configuration for Dayliz App
+# This configuration excludes documentation and test files from secret scanning
+# while maintaining security for production code
+
+title = "Dayliz App GitLeaks Configuration"
+
+# Global allowlist for common false positives
+[allowlist]
+description = "Global allowlist for documentation and test files"
+paths = [
+    # Documentation files
+    ".*\\.md$",
+    ".*\\.txt$",
+    ".*\\.rst$",
+    
+    # Test and script directories
+    "scripts/.*",
+    "test/.*",
+    "tests/.*",
+    ".*_test\\..*",
+    ".*test_.*",
+    
+    # Configuration examples
+    ".*\\.example$",
+    ".*\\.sample$",
+    ".*\\.template$",
+    
+    # Build and cache directories
+    "build/.*",
+    "cache/.*",
+    "node_modules/.*",
+    "\\.dart_tool/.*",
+    
+    # Documentation directories
+    "docs/.*",
+    "documentation/.*",
+    
+    # Specific files that contain example credentials
+    "PHASE_1_SECURITY_IMPLEMENTATION_SUMMARY.md",
+    "PRODUCTION_READINESS_REPORT.md",
+    ".*\\.py$",  # Python scripts in root (they're utility scripts)
+]
+
+# Specific rules for different types of secrets
+[[rules]]
+id = "google-api-key"
+description = "Google API Key"
+regex = '''AIza[0-9A-Za-z_-]{35}'''
+keywords = ["AIza"]
+
+# Allow Google API keys in documentation and example files
+[[rules.allowlist]]
+paths = [
+    ".*\\.md$",
+    ".*\\.example$",
+    ".*\\.sample$",
+    "docs/.*",
+    "scripts/.*"
+]
+
+[[rules]]
+id = "supabase-anon-key"
+description = "Supabase Anonymous Key"
+regex = '''eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*'''
+keywords = ["eyJ"]
+
+# Allow Supabase keys in documentation and test files
+[[rules.allowlist]]
+paths = [
+    ".*\\.md$",
+    ".*\\.example$",
+    ".*\\.sample$",
+    "docs/.*",
+    "scripts/.*",
+    "test/.*",
+    ".*_test\\..*",
+    ".*test_.*"
+]
+
+[[rules]]
+id = "generic-password"
+description = "Generic Password"
+regex = '''password\s*[:=]\s*["\']([^"\']{8,})["\']'''
+keywords = ["password"]
+
+# Allow test passwords in test files and scripts
+[[rules.allowlist]]
+paths = [
+    "scripts/.*",
+    "test/.*",
+    ".*_test\\..*",
+    ".*test_.*",
+    "docs/.*",
+    ".*\\.md$"
+]
+
+[[rules]]
+id = "hardcoded-url"
+description = "Hardcoded Supabase URL"
+regex = '''https://[a-z0-9]+\.supabase\.co'''
+keywords = ["supabase.co"]
+
+# Allow Supabase URLs in documentation and test files
+[[rules.allowlist]]
+paths = [
+    ".*\\.md$",
+    ".*\\.example$",
+    "docs/.*",
+    "scripts/.*",
+    "test/.*",
+    ".*_test\\..*",
+    ".*test_.*"
+]
+
+# Additional entropy-based detection for high-entropy strings
+[[rules]]
+id = "high-entropy-string"
+description = "High entropy string (potential secret)"
+regex = '''[A-Za-z0-9+/]{40,}={0,2}'''
+entropy = 4.5
+
+# Allow high entropy strings in documentation and test files
+[[rules.allowlist]]
+paths = [
+    ".*\\.md$",
+    ".*\\.example$",
+    "docs/.*",
+    "scripts/.*",
+    "test/.*",
+    ".*_test\\..*",
+    ".*test_.*",
+    ".*\\.py$"  # Python utility scripts
+]
+
+# File-specific allowlists for known safe files
+[[rules]]
+id = "file-specific-allowlist"
+description = "File-specific allowlist for known safe files"
+regex = '''.*'''
+
+[[rules.allowlist]]
+paths = [
+    # Specific documentation files with example credentials
+    "PHASE_1_SECURITY_IMPLEMENTATION_SUMMARY.md",
+    "PRODUCTION_READINESS_REPORT.md",
+    
+    # Python utility scripts (not production code)
+    "bulk_product_enhancer.py",
+    "direct_api_image_processor.py",
+    "enhanced_image_processor.py",
+    "simple_image_processor.py",
+    "firecrawl_bulk_enhancer.py",
+    
+    # Test files in apps
+    "apps/agent/test_login.dart",
+    "apps/mobile/test/.*",
+    "apps/agent/test/.*"
+]

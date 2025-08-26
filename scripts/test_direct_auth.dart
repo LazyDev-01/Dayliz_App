@@ -3,10 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Test Supabase authentication directly to isolate the issue
 Future<void> main() async {
   try {
-    // Initialize Supabase with the same credentials as the app
+    // Initialize Supabase - Replace with your credentials
     await Supabase.initialize(
-      url: 'https://zdezerezpbeuebnompyj.supabase.co',
-      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkZXplcmV6cGJldWVibm9tcHlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMDI3MDgsImV4cCI6MjA1OTc3ODcwOH0.VpbFxH9EeSpi-TV6JYUsyQ-nY6C1-KC8_5defc_pMnA',
+      url: 'https://your-project.supabase.co',  // Replace with your Supabase URL
+      anonKey: 'your_supabase_anon_key_here',  // Replace with your Supabase anon key
       debug: true,
     );
 
@@ -14,9 +14,9 @@ Future<void> main() async {
     
     print('🔄 Testing Supabase authentication...');
     
-    // Test credentials
+    // Test credentials - Replace with secure password
     const email = 'simple.test@dayliz.com';
-    const password = 'test123';
+    const password = 'your_test_password_here';
     
     print('Email: $email');
     print('Password length: ${password.length}');

@@ -1,39 +1,70 @@
 import 'dart:io';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert';
 
+/// Standalone Dart script to check product distribution in Supabase database
+///
+/// Usage:
+/// 1. Replace YOUR_SUPABASE_URL and YOUR_SUPABASE_ANON_KEY with actual values
+/// 2. Run: dart database_check.dart
+///
+/// This script uses direct HTTP calls to Supabase REST API instead of the
+/// supabase_flutter package to work as a standalone script.
 void main() async {
-  // Initialize Supabase
-  await Supabase.initialize(
-    url: 'YOUR_SUPABASE_URL',
-    anonKey: 'YOUR_SUPABASE_ANON_KEY',
-  );
+  // Configuration - Replace with your actual Supabase credentials
+  const supabaseUrl = 'YOUR_SUPABASE_URL';
+  const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
 
-  final supabase = Supabase.instance.client;
+  final httpClient = HttpClient();
 
   print('🔍 Checking product distribution in database...\n');
 
   try {
-    // 1. Get total product count
-    final totalCountResponse = await supabase
-        .from('products')
-        .select('id', const FetchOptions(count: CountOption.exact));
+    // Helper function to make Supabase REST API calls
+    Future<Map<String, dynamic>> makeSupabaseRequest(String endpoint, {Map<String, String>? headers}) async {
+      final request = await httpClient.getUrl(Uri.parse('$supabaseUrl/rest/v1/$endpoint'));
+      request.headers.set('apikey', supabaseAnonKey);
+      request.headers.set('Authorization', 'Bearer $supabaseAnonKey');
+      if (headers != null) {
+        headers.forEach((key, value) => request.headers.set(key, value));
+      }
 
-    final totalProducts = totalCountResponse.count ?? 0;
+      final response = await request.close();
+      final responseBody = await response.transform(utf8.decoder).join();
+
+      if (response.statusCode == 200) {
+        return {
+          'data': json.decode(responseBody),
+          'count': response.headers.value('content-range')?.split('/').last
+        };
+      } else {
+        throw Exception('HTTP ${response.statusCode}: $responseBody');
+      }
+    }
+
+    // 1. Get total product count
+    final totalCountResponse = await makeSupabaseRequest(
+      'products?select=id',
+      headers: {'Prefer': 'count=exact'}
+    );
+
+    final totalProducts = int.tryParse(totalCountResponse['count'] ?? '0') ?? 0;
     print('📊 Total products in database: $totalProducts');
 
     // 2. Get product count by subcategory
-    final subcategoryCountResponse = await supabase
-        .from('products')
-        .select('subcategory_id, subcategories(name)')
-        .not('subcategory_id', 'is', null);
+    final subcategoryCountResponse = await makeSupabaseRequest(
+      'products?select=subcategory_id,subcategories(name)&subcategory_id=not.is.null'
+    );
 
     // Group by subcategory
     final subcategoryCounts = <String, int>{};
     final subcategoryNames = <String, String>{};
 
-    for (final product in subcategoryCountResponse) {
-      final subcategoryId = product['subcategory_id'] as String;
-      final subcategoryName = product['subcategories']?['name'] as String? ?? 'Unknown';
+    final products = subcategoryCountResponse['data'] as List<dynamic>;
+    for (final product in products) {
+      final productMap = product as Map<String, dynamic>;
+      final subcategoryId = productMap['subcategory_id'] as String;
+      final subcategoryData = productMap['subcategories'] as Map<String, dynamic>?;
+      final subcategoryName = subcategoryData?['name'] as String? ?? 'Unknown';
 
       subcategoryCounts[subcategoryId] = (subcategoryCounts[subcategoryId] ?? 0) + 1;
       subcategoryNames[subcategoryId] = subcategoryName;
@@ -71,15 +102,17 @@ void main() async {
 
     // 4. Test actual query that the app uses
     print('\n🧪 Testing app query (limit 20):');
-    final testResponse = await supabase
-        .from('products')
-        .select('id, name, subcategory_id')
-        .limit(20);
+    final testResponse = await makeSupabaseRequest(
+      'products?select=id,name,subcategory_id&limit=20'
+    );
 
-    print('Query returned: ${testResponse.length} products');
+    final testProducts = testResponse['data'] as List<dynamic>;
+    print('Query returned: ${testProducts.length} products');
 
   } catch (e) {
     print('❌ Error: $e');
+  } finally {
+    httpClient.close();
   }
 
   exit(0);

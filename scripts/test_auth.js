@@ -3,8 +3,8 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = 'https://zdezerezpbeuebnompyj.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkZXplcmV6cGJldWVibm9tcHlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMDI3MDgsImV4cCI6MjA1OTc3ODcwOH0.VpbFxH9EeSpi-TV6JYUsyQ-nY6C1-KC8_5defc_pMnA';
+const supabaseUrl = 'https://your-project.supabase.co';  // Replace with your Supabase URL
+const supabaseKey = 'your_supabase_anon_key_here';  // Replace with your Supabase anon key
 
 async function testAuth() {
   const supabase = createClient(supabaseUrl, supabaseKey);
@@ -13,22 +13,22 @@ async function testAuth() {
   console.log('URL:', supabaseUrl);
   console.log('Key length:', supabaseKey.length);
   
-  // Test credentials
+  // Test credentials - Replace with secure passwords
   const testCases = [
     {
       name: 'Agent Email Format',
       email: 'DLZ-AG-GHY-00001@dayliz.internal',
-      password: 'test123'
+      password: 'your_test_password_here'
     },
     {
       name: 'Simple Email Format',
       email: 'simple.test@dayliz.com',
-      password: 'test123'
+      password: 'your_test_password_here'
     },
     {
       name: 'Existing User',
       email: 'newuser1999@gmail.com',
-      password: 'test123'  // This will likely fail, but let's see the error
+      password: 'your_test_password_here'  // This will likely fail, but let's see the error
     }
   ];
   

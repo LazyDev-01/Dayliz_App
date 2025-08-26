@@ -31,8 +31,8 @@
 **Issues**:
 ```xml
 <!-- EXPOSED: Google Maps API Key -->
-<meta-data android:name="com.google.android.geo.API_KEY" 
-           android:value="AIzaSyBf-rFSTkhfN_Z6DB8PR4suHjimIMxxXg0" />
+<meta-data android:name="com.google.android.geo.API_KEY"
+           android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE" />
 ```
 
 ```dart
