@@ -140,7 +140,7 @@ dev_dependencies:
   json_serializable: ^6.9.0   # Compatible version
   build_runner: ^2.4.15       # Code generation - Compatible version
   hive_generator: ^2.0.1      # Hive code generation
-  riverpod_generator: ^2.6.5  # Riverpod code generation - SECURITY UPDATE
+  riverpod_generator: ^2.6.3  # Riverpod code generation - COMPATIBILITY FIX
   flutter_launcher_icons: ^0.14.4 # SECURITY UPDATE
   flutter_native_splash: ^2.4.6 # SECURITY UPDATE
   mocktail: ^1.0.2
