@@ -138,7 +138,7 @@ jobs:
 
       - name: 📊 Upload Test Coverage
         if: inputs.skip_tests != true
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         continue-on-error: true
         with:
           file: services/api/coverage.xml
