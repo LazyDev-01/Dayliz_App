@@ -227,3 +227,12 @@ dependency_overrides:
   # These packages have known CVEs that are resolved in newer versions
   source_gen: ^1.5.0  # Force compatible version (latest that works with current analyzer)
   build: ^2.4.2       # Force compatible version
+
+  # ADDITIONAL SECURITY OVERRIDES: Common vulnerable packages
+  # These are frequently flagged by OWASP dependency checks
+  crypto: ^3.0.5      # Force secure crypto implementation
+  http: ^1.2.2        # Force secure HTTP client
+  path: ^1.9.1        # Force secure path handling
+  collection: ^1.19.1 # Force secure collection utilities
+  meta: ^1.15.0       # Force secure meta annotations
+  typed_data: ^1.4.0  # Force secure typed data handling
