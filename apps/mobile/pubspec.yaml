@@ -48,7 +48,7 @@ dependencies:
   # Network
   dio: ^5.3.2                 # Alternative HTTP client with more features
   http: ^1.1.0                # HTTP client for API calls
-  internet_connection_checker: ^1.0.0+1 # Network connectivity
+  internet_connection_checker: ^3.0.1 # Network connectivity - SECURITY UPDATE
   cached_network_image: ^3.2.3 # Image caching
   flutter_cache_manager: ^3.3.1 # Advanced caching for API responses and files
 
@@ -58,34 +58,34 @@ dependencies:
 
   # Supabase (restored)
   supabase_flutter: ^2.0.1
-  decimal: ^2.3.3
+  decimal: ^3.2.4             # SECURITY UPDATE
 
   # UI
   flutter_svg: ^2.0.7         # SVG rendering
   shimmer: ^3.0.0             # Loading effects
-  lottie: ^2.6.0              # Lottie animations
-  google_fonts: ^5.1.0        # Google fonts
+  lottie: ^3.3.1              # Lottie animations - SECURITY UPDATE
+  google_fonts: ^6.3.0        # Google fonts - SECURITY UPDATE
   smooth_page_indicator: ^1.1.0 # Page indicator
-  carousel_slider: ^4.2.1     # Carousel slider - fixed version to avoid conflict
+  carousel_slider: ^5.1.1     # Carousel slider - SECURITY UPDATE
   expandable: ^5.0.1          # Expandable widgets
   pull_to_refresh: ^2.0.0     # Pull to refresh
-  infinite_scroll_pagination: ^4.0.0 # Pagination
+  infinite_scroll_pagination: ^5.1.0 # Pagination - SECURITY UPDATE
   visibility_detector: ^0.4.0+2
   timeline_tile: ^2.0.0       # Timeline visualization for order tracking
-  confetti: ^0.7.0            # Confetti animation for celebrations
+  confetti: ^0.8.0            # Confetti animation for celebrations - SECURITY UPDATE
   flutter_staggered_grid_view: ^0.7.0 # High-performance grid layouts
 
   # Navigation
-  go_router: ^10.1.2          # Router
+  go_router: ^16.1.0          # Router - SECURITY UPDATE
 
   # Tools
-  intl: ^0.18.1               # Internationalization
+  intl: ^0.20.2               # Internationalization - SECURITY UPDATE
   logger: ^2.0.1              # Logging
-  flutter_dotenv: ^5.1.0      # Environment variables
+  flutter_dotenv: ^6.0.0      # Environment variables - SECURITY UPDATE
   uuid: ^4.5.1                # UUID generation (updated for geolocator compatibility)
-  connectivity_plus: ^4.0.2   # Network connectivity
-  package_info_plus: ^4.2.0   # Package information
-  device_info_plus: ^9.1.1    # Device information for monitoring
+  connectivity_plus: ^6.1.5   # Network connectivity - SECURITY UPDATE
+  package_info_plus: ^8.3.1   # Package information - SECURITY UPDATE
+  device_info_plus: ^11.3.0   # Device information for monitoring - SECURITY UPDATE
 
   # UI/UX Enhancement Packages
   flutter_screenutil: ^5.9.3  # Responsive design for all screen sizes
@@ -93,33 +93,33 @@ dependencies:
   flutter_keyboard_visibility: ^6.0.0 # Better keyboard handling
 
   # Location dependencies - Updated to stable versions compatible with Flutter 3.29.2
-  geolocator: ^12.0.0           # Stable geolocation (compatible with Flutter 3.29.2)
-  geocoding: ^3.0.0             # Latest geocoding (compatible with Flutter 3.29.2)
-  location: ^7.0.0              # For requestService() - GPS enable dialog
+  geolocator: ^14.0.2           # Stable geolocation - SECURITY UPDATE
+  geocoding: ^4.0.0             # Latest geocoding - SECURITY UPDATE
+  location: ^8.0.1              # For requestService() - GPS enable dialog - SECURITY UPDATE
   google_places_flutter: ^2.0.9 # Google Places API for address search
   # Enhanced mock implementation available as fallback
 
-  flutter_secure_storage: ^8.0.0 # Secure storage
+  flutter_secure_storage: ^9.2.4 # Secure storage - SECURITY UPDATE
   url_launcher: ^6.1.14       # URL launcher
-  share_plus: ^7.1.0          # Sharing content
-  flutter_slidable: ^3.1.1
+  share_plus: ^11.1.0         # Sharing content - SECURITY UPDATE
+  flutter_slidable: ^4.0.1    # SECURITY UPDATE
   image_picker: ^1.1.2
-  google_sign_in: ^6.1.5      # Google Sign-In
+  google_sign_in: ^7.1.1      # Google Sign-In - SECURITY UPDATE
   intl_phone_field: ^3.2.0    # International phone number input
   pin_code_fields: ^8.0.1     # OTP/PIN input fields
 
-  permission_handler: ^11.3.0 # Permission handling (updated)
+  permission_handler: ^12.0.1 # Permission handling - SECURITY UPDATE
 
   # Payment Integration - Phase 1 Implementation
   razorpay_flutter: ^1.3.7     # Razorpay payment gateway integration
 
   # Firebase dependencies for notifications and monitoring
-  firebase_core: ^3.6.0          # Firebase core
-  firebase_messaging: ^15.1.3    # Firebase Cloud Messaging
-  flutter_local_notifications: ^18.0.1 # Local notifications
-  firebase_analytics: ^11.3.3    # Firebase Analytics
-  firebase_crashlytics: ^4.1.3   # Firebase Crashlytics for crash reporting
-  firebase_performance: ^0.10.0+8 # Firebase Performance Monitoring
+  firebase_core: ^4.0.0          # Firebase core - SECURITY UPDATE
+  firebase_messaging: ^16.0.0    # Firebase Cloud Messaging - SECURITY UPDATE
+  flutter_local_notifications: ^19.4.1 # Local notifications - SECURITY UPDATE
+  firebase_analytics: ^12.0.0    # Firebase Analytics - SECURITY UPDATE
+  firebase_crashlytics: ^5.0.0   # Firebase Crashlytics for crash reporting - SECURITY UPDATE
+  firebase_performance: ^0.11.0  # Firebase Performance Monitoring - SECURITY UPDATE
 
   # Maps and Location - Google Maps implementation
   google_maps_flutter: ^2.9.0   # Google Maps Flutter SDK
@@ -136,15 +136,15 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^2.0.3       # Linting
-  json_serializable: ^6.7.1
-  build_runner: ^2.4.15        # Code generation
+  flutter_lints: ^4.0.0       # Linting - Compatible version
+  json_serializable: ^6.9.0   # Compatible version
+  build_runner: ^2.4.15       # Code generation - Compatible version
   hive_generator: ^2.0.1      # Hive code generation
-  riverpod_generator: ^2.3.1  # Riverpod code generation
-  flutter_launcher_icons: ^0.13.1
-  flutter_native_splash: ^2.3.9
+  riverpod_generator: ^2.6.5  # Riverpod code generation - SECURITY UPDATE
+  flutter_launcher_icons: ^0.14.4 # SECURITY UPDATE
+  flutter_native_splash: ^2.4.6 # SECURITY UPDATE
   mocktail: ^1.0.2
-  mockito: ^5.4.4
+  mockito: ^5.4.5             # Compatible with current Dart SDK
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
