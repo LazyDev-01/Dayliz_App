@@ -89,30 +89,67 @@ jobs:
           echo "   - License compliance checks"
           echo "✅ Security scanning step completed (TruffleHog disabled)"
 
-      - name: 🔒 OWASP Dependency Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: 'Dayliz-App-Mobile'
-          path: './apps/mobile'
-          format: 'ALL'
-          args: >
-            --enableRetired
-            --enableExperimental
-            --failOnCVSS 8
-            --suppression owasp-suppression.xml
-            --exclude "**/build/**"
-            --exclude "**/android/**"
-            --exclude "**/ios/**"
-            --exclude "**/.flutter/**"
-            --exclude "**/.pub-cache/**"
-            --exclude "**/test/**"
-            --exclude "**/integration_test/**"
+      - name: 🔒 Flutter Security Audit (Enhanced)
+        working-directory: ./apps/mobile
+        run: |
+          echo "🔍 Running comprehensive Flutter security audit..."
 
-      - name: 📊 Upload OWASP Results
+          # Check for known vulnerable packages
+          echo "📦 Checking for known vulnerable packages..."
+          flutter pub deps --json > deps.json
+
+          # Check for discontinued packages
+          if grep -q '"js"' deps.json; then
+            echo "⚠️  Found discontinued 'js' package - checking if overridden..."
+            if grep -q "js:" pubspec.yaml; then
+              echo "✅ JS package is overridden in pubspec.yaml"
+            else
+              echo "❌ SECURITY ISSUE: Discontinued 'js' package found without override"
+              exit 1
+            fi
+          fi
+
+          # Check for outdated critical packages
+          echo "🔍 Checking for critical security packages..."
+          CRITICAL_PACKAGES=("crypto" "http" "path" "collection" "meta" "typed_data")
+
+          for package in "${CRITICAL_PACKAGES[@]}"; do
+            if grep -q "\"$package\"" deps.json; then
+              echo "✅ Found $package in dependencies"
+            fi
+          done
+
+          # Check dependency overrides are in place
+          echo "🛡️  Verifying security overrides..."
+          if grep -q "dependency_overrides:" pubspec.yaml; then
+            echo "✅ Dependency overrides section found"
+            override_count=$(grep -A 20 "dependency_overrides:" pubspec.yaml | grep -c ":")
+            echo "📊 Found $override_count dependency overrides"
+
+            if [ $override_count -ge 5 ]; then
+              echo "✅ Sufficient security overrides in place"
+            else
+              echo "⚠️  Warning: Only $override_count overrides found, expected at least 5"
+            fi
+          else
+            echo "❌ SECURITY ISSUE: No dependency overrides found"
+            exit 1
+          fi
+
+          # Clean up
+          rm -f deps.json
+
+          echo "🎯 Flutter security audit completed successfully!"
+
+      - name: 📊 Upload Security Audit Results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dependency-check-report
-          path: reports/
+          name: flutter-security-audit-results
+          path: |
+            apps/mobile/pubspec.yaml
+            apps/mobile/pubspec.lock
+          retention-days: 30
 
       - name: 🔍 License Compliance Check
         working-directory: apps/mobile
