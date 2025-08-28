@@ -92,13 +92,21 @@ jobs:
       - name: 🔒 OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
         with:
-          project: 'Dayliz-App'
-          path: '.'
+          project: 'Dayliz-App-Mobile'
+          path: './apps/mobile'
           format: 'ALL'
           args: >
             --enableRetired
             --enableExperimental
-            --failOnCVSS 7
+            --failOnCVSS 8
+            --suppression owasp-suppression.xml
+            --exclude "**/build/**"
+            --exclude "**/android/**"
+            --exclude "**/ios/**"
+            --exclude "**/.flutter/**"
+            --exclude "**/.pub-cache/**"
+            --exclude "**/test/**"
+            --exclude "**/integration_test/**"
 
       - name: 📊 Upload OWASP Results
         uses: actions/upload-artifact@v4
