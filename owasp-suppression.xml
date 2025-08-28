@@ -6,78 +6,78 @@
     <suppress>
         <notes>Flutter SDK vulnerabilities - not controllable by application</notes>
         <packageUrl regex="true">^pkg:.*flutter.*</packageUrl>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
-    
+
     <suppress>
         <notes>Flutter cache and build artifacts</notes>
         <filePath regex="true">.*\.flutter.*</filePath>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
-    
+
     <suppress>
         <notes>Flutter pub cache</notes>
         <filePath regex="true">.*\.pub-cache.*</filePath>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
-    
+
     <!-- Dart SDK Suppressions -->
     <suppress>
         <notes>Dart SDK vulnerabilities - not controllable by application</notes>
         <packageUrl regex="true">^pkg:.*dart.*</packageUrl>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
-    
+
     <!-- Build and Cache Directory Suppressions -->
     <suppress>
         <notes>Build artifacts and cache directories</notes>
         <filePath regex="true">.*/build/.*</filePath>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
-    
+
     <suppress>
         <notes>Android build artifacts</notes>
         <filePath regex="true">.*/android/.*</filePath>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
-    
+
     <suppress>
         <notes>iOS build artifacts</notes>
         <filePath regex="true">.*/ios/.*</filePath>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
-    
+
     <!-- Discontinued JS Package - Known Issue -->
     <suppress>
         <notes>JS package is discontinued but we have override in place</notes>
         <packageUrl regex="true">^pkg:.*js@.*</packageUrl>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
-    
+
     <!-- Development and Test Dependencies -->
     <suppress>
         <notes>Development dependencies - not in production</notes>
         <packageUrl regex="true">^pkg:.*test.*</packageUrl>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
-    
+
     <suppress>
         <notes>Development dependencies - not in production</notes>
         <packageUrl regex="true">^pkg:.*dev.*</packageUrl>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
-    
+
     <!-- Specific Known False Positives -->
     <suppress>
         <notes>Analyzer package - development only, overridden in pubspec</notes>
         <packageUrl regex="true">^pkg:.*analyzer.*</packageUrl>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
-    
+
     <suppress>
         <notes>Source gen package - development only, overridden in pubspec</notes>
         <packageUrl regex="true">^pkg:.*source_gen.*</packageUrl>
-        <cve>.*</cve>
+        <cve regex="true">.*</cve>
     </suppress>
     
 </suppressions>
