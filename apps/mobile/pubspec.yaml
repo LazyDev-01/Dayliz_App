@@ -214,3 +214,16 @@ flutter_native_splash:
   android_12:
     image: assets/images/splash_logo.png
     color: "#FFFFFF"
+
+# SECURITY DEPENDENCY OVERRIDES
+# These overrides address specific OWASP vulnerabilities
+dependency_overrides:
+  # CRITICAL: Override discontinued js package
+  # The js package is discontinued and has known security vulnerabilities
+  # This forces all dependencies to use the newer web package instead
+  js: ^0.7.1  # Latest stable version before discontinuation
+
+  # SECURITY: Force newer versions of vulnerable transitive dependencies
+  # These packages have known CVEs that are resolved in newer versions
+  source_gen: ^1.5.0  # Force compatible version (latest that works with current analyzer)
+  build: ^2.4.2       # Force compatible version
