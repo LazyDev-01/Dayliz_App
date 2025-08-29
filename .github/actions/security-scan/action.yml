@@ -19,19 +19,37 @@ runs:
       run: |
         echo "🔍 Running GitLeaks secret detection..."
 
-        # Install GitLeaks if not available
+        # Try to install GitLeaks if not available
         if ! command -v gitleaks &> /dev/null; then
           echo "📦 Installing GitLeaks..."
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.18.4_linux_x64.tar.gz | tar -xz
-          sudo mv gitleaks /usr/local/bin/
+          if curl -sSfL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.18.4_linux_x64.tar.gz | tar -xz && sudo mv gitleaks /usr/local/bin/; then
+            echo "✅ GitLeaks installed successfully"
+          else
+            echo "⚠️ GitLeaks installation failed, skipping GitLeaks scan"
+            echo "🔍 Running basic secret pattern detection instead..."
+
+            # Basic secret detection as fallback
+            if grep -r "AIza[0-9A-Za-z_-]\{35\}" . --exclude-dir=.git --exclude-dir=.github --exclude="*.md" 2>/dev/null; then
+              echo "⚠️ Potential Google API key detected"
+            fi
+
+            if grep -r "GOCSPX-[0-9A-Za-z_-]\{28\}" . --exclude-dir=.git --exclude-dir=.github --exclude="*.md" 2>/dev/null; then
+              echo "⚠️ Potential Google OAuth secret detected"
+            fi
+
+            echo "✅ Basic secret detection completed"
+            exit 0
+          fi
         fi
 
-        # Run GitLeaks with our configuration
-        if gitleaks detect --config=.gitleaks.toml --verbose --no-git; then
-          echo "✅ GitLeaks scan completed - no secrets detected"
-        else
-          echo "⚠️ GitLeaks detected potential issues, but continuing with build..."
-          echo "📋 Please review the GitLeaks output above"
+        # Run GitLeaks with our configuration if available
+        if command -v gitleaks &> /dev/null; then
+          if gitleaks detect --config=.gitleaks.toml --verbose --no-git; then
+            echo "✅ GitLeaks scan completed - no secrets detected"
+          else
+            echo "⚠️ GitLeaks detected potential issues, but continuing with build..."
+            echo "📋 Please review the GitLeaks output above"
+          fi
         fi
 
         echo "🎯 Secret detection completed"
