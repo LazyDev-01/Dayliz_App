@@ -36,7 +36,6 @@ import 'network_error_app.dart';
 import 'package:dayliz_app/theme/app_theme.dart';
 // Clean architecture imports
 // Clean architecture imports for database operations
-import 'package:dayliz_app/data/datasources/clean_database_seeder.dart';
 import 'package:dayliz_app/data/datasources/clean_database_migrations.dart';
 import 'package:dayliz_app/domain/usecases/is_authenticated_usecase.dart';
 // Unused usecase imports removed for production
@@ -333,18 +332,7 @@ void _initializeBackgroundOperations() {
       }
 
       // Seed database with test data (debug mode only)
-      if (kDebugMode) {
-        try {
-          final isAuthenticatedUseCase = sl<IsAuthenticatedUseCase>();
-          final isAuthenticated = await isAuthenticatedUseCase.call();
-
-          if (isAuthenticated) {
-            await CleanDatabaseSeeder.instance.seedDatabase();
-          }
-        } catch (e) {
-          // Database seeding failed - continue without test data
-        }
-      }
+      // Database seeding removed for production build
 
     } catch (e) {
       // Background initialization error - continue with basic functionality

@@ -3,7 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../errors/exceptions.dart';
-import '../../utils/supabase_config_checker.dart';
+import 'production_logger.dart';
 
 /// Service for handling Google Sign-In authentication
 /// This is a specialized service that integrates with clean architecture
@@ -49,7 +49,7 @@ class GoogleSignInService {
           scopes: ['email', 'profile', 'openid'],
           clientId: webClientId,
         );
-        debugPrint('🔍 [GoogleSignInService] Configured for Web with client ID');
+        ProductionLogger.auth('Configured for Web with client ID');
       } else {
         // For Android, try using the web client ID to fix ApiException: 10
         // Sometimes this resolves token exchange issues
@@ -74,14 +74,7 @@ class GoogleSignInService {
     try {
       debugPrint('🔄 [GoogleSignInService] Starting Google Sign-in process');
 
-      // Check Supabase configuration
-      final configResult = await SupabaseConfigChecker.checkSupabaseConfig();
-      final isConfigured = configResult['isInitialized'] == true && configResult['hasClient'] == true;
-
-      if (!isConfigured) {
-        debugPrint('❌ [GoogleSignInService] Supabase is not properly configured: ${configResult['error']}');
-        throw ServerException(message: 'Supabase configuration is incomplete');
-      }
+      // Supabase configuration check removed for production
 
       // First, ensure we're signed out from any previous sessions
       try {
