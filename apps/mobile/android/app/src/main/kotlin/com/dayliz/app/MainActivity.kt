@@ -1,4 +1,4 @@
-package com.dayliz.dayliz_app
+package com.dayliz.app
 
 import io.flutter.embedding.android.FlutterActivity
 

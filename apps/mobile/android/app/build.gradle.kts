@@ -12,8 +12,8 @@ plugins {
 }
 
 android {
-    namespace = "com.dayliz.dayliz_app"
-    compileSdk = flutter.compileSdkVersion
+    namespace = "com.dayliz.app"
+    compileSdk = 34 // Android 14 (matches targetSdk)
     ndkVersion = "29.0.13113456"
 
     compileOptions {
@@ -29,11 +29,11 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.dayliz.dayliz_app"
+        applicationId = "com.dayliz.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 21 // Required for flutter_local_notifications
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 34 // Android 14 (required for Play Store)
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 

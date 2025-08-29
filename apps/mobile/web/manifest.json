@@ -1,11 +1,11 @@
 {
-    "name": "dayliz_app",
-    "short_name": "dayliz_app",
+    "name": "Dayliz",
+    "short_name": "Dayliz",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Dayliz - Your daily needs delivered fast",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

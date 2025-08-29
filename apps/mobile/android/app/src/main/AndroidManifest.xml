@@ -112,7 +112,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="com.dayliz.dayliz_app"
+                    android:scheme="com.dayliz.app"
                     android:host="login" />
             </intent-filter>
 

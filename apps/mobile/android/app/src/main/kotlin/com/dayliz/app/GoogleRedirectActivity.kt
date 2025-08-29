@@ -1,4 +1,4 @@
-package com.dayliz.dayliz_app
+package com.dayliz.app
 
 import android.app.Activity
 import android.content.Intent
@@ -20,7 +20,7 @@ class GoogleRedirectActivity : Activity() {
             Log.d("GoogleRedirectActivity", "Received redirect: $data")
             
             // Create a new intent with the modified URI
-            val redirectUri = Uri.parse("com.dayliz.dayliz_app://login")
+            val redirectUri = Uri.parse("com.dayliz.app://login")
                 .buildUpon()
                 .appendQueryParameter("code", data.getQueryParameter("code"))
                 .appendQueryParameter("state", data.getQueryParameter("state"))
