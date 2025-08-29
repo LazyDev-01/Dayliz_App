@@ -1,5 +1,8 @@
 # Dayliz - Q-Commerce Grocery Delivery App
 
+[![CI/CD Pipeline](https://github.com/LazyDev-01/Dayliz_App/actions/workflows/ci.yml/badge.svg)](https://github.com/LazyDev-01/Dayliz_App/actions/workflows/ci.yml)
+[![Security Scanning](https://github.com/LazyDev-01/Dayliz_App/actions/workflows/security.yml/badge.svg)](https://github.com/LazyDev-01/Dayliz_App/actions/workflows/security.yml)
+
 A full-stack, scalable, and cost-efficient q-commerce mobile app for grocery delivery in India, supporting real-time order tracking, optimized for Indian users.
 
 ## Project Structure
