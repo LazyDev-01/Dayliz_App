@@ -11,6 +11,13 @@ plugins {
     id("com.google.firebase.firebase-perf")
 }
 
+// Load keystore properties
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.dayliz.app"
     compileSdk = 34 // Android 14 (matches targetSdk)
@@ -48,12 +55,21 @@ android {
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsKey
     }
 
+    signingConfigs {
+        create("release") {
+            // Production keystore configuration
+            // Load from key.properties file or environment variables
+            keyAlias = keystoreProperties.getProperty("RELEASE_KEY_ALIAS") ?: System.getenv("RELEASE_KEY_ALIAS")
+            keyPassword = keystoreProperties.getProperty("RELEASE_KEY_PASSWORD") ?: System.getenv("RELEASE_KEY_PASSWORD")
+            storeFile = file(keystoreProperties.getProperty("RELEASE_STORE_FILE") ?: System.getenv("RELEASE_STORE_FILE") ?: "../release-keystore.jks")
+            storePassword = keystoreProperties.getProperty("RELEASE_STORE_PASSWORD") ?: System.getenv("RELEASE_STORE_PASSWORD")
+        }
+    }
+
     buildTypes {
         release {
-            // Production release configuration
-            // Note: Proper signing configuration should be set up for production deployment
-            // For development builds, using debug signing temporarily
-            signingConfig = signingConfigs.getByName("debug")
+            // Production release configuration with proper signing
+            signingConfig = signingConfigs.getByName("release")
 
             // Enable code shrinking and obfuscation for release builds
             isMinifyEnabled = true

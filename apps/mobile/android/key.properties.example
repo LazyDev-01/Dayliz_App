@@ -1,0 +1,22 @@
+# Production Keystore Configuration
+# Copy this file to key.properties and fill in your actual values
+# NEVER commit key.properties to version control
+
+# Keystore file path (relative to android/app/ directory)
+RELEASE_STORE_FILE=../release-keystore.jks
+
+# Keystore password
+RELEASE_STORE_PASSWORD=your_keystore_password_here
+
+# Key alias
+RELEASE_KEY_ALIAS=dayliz-release-key
+
+# Key password
+RELEASE_KEY_PASSWORD=your_key_password_here
+
+# Instructions:
+# 1. Generate keystore: keytool -genkey -v -keystore release-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias dayliz-release-key
+# 2. Copy this file to key.properties
+# 3. Fill in your actual passwords
+# 4. Place release-keystore.jks in android/ directory
+# 5. Ensure key.properties and *.jks are in .gitignore
