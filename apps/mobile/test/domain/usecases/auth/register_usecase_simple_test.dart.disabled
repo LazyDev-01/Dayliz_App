@@ -33,10 +33,10 @@ void main() {
   test('should register user from the repository', () async {
     // arrange
     when(mockAuthRepository.register(
-      email: tEmail,
-      password: tPassword,
-      name: tName,
-      phone: tPhone,
+      email: any,
+      password: any,
+      name: any,
+      phone: any,
     )).thenAnswer((_) async => Right(tUser));
 
     // act
