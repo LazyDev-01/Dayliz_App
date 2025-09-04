@@ -383,23 +383,16 @@ class AuthSupabaseDataSource implements AuthDataSource {
         debugPrint('🔍 [AuthSupabaseDataSource] No previous Supabase session to sign out from');
       }
 
-      // Get the OAuth token from Google (force account selection)
-      debugPrint('🔍 [AuthSupabaseDataSource] Getting OAuth token from Google with account selection');
-      final token = await googleSignInService.getGoogleAuthToken(forceAccountSelection: true);
+      // Use the full Google Sign-In flow with v7.x API (includes both authentication and Supabase integration)
+      debugPrint('🔍 [AuthSupabaseDataSource] Using full Google Sign-In flow with v7.x API');
+      final response = await googleSignInService.signInWithGoogle(forceAccountSelection: true);
 
-      if (token == null) {
+      if (response == null) {
         debugPrint('🔍 [AuthSupabaseDataSource] User cancelled Google Sign-In - this is not an error');
         throw UserCancellationException(message: 'Google Sign-In cancelled by user');
       }
 
-      debugPrint('✅ [AuthSupabaseDataSource] Got Google OAuth token: ${token.substring(0, 10)}...');
-
-      // Sign in to Supabase with the Google token
-      debugPrint('🔍 [AuthSupabaseDataSource] Signing in to Supabase with Google token');
-      final response = await _supabaseClient.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: token,
-      );
+      debugPrint('✅ [AuthSupabaseDataSource] Google Sign-In completed successfully');
 
       if (response.user == null) {
         debugPrint('❌ [AuthSupabaseDataSource] No user returned from Google Sign-in');

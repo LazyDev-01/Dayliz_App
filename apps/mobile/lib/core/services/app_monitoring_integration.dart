@@ -25,8 +25,8 @@ class AppMonitoringIntegration {
   
   // Connectivity monitoring
   final Connectivity _connectivity = Connectivity();
-  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
-  ConnectivityResult? _lastConnectivityResult;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  List<ConnectivityResult>? _lastConnectivityResult;
   
   // Performance monitoring
   final Map<String, DateTime> _operationStartTimes = {};
@@ -78,8 +78,8 @@ class AppMonitoringIntegration {
       
       // Listen for connectivity changes
       _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
-        (ConnectivityResult result) async {
-          await _handleConnectivityChange(result);
+        (List<ConnectivityResult> results) async {
+          await _handleConnectivityChange(results);
         },
         onError: (error) async {
           await _monitoring.recordError(error, null, reason: 'Connectivity monitoring error');
@@ -97,24 +97,28 @@ class AppMonitoringIntegration {
   }
 
   /// Handle connectivity changes
-  Future<void> _handleConnectivityChange(ConnectivityResult result) async {
+  Future<void> _handleConnectivityChange(List<ConnectivityResult> results) async {
     try {
       final previousResult = _lastConnectivityResult;
-      _lastConnectivityResult = result;
-      
+      _lastConnectivityResult = results;
+
+      // Check if connected (any connection type except none)
+      final isConnected = results.any((result) => result != ConnectivityResult.none);
+      final wasConnected = previousResult?.any((result) => result != ConnectivityResult.none) ?? false;
+
       // Track connectivity change
       await _monitoring.logEvent('connectivity_changed', {
         'from': previousResult.toString(),
-        'to': result.toString(),
-        'is_connected': result != ConnectivityResult.none,
+        'to': results.toString(),
+        'is_connected': isConnected,
       });
-      
+
       // Track business impact
-      if (result == ConnectivityResult.none) {
-        await _businessMetrics.trackErrorEvent('network_disconnected', 
+      if (!isConnected) {
+        await _businessMetrics.trackErrorEvent('network_disconnected',
           errorMessage: 'Device lost network connectivity'
         );
-      } else if (previousResult == ConnectivityResult.none) {
+      } else if (!wasConnected) {
         await _businessMetrics.trackErrorEvent('network_reconnected',
           errorMessage: 'Device regained network connectivity'
         );

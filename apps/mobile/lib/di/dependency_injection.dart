@@ -136,7 +136,7 @@ Future<void> initCleanArchitecture() async {
 
   // Only register InternetConnectionChecker for non-web platforms and if not already registered
   if (!kIsWeb && !sl.isRegistered<InternetConnectionChecker>()) {
-    sl.registerLazySingleton(() => InternetConnectionChecker());
+    sl.registerLazySingleton(() => InternetConnectionChecker.instance);
   }
 
   // Register SharedPreferences only if not already registered

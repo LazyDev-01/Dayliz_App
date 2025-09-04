@@ -7,7 +7,7 @@ import '../../core/services/connectivity_checker.dart';
 
 /// Network info provider
 final networkInfoProvider = Provider<NetworkInfo>((ref) {
-  return NetworkInfoImpl(InternetConnectionChecker());
+  return NetworkInfoImpl(InternetConnectionChecker.instance);
 });
 
 /// Connectivity state notifier that caches network status and prevents flickering

@@ -1,17 +1,17 @@
 import 'package:flutter/foundation.dart';
 
+/// Log levels for different types of messages
+enum LogLevel {
+  debug,
+  info,
+  warning,
+  error,
+}
+
 /// Production-ready logging service that conditionally logs based on build mode
 /// Replaces debugPrint statements for production builds
 class ProductionLogger {
   static const String _tag = 'DaylizApp';
-
-  /// Log levels for different types of messages
-  enum LogLevel {
-    debug,
-    info,
-    warning,
-    error,
-  }
 
   /// Log a debug message (only in debug mode)
   static void debug(String message, {String? tag}) {

@@ -1,40 +1,339 @@
-I/flutter ( 5681): Unable to load asset: "assets/icons/svg_icons/profile.svg".
-I/flutter ( 5681): The asset does not exist or has empty data.
-I/flutter ( 5681): #0      PlatformAssetBundle.load.<anonymous closure> (package:flutter/src/services/asset_bundle.dart:333:13)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #1      SvgLoader._load.<anonymous closure> (package:flutter_svg/src/loaders.dart:153:41)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #2      _VectorGraphicWidgetState._loadPicture.<anonymous closure> (package:vector_graphics/src/vector_graphics.dart:362:40)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #3      _VectorGraphicWidgetState._loadPicture.<anonymous closure> (package:vector_graphics/src/vector_graphics.dart:370:13)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #4      _VectorGraphicWidgetState._loadAssetBytes (package:vector_graphics/src/vector_graphics.dart:409:33)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): ----------------------------------------------------
-I/flutter ( 5681): ----------------FIREBASE CRASHLYTICS----------------
-I/flutter ( 5681): Unable to load asset: "assets/icons/svg_icons/profile.svg".
-I/flutter ( 5681): The asset does not exist or has empty data.
-I/flutter ( 5681): #0      PlatformAssetBundle.load.<anonymous closure> (package:flutter/src/services/asset_bundle.dart:333:13)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #1      SvgLoader._load.<anonymous closure> (package:flutter_svg/src/loaders.dart:153:41)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #2      _VectorGraphicWidgetState._loadPicture.<anonymous closure> (package:vector_graphics/src/vector_graphics.dart:362:40)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #3      _VectorGraphicWidgetState._loadPicture.<anonymous closure> (package:vector_graphics/src/vector_graphics.dart:370:13)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #4      _VectorGraphicWidgetState._loadAssetBytes (package:vector_graphics/src/vector_graphics.dart:409:33)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): ----------------------------------------------------
-I/flutter ( 5681): ----------------FIREBASE CRASHLYTICS----------------
-I/flutter ( 5681): Unable to load asset: "assets/icons/svg_icons/profile.svg".
-I/flutter ( 5681): The asset does not exist or has empty data.
-I/flutter ( 5681): #0      PlatformAssetBundle.load.<anonymous closure> (package:flutter/src/services/asset_bundle.dart:333:13)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #1      SvgLoader._load.<anonymous closure> (package:flutter_svg/src/loaders.dart:153:41)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #2      _VectorGraphicWidgetState._loadPicture.<anonymous closure> (package:vector_graphics/src/vector_graphics.dart:362:40)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #3      _VectorGraphicWidgetState._loadPicture.<anonymous closure> (package:vector_graphics/src/vector_graphics.dart:370:13)
-I/flutter ( 5681): <asynchronous suspension>
-I/flutter ( 5681): #4      _VectorGraphicWidgetState._loadAssetBytes (package:vector_graphics/src/vector_graphics.dart:409:33)
-I/flutter ( 5681): <asynchronous suspension>
+I/flutter (26669): 🗺️ Initializing Maps service...
+Another exception was thrown: BoxConstraints forces an infinite height.
+Another exception was thrown: RenderBox was not laid out: RenderConstrainedBox#168c3 relayoutBoundary=up6 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderFlex#6145f relayoutBoundary=up5 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderPadding#8abc0 relayoutBoundary=up4 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29f9e relayoutBoundary=up3 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderConstrainedBox#a2847 relayoutBoundary=up2 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+I/flutter (26669): ✅ Maps service initialized in 643ms
+Another exception was thrown: RenderBox was not laid out: RenderFlex#1dfb7 relayoutBoundary=up1 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+I/Choreographer(26669): Skipped 39 frames!  The application may be doing too much work on its main thread.
+I/Quality (26669): Skipped: false 39 cost 661.8916 refreshRate 16721302 bit true processName com.dayliz.app
+D/MapsInitializer(26669): preferredRenderer: null
+D/zzcc    (26669): preferredRenderer: null
+I/zzcc    (26669): Making Creator dynamically
+I/DynamiteModule(26669): Considering local module com.google.android.gms.maps_core_dynamite:0 and remote module com.google.android.gms.maps_core_dynamite:252725201
+I/DynamiteModule(26669): Selected remote version of com.google.android.gms.maps_core_dynamite, version >= 252725201
+V/DynamiteModule(26669): Dynamite loader version >= 2, using loadModule2NoCrashUtils
+D/zzcc    (26669): early loading native code
+D/nativeloader(26669): Configuring clns-9 for other apk . target_sdk_version=35, uses_libraries=ALL, library_path=/data/user_de/0/com.google.android.gms/app_chimera/m/00000948/dl-MapsCoreDynamite.integ_252725201100400.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand
+D/nativeloader(26669): Extending system_exposed_libraries: libapuwareapusys.mtk.so:libapuwareapusys_v2.mtk.so:libapuwarexrp.mtk.so:libapuwarexrp_v2.mtk.so:libapuwareutils.mtk.so:libapuwareutils_v2.mtk.so:libapuwarehmp.mtk.so:libmcv_runtime_usdk.mtk.so:libneuron_graph_delegate.mtk.so:libneuronusdk_adapter.mtk.so:libtflite_mtk.mtk.so:libarmnn_ndk.mtk.so:libcmdl_ndk.mtk.so:libnir_neon_driver_ndk.mtk.so:libmvpu_runtime.mtk.so:libmvpu_runtime_pub.mtk.so:libmvpu_engine_pub.mtk.so:libmvpu_pattern_pub.mtk.so:libmvpuop_mtk_cv.mtk.so:libmvpuop_mtk_nn.mtk.so:libteeservice_client.trustonic.so:libSloganJni.oplus.so:libsuperNight.oplus.so
+D/nativeloader(26669): Load /data/user_de/0/com.google.android.gms/app_chimera/m/00000948/dl-MapsCoreDynamite.integ_252725201100400.apk!/lib/arm64-v8a/libgmm-jni.so using isolated ns clns-9 (caller=/data/user_de/0/com.google.android.gms/app_chimera/m/00000948/dl-MapsCoreDynamite.integ_252725201100400.apk): ok
+I/native  (26669): I0000 00:00:1756919641.061357   26669 jni_init.cc:30] Initializing JNI...
+I/Google Android Maps SDK(26669): Google Play services client version: 19020000
+D/bo      (26669): SDK type: 1, version: 252725201
+D/ho      (26669): maps_core_dynamite module version in use (0 represents standalone library): 252725201
+D/ho      (26669): Added event: 109
+D/ho      (26669): Added event: 112
+D/MapsInitializer(26669): loadedRenderer: LATEST
+D/zzcc    (26669): preferredRenderer: null
+D/bo      (26669): SDK type: 1, version: 252725201
+I/Google Android Maps SDK(26669): Google Play services package version: 253434029
+I/Google Android Maps SDK(26669): Google Play services maps renderer version(maps_core): 252725201
+D/bo      (26669): SDK type: 1, version: 252725201
+D/de      (26669): about to start loading native library asynchronously
+W/x       (26669): Suppressed StrictMode policy violation: StrictModeDiskReadViolation
+I/o       (26669): Using GMM server: https://clients4.google.com/glm/mmap
+W/x       (26669): Suppressed StrictMode policy violation: StrictModeDiskReadViolation
+W/x       (26669): Suppressed StrictMode policy violation: StrictModeDiskWriteViolation
+D/o       (26669): Using Non-null serverVersionMetadataManager to load previous metadata.
+I/bs      (26669): Selected MapView map renderer: P
+D/ho      (26669): maps_core_dynamite module version in use (0 represents standalone library): 252725201
+W/x       (26669): Suppressed StrictMode policy violation: StrictModeDiskReadViolation
+W/x       (26669): Suppressed StrictMode policy violation: StrictModeDiskReadViolation
+W/x       (26669): Suppressed StrictMode policy violation: StrictModeDiskWriteViolation
+E/OplusCustomizeRestrictionManager(26669): sInstance is null, start a new sInstance
+D/CompatibilityChangeReporter(26669): Compat change id reported: 210923482; UID 10359; state: ENABLED
+D/CompatibilityChangeReporter(26669): Compat change id reported: 171228096; UID 10359; state: ENABLED
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+I/HttpFlagsLoader(26669): HTTP flags log line (Impl): Using live production flag values from Google
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+I/HttpEngBuilderWrap(26669): NetworkQualityEstimator is unsupported when HttpEngineNativeProvider is used
+I/cn_CronetLibraryLoader(26669): HTTP flags log line: Using live production flag values from Google
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+I/cn_CronetLibraryLoader(26669): Cronet version: 136.0.7091.2, arch: aarch64
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+I/PlatformViewsController(26669): Hosting view in view hierarchy for platform view: 0
+I/PlatformViewsController(26669): PlatformView is using SurfaceProducer backend
+D/BufferQueueConsumer(26669): [](id:682d00000003,api:0,p:-1,c:26669) connect: controlledByApp=true
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+W/Parcel  (26669): Expecting binder but got null!
+I/Quality (26669): Skipped: false 5 cost 93.081535 refreshRate 16724584 bit true processName com.dayliz.app
+D/BufferQueueConsumer(26669): [](id:682d00000004,api:0,p:-1,c:26669) connect: controlledByApp=true
+D/TextureView(26669): getHardwareLayer, createNewSurface:true
+D/BufferQueueConsumer(26669): [](id:682d00000005,api:0,p:-1,c:26669) connect: controlledByApp=true
+D/libMEOW (26669): meow new tls: 0xb4000072c121dd00
+D/libMEOW (26669): applied 1 plugins for [com.dayliz.app]:
+D/libMEOW (26669):   plugin 1: [libMEOW_gift.so]: 0xb4000074dbb9f7c0
+D/libMEOW (26669): rebuild call chain: 0xb4000072c0c0dd00
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+W/Parcel  (26669): Expecting binder but got null!
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+I/GoogleMapController(26669): Installing custom TextureView driven invalidator.
+I/flutter (26669): 🗺️ Google Maps controller created successfully!
+I/Quality (26669): Skipped: false 3 cost 55.9213 refreshRate 16724282 bit true processName com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+D/BufferQueueConsumer(26669): [ImageReader-1x1f22m5-26669-0](id:682d00000003,api:0,p:-1,c:26669) disconnect
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+W/FirebaseCrashlytics(26669): Could not create app exception marker file.
+W/FirebaseCrashlytics(26669): java.io.IOException: Create new file failed.
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.common.CrashlyticsController.doWriteAppExceptionMarker(CrashlyticsController.java:750)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.common.CrashlyticsController.access$400(CrashlyticsController.java:64)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.common.CrashlyticsController$2.call(CrashlyticsController.java:221)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.common.CrashlyticsController$2.call(CrashlyticsController.java:204)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.concurrency.CrashlyticsWorker.lambda$submitTask$2(CrashlyticsWorker.java:118)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.concurrency.CrashlyticsWorker$$ExternalSyntheticLambda3.then(D8$$SyntheticClass:0)
+W/FirebaseCrashlytics(26669):   at com.google.android.gms.tasks.zze.run(com.google.android.gms:play-services-tasks@@18.1.0:1)
+W/FirebaseCrashlytics(26669):   at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+W/FirebaseCrashlytics(26669):   at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.concurrent.CustomThreadFactory.lambda$newThread$0$com-google-firebase-concurrent-CustomThreadFactory(CustomThreadFactory.java:47)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.concurrent.CustomThreadFactory$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+W/FirebaseCrashlytics(26669):   at java.lang.Thread.run(Thread.java:1119)
+I/Quality (26669): Skipped: false 1 cost 22.257153 refreshRate 16724444 bit true processName com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+I/flutter (26669): ✅ Camera animated to: 25.5138, 90.2172
+I/flutter (26669): ✅ Camera moved to initial location: LatLng(25.51379989286625, 90.21719992160797)
+W/FirebaseCrashlytics(26669): Could not create app exception marker file.
+W/FirebaseCrashlytics(26669): java.io.IOException: Create new file failed.
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.common.CrashlyticsController.doWriteAppExceptionMarker(CrashlyticsController.java:750)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.common.CrashlyticsController.access$400(CrashlyticsController.java:64)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.common.CrashlyticsController$2.call(CrashlyticsController.java:221)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.common.CrashlyticsController$2.call(CrashlyticsController.java:204)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.concurrency.CrashlyticsWorker.lambda$submitTask$2(CrashlyticsWorker.java:118)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.crashlytics.internal.concurrency.CrashlyticsWorker$$ExternalSyntheticLambda3.then(D8$$SyntheticClass:0)
+W/FirebaseCrashlytics(26669):   at com.google.android.gms.tasks.zze.run(com.google.android.gms:play-services-tasks@@18.1.0:1)
+W/FirebaseCrashlytics(26669):   at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+W/FirebaseCrashlytics(26669):   at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.concurrent.CustomThreadFactory.lambda$newThread$0$com-google-firebase-concurrent-CustomThreadFactory(CustomThreadFactory.java:47)
+W/FirebaseCrashlytics(26669):   at com.google.firebase.concurrent.CustomThreadFactory$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+W/FirebaseCrashlytics(26669):   at java.lang.Thread.run(Thread.java:1119)
+I/Quality (26669): Skipped: false 1 cost 32.359207 refreshRate 16724615 bit true processName com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+I/Quality (26669): Skipped: false 1 cost 21.941183 refreshRate 16725014 bit true processName com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+I/Quality (26669): Skipped: false 3 cost 63.04135 refreshRate 16732699 bit true processName com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/Google Android Maps SDK(26669): Authorization failure.  Please see https://developers.google.com/maps/documentation/android-sdk/start for how to correctly set up the map.
+E/Google Android Maps SDK(26669): In the Google Developer Console (https://console.developers.google.com)
+E/Google Android Maps SDK(26669): Ensure that the "Maps SDK for Android" is enabled.
+E/Google Android Maps SDK(26669): Ensure that the following Android Key exists:
+E/Google Android Maps SDK(26669):       API Key: PLACEHOLDER_API_KEY_FOR_CI_BUILD
+E/Google Android Maps SDK(26669):       Android Application (<cert_fingerprint>;<package_name>): 8E:C5:58:DD:C3:58:FB:43:32:53:39:E7:F8:74:D8:A6:E4:AE:C6:18;com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+I/Quality (26669): Skipped: false 1 cost 17.611858 refreshRate 16723655 bit true processName com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+I/Quality (26669): Skipped: false 1 cost 24.399372 refreshRate 16722268 bit true processName com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+I/Quality (26669): Skipped: false 1 cost 25.68077 refreshRate 16723248 bit true processName com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+W/DynamiteModule(26669): Local module descriptor class for com.google.android.gms.googlecertificates not found.
+I/DynamiteModule(26669): Considering local module com.google.android.gms.googlecertificates:0 and remote module com.google.android.gms.googlecertificates:7
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+I/DynamiteModule(26669): Selected remote version of com.google.android.gms.googlecertificates, version >= 7
+W/com.dayliz.app(26669): ClassLoaderContext classpath element checksum mismatch. expected=549733019, found=2934168106 (DLC[];PCL[base.apk*549733019]{PCL[/system/framework/org.apache.http.legacy.jar*437381499]#PCL[/system/framework/com.android.media.remotedisplay.jar*3886290638]#PCL[/system/framework/com.android.location.provider.jar*3868789109]#PCL[/system_ext/framework/androidx.window.extensions.jar*2647316047]#PCL[/system_ext/framework/androidx.window.sidecar.jar*2604584306]#PCL[/system/framework/org.apache.http.legacy.jar*437381499]} | DLC[];PCL[/data/app/~~AU9is7uXUuZGpmUTYPyKqg==/com.dayliz.app-g73z6Jd4N_UdSK3SsvXM7Q==/base.apk*2934168106]{PCL[/system_ext/framework/androidx.window.extensions.jar*2647316047]#PCL[/system_ext/framework/androidx.window.sidecar.jar*2604584306]#PCL[/system/framework/org.apache.http.legacy.jar*437381499]})
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+W/ProxyAndroidLoggerBackend(26669): Too many Flogger logs received before configuration. Dropping old logs.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+I/Quality (26669): Skipped: false 1 cost 18.646872 refreshRate 16726641 bit true processName com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+I/Quality (26669): Skipped: false 1 cost 23.58954 refreshRate 16728184 bit true processName com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+I/Quality (26669): Skipped: false 1 cost 16.998991 refreshRate 16728783 bit true processName com.dayliz.app
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+I/com.dayliz.app(26669): Compiler allocated 5800KB to compile void m140.euc.o()
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.
+E/FrameEvents(26669): updateAcquireFence: Did not find frame.

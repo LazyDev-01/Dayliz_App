@@ -82,8 +82,8 @@ class OfflineOrderService {
   Future<void> processQueuedOrders() async {
     try {
       // Check connectivity
-      final connectivityResult = await Connectivity().checkConnectivity();
-      if (connectivityResult == ConnectivityResult.none) {
+      final connectivityResults = await Connectivity().checkConnectivity();
+      if (connectivityResults.every((result) => result == ConnectivityResult.none)) {
         debugPrint('OfflineOrderService: No internet connection, skipping queue processing');
         return;
       }
@@ -188,8 +188,8 @@ class OfflineOrderService {
     debugPrint('OfflineOrderService: Initializing offline order service');
     
     // Listen to connectivity changes
-    Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
-      if (result != ConnectivityResult.none) {
+    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      if (results.any((result) => result != ConnectivityResult.none)) {
         debugPrint('OfflineOrderService: Internet connection restored, processing queue');
         processQueuedOrders();
       }

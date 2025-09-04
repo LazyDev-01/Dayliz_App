@@ -242,7 +242,7 @@ Future<void> _initializeEssentialServices() async {
       } else {
         // Register InternetConnectionChecker first for non-web platforms
         if (!sl.isRegistered<InternetConnectionChecker>()) {
-          sl.registerLazySingleton(() => InternetConnectionChecker());
+          sl.registerLazySingleton(() => InternetConnectionChecker.instance);
         }
         sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
       }

@@ -13,8 +13,8 @@ class NetworkService {
   static Future<bool> hasInternetConnection() async {
     try {
       // Check connectivity status first
-      final connectivityResult = await Connectivity().checkConnectivity();
-      if (connectivityResult == ConnectivityResult.none) {
+      final connectivityResults = await Connectivity().checkConnectivity();
+      if (connectivityResults.every((result) => result == ConnectivityResult.none)) {
         return false;
       }
 
@@ -145,7 +145,7 @@ class NetworkService {
   }
 
   /// Listen to connectivity changes
-  static Stream<ConnectivityResult> get connectivityStream =>
+  static Stream<List<ConnectivityResult>> get connectivityStream =>
       Connectivity().onConnectivityChanged;
 }
 

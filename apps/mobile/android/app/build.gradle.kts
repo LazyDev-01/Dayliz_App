@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -20,7 +23,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.dayliz.app"
-    compileSdk = 34 // Android 14 (matches targetSdk)
+    compileSdk = 35 // Android 15 (required by plugins)
     ndkVersion = "29.0.13113456"
 
     compileOptions {
@@ -39,16 +42,24 @@ android {
         applicationId = "com.dayliz.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 21 // Required for flutter_local_notifications
-        targetSdk = 34 // Android 14 (required for Play Store)
+        minSdk = 23 // Required for firebase_analytics (updated from 21)
+        targetSdk = 35 // Android 15 (required by plugins)
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
         // Google Sign-In configuration
         manifestPlaceholders["com.google.android.gms.client_id"] = "@string/web_client_id"
 
-        // Google Maps API Key configuration - Secure environment injection with CI fallback
-        val googleMapsKey = project.findProperty("GOOGLE_MAPS_API_KEY") as String?
+        // Google Maps API Key configuration - Secure multi-source injection
+        // Priority: 1) local.properties, 2) gradle.properties, 3) environment variable, 4) CI fallback
+        val localProperties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localProperties.load(localPropertiesFile.inputStream())
+        }
+
+        val googleMapsKey = localProperties.getProperty("GOOGLE_MAPS_API_KEY")
+            ?: project.findProperty("GOOGLE_MAPS_API_KEY") as String?
             ?: System.getenv("GOOGLE_MAPS_API_KEY")
             ?: "PLACEHOLDER_API_KEY_FOR_CI_BUILD" // Fallback for CI environments
 
@@ -84,6 +95,6 @@ flutter {
 }
 
 dependencies {
-    // Core library desugaring for flutter_local_notifications
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    // Core library desugaring for flutter_local_notifications (updated to 2.1.4+ for compatibility)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
